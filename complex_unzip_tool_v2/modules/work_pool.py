@@ -22,6 +22,16 @@ from enum import Enum
 from typing import Callable, Optional, Protocol, Sequence, Union
 
 from complex_unzip_tool_v2.modules import multipart_assembly as ma
+from complex_unzip_tool_v2.modules.events import (  # re-exported for callers
+    Event,
+    ItemOpened,
+    ItemStarted,
+    ItemUnresolved,
+    PromptNeeded,
+    RootFinished,
+    RoundStarted,
+    SetAssembled,
+)
 from complex_unzip_tool_v2.modules.const import OUTPUT_FOLDER, WORK_DIR_PREFIX
 from complex_unzip_tool_v2.modules.file_utils import normalize_output_relative_path
 from complex_unzip_tool_v2.modules.utils import sanitize_filename
@@ -150,34 +160,6 @@ class WorkItem:
         return os.path.basename(self.path)
 
 
-# ------------------------------
-# Events (rendered by the terminal output; see redesign-terminal-output)
-# ------------------------------
-
-
-@dataclass(frozen=True)
-class RoundStarted:
-    number: int
-
-
-@dataclass(frozen=True)
-class ItemOpened:
-    item: WorkItem
-    files: int
-
-
-@dataclass(frozen=True)
-class SetAssembled:
-    primary: WorkItem
-    volumes: tuple[WorkItem, ...]
-    files: int
-
-
-@dataclass(frozen=True)
-class ItemUnresolved:
-    item: WorkItem
-
-
 @dataclass
 class PoolResult:
     root: str
@@ -198,14 +180,6 @@ class PoolResult:
 
     def item(self, item_id: int) -> WorkItem:
         return next(i for i in self.items if i.id == item_id)
-
-
-@dataclass(frozen=True)
-class RootFinished:
-    result: PoolResult
-
-
-Event = Union[RoundStarted, ItemOpened, SetAssembled, ItemUnresolved, RootFinished]
 
 
 @dataclass
@@ -396,7 +370,7 @@ class WorkPool:
         round_number = 0
         while True:
             round_number += 1
-            self.emit(RoundStarted(round_number))
+            self.emit(RoundStarted(round_number, *self._archive_counts()))
             containers = self._pending(Kind.CONTAINER)
             if containers:
                 for item in sorted(containers, key=lambda i: i.path):
@@ -422,6 +396,23 @@ class WorkPool:
 
     def _pending(self, kind: Kind) -> list[WorkItem]:
         return [i for i in self.items if i.kind is kind and i.state is State.PENDING]
+
+    def _archive_counts(self) -> tuple[int, int]:
+        """(finished, pending) archives: containers plus sets by their primary."""
+        done = pending = 0
+        for item in self.items:
+            is_archive = item.kind is Kind.CONTAINER or (
+                item.kind is Kind.VOLUME
+                and item.volume is not None
+                and item.volume.is_primary
+            )
+            if not is_archive:
+                continue
+            if item.state is State.CONSUMED:
+                done += 1
+            elif item.state is State.PENDING:
+                pending += 1
+        return done, pending
 
     # ---------- intake ----------
 
@@ -524,6 +515,7 @@ class WorkPool:
         if item.depth > self.max_depth:
             self._unresolve(item, "max depth")
             return
+        self.emit(ItemStarted(item))
         dest = self._container_dest(item)
 
         def attempt(password: Optional[str]) -> Outcome:
@@ -572,6 +564,7 @@ class WorkPool:
             and self.prompt is not None
             and not self._skip_all
         ):
+            self.emit(PromptNeeded(name))
             answer = self.prompt(name)
             if isinstance(answer, _SkipAll):
                 self._skip_all = True
@@ -632,6 +625,7 @@ class WorkPool:
         self, primary: WorkItem, state: _SetState, password: Optional[str]
     ) -> bool:
         assert primary.volume is not None
+        self.emit(ItemStarted(primary))
         key = primary.volume.key
         members = {
             os.path.abspath(i.path): i
@@ -838,6 +832,7 @@ class WorkPool:
             if state.password_failures == 0 or state.other_failures:
                 continue
             state.prompted = True
+            self.emit(PromptNeeded(primary.path))
             answer = self.prompt(primary.path)
             if isinstance(answer, _SkipAll):
                 self._skip_all = True
