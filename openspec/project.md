@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Complex Unzip Tool v2 is a robust and intelligent command-line archive extraction utility for Windows x64, macOS Intel/Apple Silicon, and Linux x64/ARM64. It handles complex archive scenarios including password-protected files, multipart archives, nested structures, and cloaked/obfuscated filenames. The tool provides automated extraction with smart features like drag-and-drop support, intelligent password management, and multilingual support (English/Chinese).
+DeepUnzip is a robust and intelligent command-line archive extraction utility for Windows x64, macOS Intel/Apple Silicon, and Linux x64/ARM64. It handles complex archive scenarios including password-protected files, multipart archives, nested structures, and cloaked/obfuscated filenames. The tool provides automated extraction with smart features like drag-and-drop support, intelligent password management, and multilingual support (English/Chinese).
 
 Inspired by: https://github.com/TR-Supowe/Complex-Unzip-Tool
 
@@ -24,7 +24,7 @@ Inspired by: https://github.com/TR-Supowe/Complex-Unzip-Tool
 - **PyInstaller**: Standalone executable builder (version ^6.15.0)
 
 ### Build & Packaging
-- **Poetry scripts**: `main`, `cuz`, `build`, `bump`, `bump-patch`, `bump-minor`, `bump-major`
+- **Poetry scripts**: `deepunzip`, `dz` (deprecated aliases: `main`, `cuz`), `build`, `bump`, `bump-patch`, `bump-minor`, `bump-major`
 - **Custom build scripts**: `scripts/build.py`, `scripts/build.bat`, `scripts/generate_icon.py`
 - **Version management**: `bump2version` (version ^1.0.1)
 
@@ -57,8 +57,8 @@ Inspired by: https://github.com/TR-Supowe/Complex-Unzip-Tool
 
 **Module Organization**:
 ```
-complex_unzip_tool_v2/
-├── __main__.py          # Entry point for poetry run main
+deepunzip/
+├── __main__.py          # Entry point for poetry run deepunzip
 ├── main.py              # CLI application (Typer app)
 ├── classes/             # Domain models and business logic
 │   ├── ArchiveExceptions.py  # Custom exception hierarchy
@@ -299,12 +299,12 @@ poetry run pytest -v
 - **poetry.lock**: Locked dependency versions
 - **.flake8**: Flake8 configuration
 - **.bumpversion.cfg**: Bump2version configuration
-- **cloaked_file_rules.json**: Cloaked file detection rules (in `complex_unzip_tool_v2/config/`)
+- **cloaked_file_rules.json**: Cloaked file detection rules (in `deepunzip/config/`)
 
 ### Entry Points
-- **CLI Entry**: `complex_unzip_tool_v2/__main__.py` and `complex_unzip_tool_v2/main.py`
-- **Poetry Scripts**: `main`, `cuz`, `build`, `bump`, `bump-patch`, `bump-minor`, `bump-major`
-- **Standalone Executable**: `dist/complex-unzip-tool-v2.exe` on Windows; `dist/complex-unzip-tool-v2` on macOS/Linux (build on the target OS/architecture)
+- **CLI Entry**: `deepunzip/__main__.py` and `deepunzip/main.py`
+- **Poetry Scripts**: `deepunzip`, `dz` (deprecated aliases: `main`, `cuz`), `build`, `bump`, `bump-patch`, `bump-minor`, `bump-major`
+- **Standalone Executable**: `dist/deepunzip.exe` on Windows; `dist/deepunzip` on macOS/Linux (build on the target OS/architecture)
 
 ### Testing Infrastructure
 - **Test Runner**: pytest
@@ -322,7 +322,7 @@ poetry run pytest -v
 ### Common Commands
 ```powershell
 # Run the tool
-poetry run main "C:\path\to\archives"
+poetry run deepunzip "C:\path\to\archives"
 
 # Run tests
 poetry run pytest -q
@@ -331,22 +331,22 @@ poetry run pytest -q
 poetry run build
 
 # Format code
-poetry run black complex_unzip_tool_v2/ tests/
+poetry run black deepunzip/ tests/
 
 # Lint code
-poetry run flake8 complex_unzip_tool_v2/ tests/
+poetry run flake8 deepunzip/ tests/
 
 # Type check
-poetry run mypy complex_unzip_tool_v2/
+poetry run mypy deepunzip/
 ```
 
 ### Key File Locations
 - **7-Zip Binary**: See `7z/README.md` for the native platform paths
-- **Config**: `complex_unzip_tool_v2/config/cloaked_file_rules.json`
-- **CLI Entry**: `complex_unzip_tool_v2/__main__.py`
-- **Main Logic**: `complex_unzip_tool_v2/main.py`
-- **Core Modules**: `complex_unzip_tool_v2/modules/`
-- **Domain Classes**: `complex_unzip_tool_v2/classes/`
+- **Config**: `deepunzip/config/cloaked_file_rules.json`
+- **CLI Entry**: `deepunzip/__main__.py`
+- **Main Logic**: `deepunzip/main.py`
+- **Core Modules**: `deepunzip/modules/`
+- **Domain Classes**: `deepunzip/classes/`
 - **Tests**: `tests/`
 
 ### Quality Gates Checklist

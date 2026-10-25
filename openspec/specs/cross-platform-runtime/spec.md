@@ -31,11 +31,11 @@ The build command SHALL produce a standalone console program for the host platfo
 
 #### Scenario: Building on macOS or Linux
 - **WHEN** the build command runs on a supported macOS or Linux host
-- **THEN** it SHALL produce `dist/complex-unzip-tool-v2` with an executable bundled engine
+- **THEN** it SHALL produce `dist/deepunzip` with an executable bundled engine
 
 #### Scenario: Building on Windows
 - **WHEN** the build command runs on Windows x64
-- **THEN** it SHALL produce `dist/complex-unzip-tool-v2.exe` with the updated engine and its DLL
+- **THEN** it SHALL produce `dist/deepunzip.exe` with the updated engine and its DLL
 
 #### Scenario: Incomplete build inputs
 - **WHEN** a required engine file or license is missing

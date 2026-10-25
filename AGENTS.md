@@ -3,7 +3,7 @@
 
 This document defines how AI agents (and humans using them) should operate in this repository.
 
-- Repo: `Complex-unzip-tool-v2`
+- Repo: `rozx/DeepUnzip`
 - Primary language: Python (3.11)
 - Package/Deps: Poetry (`pyproject.toml`, `poetry.lock`)
 - Tests: `pytest` in `tests/`
@@ -31,7 +31,7 @@ A command-line tool to unzip/extract various archive formats, including nested a
 ## Ground Rules
 - Do not exfiltrate secrets or make network calls unless explicitly required.
 - Keep code portable across supported platforms; use PowerShell-compatible commands on Windows and native shell commands on macOS/Linux.
-- Respect the existing structure under `complex_unzip_tool_v2/` and `scripts/`.
+- Respect the existing structure under `deepunzip/` and `scripts/`.
 - Use `pytest` for tests; add or update tests when changing behavior.
 - Keep public APIs stable unless the change is intentional and documented.
 - Use concise, focused commits/PRs with a clear description and checklist status.
@@ -43,7 +43,7 @@ A command-line tool to unzip/extract various archive formats, including nested a
 
 ```powershell
 # From repo root
-poetry run main
+poetry run deepunzip
 ```
 
 - Install dependencies (Poetry):
@@ -64,15 +64,15 @@ poetry run pytest tests/test_archive_utils.py::test_build_7z_extract_cmd -q   # 
 - Lint / format / type-check:
 
 ```powershell
-poetry run black complex_unzip_tool_v2/ tests/   # format (line-length 88)
-poetry run flake8 complex_unzip_tool_v2/ tests/  # lint
-poetry run mypy complex_unzip_tool_v2/           # type check (strict)
+poetry run black deepunzip/ tests/   # format (line-length 88)
+poetry run flake8 deepunzip/ tests/  # lint
+poetry run mypy deepunzip/           # type check (strict)
 ```
 
 - Smoke test the CLI:
 
 ```powershell
-poetry run main --help
+poetry run deepunzip --help
 ```
 
 - Build (packaging helper):
@@ -85,7 +85,7 @@ poetry run build
 The project bundles 7-Zip 26.03 for each supported platform. Use `modules/seven_zip_runtime.py` for engine selection; see `7z/README.md` for paths, checksums, and licenses. Build on the target OS/architecture with `poetry run build`.
 
 ## Repository Facts
-- Entry points: `complex_unzip_tool_v2/__main__.py`, `complex_unzip_tool_v2/main.py`.
+- Entry points: `deepunzip/__main__.py`, `deepunzip/main.py`.
 - Core modules:
   - `modules/archive_utils.py`, `modules/archive_extension_utils.py`
   - `modules/file_utils.py`, `modules/password_util.py`
@@ -103,7 +103,7 @@ The project bundles 7-Zip 26.03 for each supported platform. Use `modules/seven_
 ## Change Workflow
 1) Branch and plan a minimal change set.
 2) **TDD: write a failing test first** under `tests/` (regression test for a bug, or a spec test for new behavior); confirm it fails for the right reason.
-3) Implement the minimum change in `complex_unzip_tool_v2/` to make it pass (keep diffs small and focused), then refactor with the test green.
+3) Implement the minimum change in `deepunzip/` to make it pass (keep diffs small and focused), then refactor with the test green.
 4) Run quality gates locally:
    - Build: ensure code runs (smoke test CLI)
    - Tests: `poetry run pytest -q`
@@ -168,7 +168,7 @@ This repo uses **OpenSpec**. Active specs live in `openspec/specs/`, proposed ch
 - Regression coverage: `tests/test_multipart_file_input.py`; real source/frozen coverage: `scripts/smoke_test.py`.
 
 ## User-facing text and output
-- Every user-facing string lives in `complex_unzip_tool_v2/modules/i18n.py` `CATALOG` with an `en` and a `zh` entry that use the same placeholders; code calls `t(key, **params)`. Add new keys in both languages. Never write inline user-facing strings, and never inline bilingual ones (`"Wrong password 密码错误"`). Each run uses one language: `DEEPUNZIP_LANG` (`zh`/`en`), else the system UI language, else English.
+- Every user-facing string lives in `deepunzip/modules/i18n.py` `CATALOG` with an `en` and a `zh` entry that use the same placeholders; code calls `t(key, **params)`. Add new keys in both languages. Never write inline user-facing strings, and never inline bilingual ones (`"Wrong password 密码错误"`). Each run uses one language: `DEEPUNZIP_LANG` (`zh`/`en`), else the system UI language, else English.
 - Library code does not print. It emits events (`modules/events.py`); warnings use `events.notice("warning", key, **params)`. Exactly one renderer (`modules/render.py`) writes the output: terminal view, plain lines when redirected, or JSON lines with `--json`.
 - `--json` writes only JSON lines to stdout and never prompts or pauses. Exit codes: `0` all resolved, `1` something unresolved, `2` fatal or usage error.
 - Passwords never appear in any output; refer to them as `password #N`.
@@ -181,7 +181,7 @@ This repo uses **OpenSpec**. Active specs live in `openspec/specs/`, proposed ch
 ## Renaming/Uncloaking rules
 The tool normalizes “cloaked” filenames before classifying and grouping them. The work pool's intake uncloaks every new item, both scanned sources and files extracted at any depth. Only renames of sources are recorded in rename history.
 
-- Engine: `CloakedFileDetector` using rules from `complex_unzip_tool_v2/config/cloaked_file_rules.json`.
+- Engine: `CloakedFileDetector` using rules from `deepunzip/config/cloaked_file_rules.json`.
 - Goal: Convert disguised names (with trailing junk/suffixes) into proper archive names, including multipart suffixes.
 
 Safety guards (never rename these):
@@ -224,7 +224,7 @@ Examples (intended outcomes):
 - `file.rar.r00删除` -> `file.rar.r00`
 
 Where to change rules:
-- Edit `complex_unzip_tool_v2/config/cloaked_file_rules.json`.
+- Edit `deepunzip/config/cloaked_file_rules.json`.
 - Use `priority` to order more specific rules above generic ones.
 - Set `enabled: false` to disable a rule without removing it.
 
@@ -233,7 +233,7 @@ Testing:
 - Run tests with `poetry run pytest -q`.
 
 ## Rename history (revert-on-failure)
-Uncloaking renames source files *in place*. If a file is kept, the user must still be able to recognize it. `RenameHistory` (`complex_unzip_tool_v2/modules/rename_history.py`) makes those renames reversible.
+Uncloaking renames source files *in place*. If a file is kept, the user must still be able to recognize it. `RenameHistory` (`deepunzip/modules/rename_history.py`) makes those renames reversible.
 
 - There is one history file per input root: `<input_root>/.unzip-rename-history.tmp.json`. It is persisted eagerly via atomic temp+replace, so a crash mid-run still leaves a recoverable record.
 - It records renames of **source** files only, in two kinds:
@@ -259,7 +259,7 @@ Uncloaking renames source files *in place*. If a file is kept, the user must sti
 - **Multipart retention on failure.** A failed set never deletes or moves away source volumes. Volumes moved for an attempt always return home.
 
 ## Multipart sets across containers
-Multipart volumes may come from the input root or from any container, at any depth. The work pool (`complex_unzip_tool_v2/modules/work_pool.py`, with pure helpers in `multipart_assembly.py`) treats them uniformly.
+Multipart volumes may come from the input root or from any container, at any depth. The work pool (`deepunzip/modules/work_pool.py`, with pure helpers in `multipart_assembly.py`) treats them uniformly.
 
 - Primary vs continuation identification (`multipart_assembly.parse_volume_name`):
   - 7z volumes: primary is `.7z.001`; continuations are `.7z.002+`.
@@ -298,7 +298,7 @@ The tool treats every file as a potential archive by default. During nested extr
   - Regular files encountered during nested scanning therefore do not produce spurious corruption errors.
 
 - Implementation:
-  - `complex_unzip_tool_v2/modules/archive_utils.py` → `_raise_for_7z_error()` maps the above messages to `ArchiveUnsupportedError` (non‑archive/unsupported), not `ArchiveCorruptedError`.
+  - `deepunzip/modules/archive_utils.py` → `_raise_for_7z_error()` maps the above messages to `ArchiveUnsupportedError` (non‑archive/unsupported), not `ArchiveCorruptedError`.
   - `_parse7zListOutput()` begins parsing after the dashed separator to remain compatible with varying 7‑Zip outputs.
   - `is_valid_archive()` uses 7‑Zip listing plus the mapping above to determine if a file is an archive.
 
@@ -308,8 +308,8 @@ The tool treats every file as a potential archive by default. During nested extr
 
 ## Common Local Paths
 - 7-Zip: `./7z/windows-x64/7z.exe` + `7z.dll` (Windows), `./7z/macos/7zz`, `./7z/linux-x64/7zzs`, or `./7z/linux-arm64/7zzs`; each platform directory also contains its `License.txt`.
-- Config: `complex_unzip_tool_v2/config/cloaked_file_rules.json`
-- CLI Entrypoint: `complex_unzip_tool_v2/__main__.py`
+- Config: `deepunzip/config/cloaked_file_rules.json`
+- CLI Entrypoint: `deepunzip/__main__.py`
 
 ## PR Template (suggested)
 - Summary: what changed and why
