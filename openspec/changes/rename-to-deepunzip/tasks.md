@@ -58,5 +58,5 @@ These tasks are committed directly on `release/v2.0.0` (single release PR) as th
 
 ## 4. Repository identity (with the release)
 
-- [ ] 4.1 In the release PR, propose the GitHub About text (the new description) and topics (`archive`, `unzip`, `7zip`, `multipart`, `password`, `cli`) for the maintainer to apply.
-- [ ] 4.2 After the release merges, the maintainer renames the repository to `rozx/DeepUnzip`. Then confirm that old URLs redirect and that the README badges resolve.
+- [x] 4.1 Set the GitHub About text and topics. Applied on 2026-10-25 with the maintainer's approval: the bilingual tagline ("深度解压：一次解开套娃、加密、分卷和伪装的压缩包。DeepUnzip extracts nested, password-protected, multipart and disguised archives in one pass.") and 20 topics (the old `complex` and duplicate netdisk topics replaced by `7z`, `archive`, `batch-processing`, `macos`, `linux`).
+- [x] 4.2 The maintainer renames the repository to `rozx/DeepUnzip`. Then confirm that old URLs redirect and that the README badges resolve. Renamed before the release; pushes to the old git URL are redirected, and the release, download, license and star badges resolve.
