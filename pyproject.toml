@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "deepunzip"
-version = "1.3.2"
+version = "2.0.0"
 description = "DeepUnzip extracts nested, password-protected, multipart and disguised archives in one pass."
 authors = ["Rozx <lisida900710@gmail.com>"]
 readme = "README.md"
