@@ -1,190 +1,173 @@
-# Complex Unzip Tool v2
+# DeepUnzip
 
-![GitHub Release](https://img.shields.io/github/v/release/rozx/Complex-unzip-tool-v2)
-[![Python](https://img.shields.io/badge/python-3.11+-green.svg)](https://python.org)
-[![License](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/rozx/Complex-unzip-tool-v2)
+[![Release](https://img.shields.io/github/v/release/rozx/DeepUnzip)](https://github.com/rozx/DeepUnzip/releases/latest)
+[![Release date](https://img.shields.io/github/release-date/rozx/DeepUnzip)](https://github.com/rozx/DeepUnzip/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/rozx/DeepUnzip/total)](https://github.com/rozx/DeepUnzip/releases)
+[![Latest downloads](https://img.shields.io/github/downloads/rozx/DeepUnzip/latest/total)](https://github.com/rozx/DeepUnzip/releases/latest)
+[![CI](https://img.shields.io/github/actions/workflow/status/rozx/DeepUnzip/ci.yml?branch=main&label=CI)](https://github.com/rozx/DeepUnzip/actions/workflows/ci.yml)
+[![Stars](https://img.shields.io/github/stars/rozx/DeepUnzip)](https://github.com/rozx/DeepUnzip/stargazers)
+[![License](https://img.shields.io/github/license/rozx/DeepUnzip)](LICENSE)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 
-🌐 [中文](README.md) | **English**
+[简体中文](README.md) | **English** | [繁體中文](README.zh-TW.md) | [日本語](README.ja.md) | [한국어](README.ko.md)
 
-**One-click extraction for disguised ("cloaked") archives downloaded from cloud drives — built for 百度网盘 / Baidu Netdisk.**
+DeepUnzip extracts nested, password-protected, multipart and disguised archives in one pass.
 
-**v1.3.2** reuses manually entered passwords for later archives in the same run, so batches with a shared password no longer prompt for each archive. See the [1.3.2 release notes](docs/releaseNotes/v1.3.2.md).
+## Demo
 
----
+![DeepUnzip output](docs/images/terminal-en.svg)
 
-## 🤔 What problem does it solve?
+This is the output of a real run. The folder holds one renamed volume; the other two volumes sit inside two other archives, one of them password-protected. DeepUnzip opens the outer archives, collects the three volumes, extracts them with the second password from the password book, and shows where each volume came from.
 
-Archives shared on 百度网盘 (Baidu Netdisk) and other cloud drives are often **cloaked**: their names are deliberately scrambled with junk characters to dodge content scanning — e.g. `movie.7z.001` becomes `movie.7z.00删1`, or a `.rar` is renamed to a random string. After downloading, these files **won't extract directly** and the multipart sets are broken apart.
+## What it solves
 
-This tool automatically **restores the real filenames (uncloaks)**, **regroups** split volumes, **tries your passwords**, and **recursively extracts** everything — including nested archives — in one pass.
+If you deal with archives often, you have probably run into these:
 
-> Inspired by: https://github.com/TR-Supowe/Complex-Unzip-Tool
+- Your downloads folder has piled up dozens of archives: game mods, asset packs, or the string of zip files a Google Takeout export comes in. Point DeepUnzip at the folder and it extracts all of them in one go; archives that extracted fine go to the recycle bin, the ones that didn't stay where they are.
+- Everything from one forum, group or author uses the same handful of passwords. Put them in `passwords.txt` and DeepUnzip tries them in order, so you never type them again. Passwords you type during a run are added to the file too.
+- Volumes downloaded from a forum, Discord or Telegram, from `.part1.rar` to `.part8.rar`, or a mail attachment split into `.zip`, `.z01` and `.z02` to get under the size limit. As long as they are somewhere under the folder you pass in, even in different subfolders, DeepUnzip finds the whole set before extracting it.
+- Archives inside archives, such as a collection where every item was zipped on its own. DeepUnzip keeps opening them, level by level, until nothing is left to open.
+- A `.zip` renamed to something like `.zip.txt` to get past a mail or chat attachment filter. DeepUnzip recognizes archives by their content, not their extension.
+- Files shared on Chinese cloud drives such as Baidu Netdisk often get deliberately mangled names to dodge content filters: `movie.7z.001` becomes `movie.7z.001删除`, and the volumes are split up and packed into other archives. DeepUnzip restores the names and gathers the volumes from those archives.
 
----
+Doing this by hand means opening archives one by one, trying passwords, moving volumes around, and then working out which originals are safe to delete. DeepUnzip does it with one command, and before it deletes an original it checks that everything extracted from it was handled.
 
-## 🚀 Quick Start
+## Features
 
-1. **Download** the package for your OS and architecture from **[Releases](https://github.com/rozx/Complex-unzip-tool-v2/releases)**. On Windows, extract the `.zip` to get `complex-unzip-tool-v2.exe`.
-2. **Drag & drop** your archive files or folders onto the `.exe` on Windows.
-3. **Done** — it uncloaks, groups, and extracts everything automatically.
+- Restores mangled file names using rules in `config/cloaked_file_rules.json`, which you can extend. If a file ends up not extracting, its original name is put back.
+- Handles `.7z.001`, `.part1.rar`, `.rar` + `.r00`, `.zip` + `.z01` and other multipart formats. Volumes may be spread over different folders or hidden inside other archives.
+- Tries the passwords in `passwords.txt` in order. A password you type during a run is used for the archives that follow and saved at the end.
+- Opens nested archives level by level until there is nothing new to extract.
+- Deletes an original only when everything extracted from it succeeded, and moves it to the recycle bin by default. Anything it cannot extract is kept, and the final summary says why and where.
+- Offers `--json` output and clear exit codes for scripts.
+- Release packages bundle Python and 7-Zip 26.03, so there is nothing else to install.
 
-On macOS / Linux, extract the matching `.tar.gz` and run the program in a terminal. This example uses an Apple Silicon Mac; substitute the package name for your platform:
+## Quick start
 
-```bash
-tar -xzf complex-unzip-tool-v2-v1.3.2-macos-arm64.tar.gz
-./complex-unzip-tool-v2 "$HOME/Downloads/Archives"
+1. Download the package for your system from [Releases](https://github.com/rozx/DeepUnzip/releases) (see "Release packages" below).
+2. Windows: unpack the `.zip`, then drag the folder or archives onto `deepunzip.exe`.
+3. macOS / Linux: unpack the `.tar.gz` and run it in a terminal:
+
+   ```bash
+   tar -xzf deepunzip-v2.0.0-macos-arm64.tar.gz
+   ./deepunzip ~/Downloads/archives
+   ```
+
+Extracted files end up in `unzipped/` inside the folder you passed in.
+
+## Usage
+
+```text
+deepunzip [options] <file or folder>...
 ```
 
-| Platform | v1.3.2 package | Bundled 7-Zip 26.03 |
-| --- | --- | --- |
-| Windows x64 | `complex-unzip-tool-v2-v1.3.2-windows-x64.zip` | `7z.exe` + `7z.dll` |
-| macOS Intel | `complex-unzip-tool-v2-v1.3.2-macos-x64.tar.gz` | Universal `7zz` |
-| macOS Apple Silicon | `complex-unzip-tool-v2-v1.3.2-macos-arm64.tar.gz` | Universal `7zz` |
-| Linux x64 | `complex-unzip-tool-v2-v1.3.2-linux-x64.tar.gz` | Static `7zzs` |
-| Linux ARM64 | `complex-unzip-tool-v2-v1.3.2-linux-arm64.tar.gz` | Static `7zzs` |
+A folder is processed with everything in it. If you pass a single volume, the other volumes of its set in the same folder come along, including renamed ones. Output goes to `unzipped/` in the input folder (or the folder that holds the input file).
 
-Packages include Python and 7-Zip, so no separate installation or runtime engine download is required. Each package includes documentation and licenses; the release also includes `SHA256SUMS`. See [7z/README.md](7z/README.md) for upstream sources, checksums, and licenses.
-
-The macOS application has separate Intel and Apple Silicon builds. Linux executables are built on Ubuntu 24.04 and require compatible system libraries. macOS signing/notarization and Windows publisher signing are not configured. See Development below to run from source or build locally.
-
----
-
-## 📖 Usage Guide
-
-### Basic usage
-
-```powershell
-# Extract every archive inside a folder
-complex-unzip-tool-v2.exe "D:\Downloads\Archives"
-
-# Extract specific files (the primary volume discovers matching sibling parts)
-complex-unzip-tool-v2.exe "D:\file.zip" "D:\movie.7z.001"
-```
-
-Extracted contents are written to an `unzipped/` folder. On success, original archives are moved to the system **Recycle Bin / Trash** (recoverable). Linux needs an available desktop trash directory; originals are retained if recycling fails.
-
-Passing a single volume collects matching parts from the same directory and naming convention by their uncloaked names, including cloaked continuation parts. All parts are cleaned up on success and retained on extraction or password failure. On Windows, output redirected to a file or pipe uses UTF-8 and the program exits without waiting for Enter.
+| Option | Effect |
+| --- | --- |
+| `--permanent-delete`, `-pd` | Delete extracted originals instead of moving them to the recycle bin |
+| `--json` | Write JSON lines for programs and never ask anything |
+| `--version`, `-v` | Show the version |
+| `--help` | Show help |
 
 ### Passwords
 
-Many netdisk archives are password-protected. Put your passwords in a `passwords.txt` file and the tool tries each one automatically (the empty password is tried first).
+Write one password per line in `passwords.txt`. DeepUnzip reads two password books and merges them:
 
-**Two locations are supported and merged automatically:**
+- `passwords.txt` next to the program (the project root when running from source);
+- `passwords.txt` in the input folder (or the folder that holds the input file).
 
-1. **Target directory** — place `passwords.txt` in the folder you pass to the tool (or next to the file you pass). Best for passwords specific to that batch of files.
-2. **Tool directory** — place `passwords.txt` next to the executable (`.exe` on Windows; `complex-unzip-tool-v2` on macOS / Linux). Source runs use the project root. This location is independent of the working directory and drag-and-drop launch behavior.
+The empty password is always tried first. Lines starting with `#` are comments; write a password that starts with `#` as `\#abc`. The file may be UTF-8, GBK, Big5 or UTF-16.
 
-**File format** (one password per line; blank lines ignored; lines starting with `#` are comments; write a password that starts with `#` as `\#`; duplicates removed automatically):
+When no password works, DeepUnzip asks whether to enter a password, skip this archive, or skip all further password questions. A password you enter that opens a file is appended to the `passwords.txt` next to the program. The output never shows a password, only its position, such as "password #2".
 
-```text
-# common passwords
-123456
-www.example.com
-mypassword
-\#password-starting-with-hash
-```
+### Language
 
-If a password itself starts with `#`, write it with a leading backslash: `\#abc` means the password `#abc`. Auto-saved passwords are escaped automatically. When upgrading, check your book for passwords that start with `#` and escape them this way.
+The output is available in English, Simplified Chinese, Traditional Chinese, Japanese and Korean. It follows the system UI language, and systems in any other language get English. Set the `DEEPUNZIP_LANG` environment variable to `en`, `zh`, `zh-TW`, `ja` or `ko` to choose.
 
-- 📝 **Auto-learn**: manually entered passwords that successfully extract an archive are immediately reused for later single, multipart, and nested archives in the same run. New passwords are appended to the tool-directory `passwords.txt` when the run finishes; existing comments and order are kept, and passwords starting with `#` are saved as `\#`.
-- The target-directory password book is read only, unless it is also the tool-directory book. If the tool directory is not writable, the program warns and completes extraction cleanup; move it to a writable directory to save new passwords. Builds do not embed personal password books.
-- 🈶 **Encoding-aware**: auto-detects UTF-8 / GBK / GB2312 / Big5 / UTF-16 (with BOM), so Chinese passwords work without mojibake.
+### Exit codes
 
-When upgrading, check whether an older version saved passwords in a launch directory such as Desktop or Downloads. Merge any entries you want to reuse into `passwords.txt` beside the new executable.
-
-### Options
-
-| Option | Description |
+| Code | Meaning |
 | --- | --- |
-| `--version`, `-v` | Show version |
-| `--permanent-delete` | Permanently delete originals instead of moving them to the Recycle Bin |
-| `--help` | Show help |
+| `0` | Everything was extracted, or there was nothing to do |
+| `1` | The run finished, but some items could not be extracted; their originals are kept |
+| `2` | Could not run: 7-Zip is missing, none of the given paths exists, or an error occurred |
 
-> 🛡️ **Safe by default**: originals are never deleted when a password fails or a multipart set is incomplete.
+### Scripting
 
----
+With `--json`, every line on standard output is a JSON object, and the last one is always `summary`:
 
-## ✨ Features
-
-- 🎭 **Filename uncloaking** — restores scrambled names via configurable rules (`config/cloaked_file_rules.json`); renames are reverted if extraction fails.
-- 📦 **Multipart support** — `.001/.002`, `.part1/.part2`, `.rar/.r00`, `.zip/.z01`, and more; finds and regroups scattered parts.
-- 🔐 **Smart passwords** — tries a password book automatically and caches successful ones.
-- 🏗️ **Nested extraction** — recursively extracts archives inside archives.
-- 🖱️ **Standalone** — build a single executable with Python and 7-Zip for each platform; Windows also supports dropping files onto the `.exe`.
-- 🌐 **Bilingual UI** — clear progress output in English and 中文.
-
----
-
-## 🛠️ Development
-
-Requires Python 3.11+ and [Poetry](https://python-poetry.org/). Supports the platforms and architectures listed above.
-
-```powershell
-git clone https://github.com/rozx/Complex-unzip-tool-v2.git
-cd Complex-unzip-tool-v2
-poetry install
-
-poetry run main "D:\path\to\archives"   # run the tool (alias: poetry run cuz)
-poetry run pytest -q                     # run tests
-poetry run build                         # build for the current platform -> dist/
+```json
+{"event": "summary", "schema_version": 1, "status": "partial", "files": 12, "output_dirs": ["D:\\Downloads\\unzipped"], "sources": {"deleted": 3, "kept": 1}, "unresolved": [{"root": 1, "path": "locked.7z", "reason": "password"}], "exit": 1}
 ```
 
-On macOS / Linux:
+In `--json` mode DeepUnzip never asks for a password and never waits for Enter at the end. It doesn't ask either when standard input is not a terminal, for example in a scheduled task.
+
+## How it works
+
+1. Scan the input folder and restore mangled file names using the rules.
+2. Work in rounds. Each round opens one more level of every archive it can, and the extracted files join the next round.
+3. Once the outer archives are open, assemble multipart sets. DeepUnzip first looks for the other volumes in the folder of the first volume, then widens the search to the enclosing folders, up to the input folder. Each candidate combination is screened by file sizes and 7z headers before 7-Zip checks it.
+4. A password typed during the run is used for the archives that follow, and multipart sets that failed on a password are retried with it.
+5. The run ends when a round makes no progress. Extracted files move to `unzipped/`. Anything extracted from an archive but not usable (an inner archive that won't open, an incomplete set of volumes) goes there as well; files that were already in the input folder stay where they are.
+6. An original is deleted only when everything extracted from it succeeded.
+
+If a run is interrupted, the next run puts moved volumes back where they were and asks whether to undo the previous run's renames.
+
+## Release packages
+
+| Platform | File |
+| --- | --- |
+| Windows x64 | `deepunzip-v2.0.0-windows-x64.zip` |
+| macOS Intel | `deepunzip-v2.0.0-macos-x64.tar.gz` |
+| macOS Apple Silicon | `deepunzip-v2.0.0-macos-arm64.tar.gz` |
+| Linux x64 | `deepunzip-v2.0.0-linux-x64.tar.gz` |
+| Linux ARM64 | `deepunzip-v2.0.0-linux-arm64.tar.gz` |
+
+Each package contains the program, the bundled 7-Zip and the license files; the release page also has `SHA256SUMS`. The Linux builds are made on Ubuntu 24.04. The program is not code-signed, and the macOS builds are not notarized. See [7z/README.md](7z/README.md) for where 7-Zip comes from and its checksums.
+
+## FAQ
+
+### Why were some originals not deleted?
+
+Something extracted from them did not succeed, for example a wrong password or a missing volume. The list at the end of the run gives the reason and location of each item. Add the password or the volume and run again.
+
+### Windows says "Windows protected your PC"
+
+The program is not code-signed, so this may appear the first time you run it. Click "More info", then "Run anyway".
+
+### macOS says the developer cannot be verified
+
+The program is not notarized. Run `xattr -d com.apple.quarantine ./deepunzip` in a terminal, then start it again.
+
+### File names are mangled in a way the rules don't cover
+
+Add a rule to `config/cloaked_file_rules.json`; the format is described in the "Renaming/Uncloaking rules" section of [AGENTS.md](AGENTS.md). New rules are welcome as contributions.
+
+### A folder starting with `temp.deepunzip-` showed up
+
+It is the work folder of a run that was interrupted. The next run tells you where it is; once you have checked that nothing in it is needed, you can delete it.
+
+## Development
+
+You need Python 3.11+ and [Poetry](https://python-poetry.org/).
 
 ```bash
-poetry run main "$HOME/Downloads/Archives"
-poetry run pytest -q
-poetry run build
-./dist/complex-unzip-tool-v2 --help
+git clone https://github.com/rozx/DeepUnzip.git
+cd DeepUnzip
+poetry install
+
+poetry run deepunzip <file or folder>   # run from source; dz works too
+poetry run pytest -q                     # run the tests
+poetry run build                         # build a standalone program for this platform into dist/
 ```
 
-Build on the target OS and architecture. Windows produces an `.exe`; macOS / Linux produce an executable without an extension. Only the native engine is packaged. The macOS application targets the current Python architecture while its bundled 7-Zip is universal. Distribution signing and notarization are not configured.
+Build on the target system and architecture. Architecture, conventions and the release process are described in [AGENTS.md](AGENTS.md) and [CLAUDE.md](CLAUDE.md).
 
-If copying a source checkout loses Unix execute permissions, run `chmod +x` on the matching engine: `7z/macos/7zz`, `7z/linux-x64/7zzs`, or `7z/linux-arm64/7zzs`. Missing or non-executable engines are reported before the CLI modifies input files.
+After changing the terminal output, regenerate the screenshot above with `poetry run python -m scripts.generate_screenshots`.
 
-See [AGENTS.md](AGENTS.md) and [CLAUDE.md](CLAUDE.md) for architecture, conventions, and the extraction pipeline.
+## License and credits
 
-### GitHub CI and automatic releases
+DeepUnzip is released under the MIT license; see [LICENSE](LICENSE). Its extraction engine is [7-Zip](https://www.7-zip.org/), which ships with every package under its own license (GNU LGPL with the unRAR restriction).
 
-[CI](.github/workflows/ci.yml) runs fast checks on pushes and PRs targeting `main` or `release/**`: version and engine checksum validation, compilation, and the complete test suite on Ubuntu and Windows. New commits cancel older CI runs for the same branch or PR event. The five-platform standalone builds and real archive smoke tests run during releases; to run them on any branch, start CI manually in Actions with **full_build** checked. Their packages remain in Actions artifacts for 14 days.
-
-Releases are prepared with the `release-ready` skill (`.claude/skills/release-ready/`; `.agents/skills/release-ready` links to it). All of a release's commits go on a `release/vX.Y.Z` branch, which merges through exactly one PR. The skill:
-
-1. checks the version against the branch and bumps all three version declarations in a separate `chore: bump version to X.Y.Z` commit;
-2. writes bilingual release notes to `docs/releaseNotes/vX.Y.Z.md` from the changes since the last tag (the 2.0.0 notes, for example, will be `docs/releaseNotes/v2.0.0.md`);
-3. updates the READMEs and docs, runs the checks, pushes the branch, and opens the PR `release: vX.Y.Z` with the `release` label.
-
-[Release](.github/workflows/release.yml) publishes only when all of these conditions hold:
-
-1. The PR comes from a `release/*` branch in this repository, for example `release/v2.0.0`.
-2. A version-like branch suffix (`release/2.0.0` or `release/v2.0.0`) equals the project version in `pyproject.toml`, package `__version__`, and `.bumpversion.cfg`.
-3. The PR has the `release` label at merge time and is merged into `main`.
-
-Check the version, branch, and notes locally before opening the PR:
-
-```powershell
-poetry run python -m scripts.release version
-poetry run python -m scripts.release verify-branch release/v2.0.0
-poetry run python -m scripts.release verify-notes
-```
-
-The release workflow rebuilds and smoke-tests all five platforms from the PR's exact merge commit. After every build succeeds, it creates a GitHub Release using the exact contents of `docs/releaseNotes/vX.Y.Z.md` as its body, and uploads the five platform packages listed above plus `SHA256SUMS`. Missing or empty notes fail before platform builds start.
-
-Release runs are processed one at a time and never cancelled. Add the label before merging. Closing an unmerged PR, adding the label after merge, a branch from a fork, or pushing a tag alone does not publish. The built-in `GITHUB_TOKEN` is sufficient; only the final publishing job has `contents: write`.
-
-Use Actions to rerun failed jobs. Interrupted uploads leave a draft that can be resumed for the same version and merge commit; its body is updated from that commit's matching release notes file. Publication waits until all remote assets pass checksum verification. Published releases are never overwritten, and a tag or draft belonging to another commit causes a clear failure.
-
----
-
-## 🤝 Contributing
-
-Issues and pull requests are welcome. Please keep changes small, tested, and follow the TDD workflow described in [CLAUDE.md](CLAUDE.md).
-
-## 📄 License
-
-MIT License — see [LICENSE](LICENSE).
-
-## 👤 Author
-
-**Rozx** — [GitHub](https://github.com/rozx)
+Author: [Rozx](https://github.com/rozx)

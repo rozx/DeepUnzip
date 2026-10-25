@@ -16,7 +16,7 @@ These tasks are committed directly on `release/v2.0.0` (single release PR) as th
 - [x] 1.4 Update the executable paths and the `compileall` package path in `.github/workflows/ci.yml`. Check that `release.yml` uses no hardcoded repository name.
 - [x] 1.5 Set the product name in the catalog (version output, help header) to DeepUnzip / 深度解压. Test `deepunzip --version` in both languages.
 - [x] 1.6 Update the `release-ready` skill for the new names: the package path `deepunzip/__init__.py`, the product name, and the `deepunzip-v…` asset names in its download table.
-- [ ] 1.7 Update `CLAUDE.md`, `AGENTS.md`, `openspec/project.md` and current specs to the new names. Add a test that fails if the old name appears outside the allowlist (historical release notes, archived OpenSpec changes, the v2.0.0 rename notice).
+- [x] 1.7 Update `CLAUDE.md`, `AGENTS.md`, `openspec/project.md` and current specs to the new names. Add a test that fails if the old name appears outside the allowlist (historical release notes, archived OpenSpec changes, the v2.0.0 rename notice).
 - [x] 1.8 Add a test that a `.unzip-rename-history.tmp.json` written by 1.3.2 is still detected and recovered.
 - [x] 1.9 Quality gates: `pytest -q`, `flake8`, `mypy`, `black`. Build `dist/deepunzip.exe` locally on Windows and run it with `--version` / `--help`.
 
@@ -34,7 +34,7 @@ These tasks are committed directly on `release/v2.0.0` (single release PR) as th
 
 ## 3. Five-language README (docs stage)
 
-- [ ] 3.1 Rewrite `README.md` (简体中文) in the shared section order:
+- [x] 3.1 Rewrite `README.md` (简体中文) in the shared section order:
   1. Screenshot and demo
   2. What it solves
   3. Features
@@ -47,14 +47,14 @@ These tasks are committed directly on `release/v2.0.0` (single release PR) as th
   10. License and acknowledgment
 
   Start with the language switcher and the new tagline.
-- [ ] 3.2 Write `README.en.md` with the same structure.
-- [ ] 3.3 Write `README.zh-TW.md`, `README.ja.md` and `README.ko.md`, each using its own language's assets. Ask for a native-speaker review of ja/ko in the PR description.
-- [ ] 3.4 README structure test:
+- [x] 3.2 Write `README.en.md` with the same structure.
+- [x] 3.3 Write `README.zh-TW.md`, `README.ja.md` and `README.ko.md`, each using its own language's assets. Ask for a native-speaker review of ja/ko in the PR description.
+- [x] 3.4 README structure test:
   - all five files exist;
   - each has the switcher with the current language marked;
   - each has the same number of `##` sections as `README.md`;
   - every referenced image exists.
-- [ ] 3.5 Update badges and links to `rozx/DeepUnzip`. Badges: latest release, total downloads, latest-release downloads, release date, CI status, stars, license, platforms.
+- [x] 3.5 Update badges and links to `rozx/DeepUnzip`. Badges: latest release, total downloads, latest-release downloads, release date, CI status, stars, license, platforms.
 
 ## 4. Repository identity (with the release)
 
