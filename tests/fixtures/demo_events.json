@@ -1,0 +1,1072 @@
+[
+ {
+  "type": "RunStarted",
+  "version": "1.3.2",
+  "roots": null,
+  "t": 0.0
+ },
+ {
+  "type": "RootStarted",
+  "index": 1,
+  "root": null,
+  "t": 0.0
+ },
+ {
+  "type": "RoundStarted",
+  "number": 1,
+  "done": 0,
+  "pending": 5,
+  "t": 0.1
+ },
+ {
+  "type": "ItemStarted",
+  "item": {
+   "id": 2,
+   "path": "Holiday Photos.7z",
+   "origin": "source",
+   "lineage": [
+    2
+   ],
+   "depth": 0,
+   "rel_base": "temp.deepunzip-demo",
+   "kind": "container",
+   "state": "pending",
+   "reason": "",
+   "volume": null,
+   "original_name": null,
+   "parents": [],
+   "password_ref": null,
+   "output_path": null
+  },
+  "t": 0.1
+ },
+ {
+  "type": "ItemOpened",
+  "item": {
+   "id": 2,
+   "path": "Holiday Photos.7z",
+   "origin": "source",
+   "lineage": [
+    2
+   ],
+   "depth": 0,
+   "rel_base": "temp.deepunzip-demo",
+   "kind": "container",
+   "state": "consumed",
+   "reason": "",
+   "volume": null,
+   "original_name": null,
+   "parents": [],
+   "password_ref": 1,
+   "output_path": null
+  },
+  "files": 3,
+  "t": 0.2
+ },
+ {
+  "type": "ItemStarted",
+  "item": {
+   "id": 3,
+   "path": "docs.zip",
+   "origin": "source",
+   "lineage": [
+    3
+   ],
+   "depth": 0,
+   "rel_base": "temp.deepunzip-demo",
+   "kind": "container",
+   "state": "pending",
+   "reason": "",
+   "volume": {
+    "base": "docs",
+    "family": "zip-span",
+    "index": 1,
+    "is_primary": true,
+    "ambiguous": true
+   },
+   "original_name": null,
+   "parents": [],
+   "password_ref": null,
+   "output_path": null
+  },
+  "t": 0.2
+ },
+ {
+  "type": "ItemOpened",
+  "item": {
+   "id": 3,
+   "path": "docs.zip",
+   "origin": "source",
+   "lineage": [
+    3
+   ],
+   "depth": 0,
+   "rel_base": "temp.deepunzip-demo",
+   "kind": "container",
+   "state": "consumed",
+   "reason": "",
+   "volume": {
+    "base": "docs",
+    "family": "zip-span",
+    "index": 1,
+    "is_primary": true,
+    "ambiguous": true
+   },
+   "original_name": null,
+   "parents": [],
+   "password_ref": 0,
+   "output_path": null
+  },
+  "files": 1,
+  "t": 0.2
+ },
+ {
+  "type": "ItemStarted",
+  "item": {
+   "id": 4,
+   "path": "part2.7z",
+   "origin": "source",
+   "lineage": [
+    4
+   ],
+   "depth": 0,
+   "rel_base": "temp.deepunzip-demo",
+   "kind": "container",
+   "state": "pending",
+   "reason": "",
+   "volume": null,
+   "original_name": null,
+   "parents": [],
+   "password_ref": null,
+   "output_path": null
+  },
+  "t": 0.2
+ },
+ {
+  "type": "ItemOpened",
+  "item": {
+   "id": 4,
+   "path": "part2.7z",
+   "origin": "source",
+   "lineage": [
+    4
+   ],
+   "depth": 0,
+   "rel_base": "temp.deepunzip-demo",
+   "kind": "container",
+   "state": "consumed",
+   "reason": "",
+   "volume": null,
+   "original_name": null,
+   "parents": [],
+   "password_ref": 1,
+   "output_path": null
+  },
+  "files": 1,
+  "t": 0.3
+ },
+ {
+  "type": "ItemStarted",
+  "item": {
+   "id": 5,
+   "path": "part3.zip",
+   "origin": "source",
+   "lineage": [
+    5
+   ],
+   "depth": 0,
+   "rel_base": "temp.deepunzip-demo",
+   "kind": "container",
+   "state": "pending",
+   "reason": "",
+   "volume": {
+    "base": "part3",
+    "family": "zip-span",
+    "index": 1,
+    "is_primary": true,
+    "ambiguous": true
+   },
+   "original_name": null,
+   "parents": [],
+   "password_ref": null,
+   "output_path": null
+  },
+  "t": 0.3
+ },
+ {
+  "type": "ItemOpened",
+  "item": {
+   "id": 5,
+   "path": "part3.zip",
+   "origin": "source",
+   "lineage": [
+    5
+   ],
+   "depth": 0,
+   "rel_base": "temp.deepunzip-demo",
+   "kind": "container",
+   "state": "consumed",
+   "reason": "",
+   "volume": {
+    "base": "part3",
+    "family": "zip-span",
+    "index": 1,
+    "is_primary": true,
+    "ambiguous": true
+   },
+   "original_name": null,
+   "parents": [],
+   "password_ref": 0,
+   "output_path": null
+  },
+  "files": 1,
+  "t": 0.3
+ },
+ {
+  "type": "RoundStarted",
+  "number": 2,
+  "done": 4,
+  "pending": 2,
+  "t": 0.3
+ },
+ {
+  "type": "ItemStarted",
+  "item": {
+   "id": 10,
+   "path": "temp.deepunzip-demo/docs/manual.7z",
+   "origin": "derived",
+   "lineage": [
+    3
+   ],
+   "depth": 1,
+   "rel_base": "temp.deepunzip-demo/docs",
+   "kind": "container",
+   "state": "pending",
+   "reason": "",
+   "volume": null,
+   "original_name": null,
+   "parents": [
+    3
+   ],
+   "password_ref": null,
+   "output_path": null
+  },
+  "t": 0.3
+ },
+ {
+  "type": "ItemOpened",
+  "item": {
+   "id": 10,
+   "path": "temp.deepunzip-demo/docs/manual.7z",
+   "origin": "derived",
+   "lineage": [
+    3
+   ],
+   "depth": 1,
+   "rel_base": "temp.deepunzip-demo/docs",
+   "kind": "container",
+   "state": "consumed",
+   "reason": "",
+   "volume": null,
+   "original_name": null,
+   "parents": [
+    3
+   ],
+   "password_ref": 0,
+   "output_path": null
+  },
+  "files": 1,
+  "t": 0.3
+ },
+ {
+  "type": "RoundStarted",
+  "number": 3,
+  "done": 5,
+  "pending": 1,
+  "t": 0.3
+ },
+ {
+  "type": "ItemStarted",
+  "item": {
+   "id": 1,
+   "path": "Concert.7z.001",
+   "origin": "source",
+   "lineage": [
+    1
+   ],
+   "depth": 0,
+   "rel_base": "temp.deepunzip-demo",
+   "kind": "volume",
+   "state": "pending",
+   "reason": "",
+   "volume": {
+    "base": "Concert",
+    "family": "7z",
+    "index": 1,
+    "is_primary": true,
+    "ambiguous": false
+   },
+   "original_name": "Concert.7z.001删除",
+   "parents": [],
+   "password_ref": null,
+   "output_path": null
+  },
+  "t": 0.3
+ },
+ {
+  "type": "SetAssembled",
+  "primary": {
+   "id": 1,
+   "path": "Concert.7z.001",
+   "origin": "source",
+   "lineage": [
+    1
+   ],
+   "depth": 0,
+   "rel_base": "temp.deepunzip-demo",
+   "kind": "volume",
+   "state": "consumed",
+   "reason": "",
+   "volume": {
+    "base": "Concert",
+    "family": "7z",
+    "index": 1,
+    "is_primary": true,
+    "ambiguous": false
+   },
+   "original_name": "Concert.7z.001删除",
+   "parents": [],
+   "password_ref": 2,
+   "output_path": null
+  },
+  "volumes": [
+   {
+    "id": 1,
+    "path": "Concert.7z.001",
+    "origin": "source",
+    "lineage": [
+     1
+    ],
+    "depth": 0,
+    "rel_base": "temp.deepunzip-demo",
+    "kind": "volume",
+    "state": "consumed",
+    "reason": "",
+    "volume": {
+     "base": "Concert",
+     "family": "7z",
+     "index": 1,
+     "is_primary": true,
+     "ambiguous": false
+    },
+    "original_name": "Concert.7z.001删除",
+    "parents": [],
+    "password_ref": 2,
+    "output_path": null
+   },
+   {
+    "id": 11,
+    "path": "temp.deepunzip-demo/part2/Concert.7z.002",
+    "origin": "derived",
+    "lineage": [
+     4
+    ],
+    "depth": 1,
+    "rel_base": "temp.deepunzip-demo/part2",
+    "kind": "volume",
+    "state": "consumed",
+    "reason": "",
+    "volume": {
+     "base": "Concert",
+     "family": "7z",
+     "index": 2,
+     "is_primary": false,
+     "ambiguous": false
+    },
+    "original_name": null,
+    "parents": [
+     4
+    ],
+    "password_ref": 2,
+    "output_path": null
+   },
+   {
+    "id": 12,
+    "path": "temp.deepunzip-demo/part3/Concert.7z.003",
+    "origin": "derived",
+    "lineage": [
+     5
+    ],
+    "depth": 1,
+    "rel_base": "temp.deepunzip-demo/part3",
+    "kind": "volume",
+    "state": "consumed",
+    "reason": "",
+    "volume": {
+     "base": "Concert",
+     "family": "7z",
+     "index": 3,
+     "is_primary": false,
+     "ambiguous": false
+    },
+    "original_name": null,
+    "parents": [
+     5
+    ],
+    "password_ref": 2,
+    "output_path": null
+   }
+  ],
+  "files": 1,
+  "t": 0.4
+ },
+ {
+  "type": "RoundStarted",
+  "number": 4,
+  "done": 6,
+  "pending": 0,
+  "t": 0.4
+ },
+ {
+  "type": "RootFinished",
+  "result": {
+   "items": [
+    {
+     "id": 1,
+     "path": "Concert.7z.001",
+     "origin": "source",
+     "lineage": [
+      1
+     ],
+     "depth": 0,
+     "rel_base": "temp.deepunzip-demo",
+     "kind": "volume",
+     "state": "consumed",
+     "reason": "",
+     "volume": {
+      "base": "Concert",
+      "family": "7z",
+      "index": 1,
+      "is_primary": true,
+      "ambiguous": false
+     },
+     "original_name": "Concert.7z.001删除",
+     "parents": [],
+     "password_ref": 2,
+     "output_path": null
+    },
+    {
+     "id": 2,
+     "path": "Holiday Photos.7z",
+     "origin": "source",
+     "lineage": [
+      2
+     ],
+     "depth": 0,
+     "rel_base": "temp.deepunzip-demo",
+     "kind": "container",
+     "state": "consumed",
+     "reason": "",
+     "volume": null,
+     "original_name": null,
+     "parents": [],
+     "password_ref": 1,
+     "output_path": null
+    },
+    {
+     "id": 3,
+     "path": "docs.zip",
+     "origin": "source",
+     "lineage": [
+      3
+     ],
+     "depth": 0,
+     "rel_base": "temp.deepunzip-demo",
+     "kind": "container",
+     "state": "consumed",
+     "reason": "",
+     "volume": {
+      "base": "docs",
+      "family": "zip-span",
+      "index": 1,
+      "is_primary": true,
+      "ambiguous": true
+     },
+     "original_name": null,
+     "parents": [],
+     "password_ref": 0,
+     "output_path": null
+    },
+    {
+     "id": 4,
+     "path": "part2.7z",
+     "origin": "source",
+     "lineage": [
+      4
+     ],
+     "depth": 0,
+     "rel_base": "temp.deepunzip-demo",
+     "kind": "container",
+     "state": "consumed",
+     "reason": "",
+     "volume": null,
+     "original_name": null,
+     "parents": [],
+     "password_ref": 1,
+     "output_path": null
+    },
+    {
+     "id": 5,
+     "path": "part3.zip",
+     "origin": "source",
+     "lineage": [
+      5
+     ],
+     "depth": 0,
+     "rel_base": "temp.deepunzip-demo",
+     "kind": "container",
+     "state": "consumed",
+     "reason": "",
+     "volume": {
+      "base": "part3",
+      "family": "zip-span",
+      "index": 1,
+      "is_primary": true,
+      "ambiguous": true
+     },
+     "original_name": null,
+     "parents": [],
+     "password_ref": 0,
+     "output_path": null
+    },
+    {
+     "id": 6,
+     "path": "readme.txt",
+     "origin": "source",
+     "lineage": [
+      6
+     ],
+     "depth": 0,
+     "rel_base": "temp.deepunzip-demo",
+     "kind": "regular",
+     "state": "kept",
+     "reason": "",
+     "volume": null,
+     "original_name": null,
+     "parents": [],
+     "password_ref": null,
+     "output_path": null
+    },
+    {
+     "id": 7,
+     "path": "temp.deepunzip-demo/Holiday Photos/photos/IMG_0001.jpg",
+     "origin": "derived",
+     "lineage": [
+      2
+     ],
+     "depth": 1,
+     "rel_base": "temp.deepunzip-demo/Holiday Photos",
+     "kind": "regular",
+     "state": "final",
+     "reason": "",
+     "volume": null,
+     "original_name": null,
+     "parents": [
+      2
+     ],
+     "password_ref": null,
+     "output_path": "unzipped/photos/IMG_0001.jpg"
+    },
+    {
+     "id": 8,
+     "path": "temp.deepunzip-demo/Holiday Photos/photos/IMG_0002.jpg",
+     "origin": "derived",
+     "lineage": [
+      2
+     ],
+     "depth": 1,
+     "rel_base": "temp.deepunzip-demo/Holiday Photos",
+     "kind": "regular",
+     "state": "final",
+     "reason": "",
+     "volume": null,
+     "original_name": null,
+     "parents": [
+      2
+     ],
+     "password_ref": null,
+     "output_path": "unzipped/photos/IMG_0002.jpg"
+    },
+    {
+     "id": 9,
+     "path": "temp.deepunzip-demo/Holiday Photos/photos/IMG_0003.jpg",
+     "origin": "derived",
+     "lineage": [
+      2
+     ],
+     "depth": 1,
+     "rel_base": "temp.deepunzip-demo/Holiday Photos",
+     "kind": "regular",
+     "state": "final",
+     "reason": "",
+     "volume": null,
+     "original_name": null,
+     "parents": [
+      2
+     ],
+     "password_ref": null,
+     "output_path": "unzipped/photos/IMG_0003.jpg"
+    },
+    {
+     "id": 10,
+     "path": "temp.deepunzip-demo/docs/manual.7z",
+     "origin": "derived",
+     "lineage": [
+      3
+     ],
+     "depth": 1,
+     "rel_base": "temp.deepunzip-demo/docs",
+     "kind": "container",
+     "state": "consumed",
+     "reason": "",
+     "volume": null,
+     "original_name": null,
+     "parents": [
+      3
+     ],
+     "password_ref": 0,
+     "output_path": null
+    },
+    {
+     "id": 11,
+     "path": "temp.deepunzip-demo/part2/Concert.7z.002",
+     "origin": "derived",
+     "lineage": [
+      4
+     ],
+     "depth": 1,
+     "rel_base": "temp.deepunzip-demo/part2",
+     "kind": "volume",
+     "state": "consumed",
+     "reason": "",
+     "volume": {
+      "base": "Concert",
+      "family": "7z",
+      "index": 2,
+      "is_primary": false,
+      "ambiguous": false
+     },
+     "original_name": null,
+     "parents": [
+      4
+     ],
+     "password_ref": 2,
+     "output_path": null
+    },
+    {
+     "id": 12,
+     "path": "temp.deepunzip-demo/part3/Concert.7z.003",
+     "origin": "derived",
+     "lineage": [
+      5
+     ],
+     "depth": 1,
+     "rel_base": "temp.deepunzip-demo/part3",
+     "kind": "volume",
+     "state": "consumed",
+     "reason": "",
+     "volume": {
+      "base": "Concert",
+      "family": "7z",
+      "index": 3,
+      "is_primary": false,
+      "ambiguous": false
+     },
+     "original_name": null,
+     "parents": [
+      5
+     ],
+     "password_ref": 2,
+     "output_path": null
+    },
+    {
+     "id": 13,
+     "path": "temp.deepunzip-demo/docs/manual/manual.pdf",
+     "origin": "derived",
+     "lineage": [
+      3
+     ],
+     "depth": 2,
+     "rel_base": "temp.deepunzip-demo/docs",
+     "kind": "regular",
+     "state": "final",
+     "reason": "",
+     "volume": null,
+     "original_name": null,
+     "parents": [
+      10
+     ],
+     "password_ref": null,
+     "output_path": "unzipped/manual/manual.pdf"
+    },
+    {
+     "id": 14,
+     "path": "temp.deepunzip-demo/Concert/Concert.mkv",
+     "origin": "derived",
+     "lineage": [
+      1,
+      4,
+      5
+     ],
+     "depth": 2,
+     "rel_base": "temp.deepunzip-demo/Concert",
+     "kind": "regular",
+     "state": "final",
+     "reason": "",
+     "volume": null,
+     "original_name": null,
+     "parents": [
+      1,
+      11,
+      12
+     ],
+     "password_ref": null,
+     "output_path": "unzipped/Concert.mkv"
+    }
+   ],
+   "work_dir_kept": false,
+   "deleted_sources": [
+    "Concert.7z.001",
+    "Holiday Photos.7z",
+    "docs.zip",
+    "part2.7z",
+    "part3.zip"
+   ],
+   "kept_sources": []
+  },
+  "t": 0.4
+ },
+ {
+  "type": "RunFinished",
+  "results": [
+   {
+    "items": [
+     {
+      "id": 1,
+      "path": "Concert.7z.001",
+      "origin": "source",
+      "lineage": [
+       1
+      ],
+      "depth": 0,
+      "rel_base": "temp.deepunzip-demo",
+      "kind": "volume",
+      "state": "consumed",
+      "reason": "",
+      "volume": {
+       "base": "Concert",
+       "family": "7z",
+       "index": 1,
+       "is_primary": true,
+       "ambiguous": false
+      },
+      "original_name": "Concert.7z.001删除",
+      "parents": [],
+      "password_ref": 2,
+      "output_path": null
+     },
+     {
+      "id": 2,
+      "path": "Holiday Photos.7z",
+      "origin": "source",
+      "lineage": [
+       2
+      ],
+      "depth": 0,
+      "rel_base": "temp.deepunzip-demo",
+      "kind": "container",
+      "state": "consumed",
+      "reason": "",
+      "volume": null,
+      "original_name": null,
+      "parents": [],
+      "password_ref": 1,
+      "output_path": null
+     },
+     {
+      "id": 3,
+      "path": "docs.zip",
+      "origin": "source",
+      "lineage": [
+       3
+      ],
+      "depth": 0,
+      "rel_base": "temp.deepunzip-demo",
+      "kind": "container",
+      "state": "consumed",
+      "reason": "",
+      "volume": {
+       "base": "docs",
+       "family": "zip-span",
+       "index": 1,
+       "is_primary": true,
+       "ambiguous": true
+      },
+      "original_name": null,
+      "parents": [],
+      "password_ref": 0,
+      "output_path": null
+     },
+     {
+      "id": 4,
+      "path": "part2.7z",
+      "origin": "source",
+      "lineage": [
+       4
+      ],
+      "depth": 0,
+      "rel_base": "temp.deepunzip-demo",
+      "kind": "container",
+      "state": "consumed",
+      "reason": "",
+      "volume": null,
+      "original_name": null,
+      "parents": [],
+      "password_ref": 1,
+      "output_path": null
+     },
+     {
+      "id": 5,
+      "path": "part3.zip",
+      "origin": "source",
+      "lineage": [
+       5
+      ],
+      "depth": 0,
+      "rel_base": "temp.deepunzip-demo",
+      "kind": "container",
+      "state": "consumed",
+      "reason": "",
+      "volume": {
+       "base": "part3",
+       "family": "zip-span",
+       "index": 1,
+       "is_primary": true,
+       "ambiguous": true
+      },
+      "original_name": null,
+      "parents": [],
+      "password_ref": 0,
+      "output_path": null
+     },
+     {
+      "id": 6,
+      "path": "readme.txt",
+      "origin": "source",
+      "lineage": [
+       6
+      ],
+      "depth": 0,
+      "rel_base": "temp.deepunzip-demo",
+      "kind": "regular",
+      "state": "kept",
+      "reason": "",
+      "volume": null,
+      "original_name": null,
+      "parents": [],
+      "password_ref": null,
+      "output_path": null
+     },
+     {
+      "id": 7,
+      "path": "temp.deepunzip-demo/Holiday Photos/photos/IMG_0001.jpg",
+      "origin": "derived",
+      "lineage": [
+       2
+      ],
+      "depth": 1,
+      "rel_base": "temp.deepunzip-demo/Holiday Photos",
+      "kind": "regular",
+      "state": "final",
+      "reason": "",
+      "volume": null,
+      "original_name": null,
+      "parents": [
+       2
+      ],
+      "password_ref": null,
+      "output_path": "unzipped/photos/IMG_0001.jpg"
+     },
+     {
+      "id": 8,
+      "path": "temp.deepunzip-demo/Holiday Photos/photos/IMG_0002.jpg",
+      "origin": "derived",
+      "lineage": [
+       2
+      ],
+      "depth": 1,
+      "rel_base": "temp.deepunzip-demo/Holiday Photos",
+      "kind": "regular",
+      "state": "final",
+      "reason": "",
+      "volume": null,
+      "original_name": null,
+      "parents": [
+       2
+      ],
+      "password_ref": null,
+      "output_path": "unzipped/photos/IMG_0002.jpg"
+     },
+     {
+      "id": 9,
+      "path": "temp.deepunzip-demo/Holiday Photos/photos/IMG_0003.jpg",
+      "origin": "derived",
+      "lineage": [
+       2
+      ],
+      "depth": 1,
+      "rel_base": "temp.deepunzip-demo/Holiday Photos",
+      "kind": "regular",
+      "state": "final",
+      "reason": "",
+      "volume": null,
+      "original_name": null,
+      "parents": [
+       2
+      ],
+      "password_ref": null,
+      "output_path": "unzipped/photos/IMG_0003.jpg"
+     },
+     {
+      "id": 10,
+      "path": "temp.deepunzip-demo/docs/manual.7z",
+      "origin": "derived",
+      "lineage": [
+       3
+      ],
+      "depth": 1,
+      "rel_base": "temp.deepunzip-demo/docs",
+      "kind": "container",
+      "state": "consumed",
+      "reason": "",
+      "volume": null,
+      "original_name": null,
+      "parents": [
+       3
+      ],
+      "password_ref": 0,
+      "output_path": null
+     },
+     {
+      "id": 11,
+      "path": "temp.deepunzip-demo/part2/Concert.7z.002",
+      "origin": "derived",
+      "lineage": [
+       4
+      ],
+      "depth": 1,
+      "rel_base": "temp.deepunzip-demo/part2",
+      "kind": "volume",
+      "state": "consumed",
+      "reason": "",
+      "volume": {
+       "base": "Concert",
+       "family": "7z",
+       "index": 2,
+       "is_primary": false,
+       "ambiguous": false
+      },
+      "original_name": null,
+      "parents": [
+       4
+      ],
+      "password_ref": 2,
+      "output_path": null
+     },
+     {
+      "id": 12,
+      "path": "temp.deepunzip-demo/part3/Concert.7z.003",
+      "origin": "derived",
+      "lineage": [
+       5
+      ],
+      "depth": 1,
+      "rel_base": "temp.deepunzip-demo/part3",
+      "kind": "volume",
+      "state": "consumed",
+      "reason": "",
+      "volume": {
+       "base": "Concert",
+       "family": "7z",
+       "index": 3,
+       "is_primary": false,
+       "ambiguous": false
+      },
+      "original_name": null,
+      "parents": [
+       5
+      ],
+      "password_ref": 2,
+      "output_path": null
+     },
+     {
+      "id": 13,
+      "path": "temp.deepunzip-demo/docs/manual/manual.pdf",
+      "origin": "derived",
+      "lineage": [
+       3
+      ],
+      "depth": 2,
+      "rel_base": "temp.deepunzip-demo/docs",
+      "kind": "regular",
+      "state": "final",
+      "reason": "",
+      "volume": null,
+      "original_name": null,
+      "parents": [
+       10
+      ],
+      "password_ref": null,
+      "output_path": "unzipped/manual/manual.pdf"
+     },
+     {
+      "id": 14,
+      "path": "temp.deepunzip-demo/Concert/Concert.mkv",
+      "origin": "derived",
+      "lineage": [
+       1,
+       4,
+       5
+      ],
+      "depth": 2,
+      "rel_base": "temp.deepunzip-demo/Concert",
+      "kind": "regular",
+      "state": "final",
+      "reason": "",
+      "volume": null,
+      "original_name": null,
+      "parents": [
+       1,
+       11,
+       12
+      ],
+      "password_ref": null,
+      "output_path": "unzipped/Concert.mkv"
+     }
+    ],
+    "work_dir_kept": false,
+    "deleted_sources": [
+     "Concert.7z.001",
+     "Holiday Photos.7z",
+     "docs.zip",
+     "part2.7z",
+     "part3.zip"
+    ],
+    "kept_sources": []
+   }
+  ],
+  "exit_code": 0,
+  "elapsed": 0.4,
+  "t": 0.4
+ }
+]
