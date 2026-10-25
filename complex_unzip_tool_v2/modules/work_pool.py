@@ -22,11 +22,10 @@ from enum import Enum
 from typing import Callable, Optional, Protocol, Sequence, Union
 
 from complex_unzip_tool_v2.modules import multipart_assembly as ma
-from complex_unzip_tool_v2.modules.const import OUTPUT_FOLDER
+from complex_unzip_tool_v2.modules.const import OUTPUT_FOLDER, WORK_DIR_PREFIX
 from complex_unzip_tool_v2.modules.file_utils import normalize_output_relative_path
 from complex_unzip_tool_v2.modules.utils import sanitize_filename
 
-WORK_DIR_PREFIX = "temp.deepunzip-"
 ASSEMBLY_DIR_NAME = ".assemble"
 DEFAULT_MAX_DEPTH = 10
 
@@ -217,6 +216,8 @@ class _SetState:
     other_failures: int = 0
     last_status: str = ""
     prompted: bool = False
+    # Learned-password count at the last attempt (see WorkPool._learn).
+    password_epoch: int = -1
 
 
 # ------------------------------
@@ -312,6 +313,19 @@ def group_input_roots(paths: Sequence[str]) -> list[tuple[str, list[str]]]:
     return list(grouped.values())
 
 
+def leftover_work_dirs(root: str) -> list[str]:
+    """Run work directories left in `root` by an interrupted run."""
+    try:
+        names = sorted(os.listdir(root))
+    except OSError:
+        return []
+    return [
+        os.path.join(root, name)
+        for name in names
+        if name.startswith(WORK_DIR_PREFIX) and os.path.isdir(os.path.join(root, name))
+    ]
+
+
 def _default_remove(path: str) -> bool:
     try:
         os.remove(path)
@@ -367,6 +381,9 @@ class WorkPool:
         self._sets: dict[int, _SetState] = {}
         self._skip_all = False
         self._assembly_count = 0
+        # Bumped whenever a password is learned, so sets that failed on a
+        # password are retried with it before anyone is prompted again.
+        self._password_epoch = 0
 
     # ---------- driver ----------
 
@@ -563,9 +580,14 @@ class WorkPool:
                 break
             outcome = retry(answer)
             if outcome.ok:
-                self.engine.remember(answer)
+                self._learn(answer)
                 return Outcome("ok", answer, "entered", outcome.detail, outcome.volumes)
         return outcome
+
+    def _learn(self, password: str) -> None:
+        """Remember a typed password and let password-failed sets retry."""
+        self.engine.remember(password)
+        self._password_epoch += 1
 
     def _discard_derived(self, item: WorkItem) -> None:
         """Clean up a consumed derived file now; keep it as output if that fails."""
@@ -591,9 +613,14 @@ class WorkPool:
                 continue
             state = self._sets.setdefault(primary.id, _SetState())
             version = self._key_versions.get(primary.volume.key, 0)
-            if state.version == version:
+            retry_password = (
+                state.password_failures > 0
+                and state.password_epoch != self._password_epoch
+            )
+            if state.version == version and not retry_password:
                 continue
             state.version = version
+            state.password_epoch = self._password_epoch
             attempted = True
             if primary.depth > self.max_depth:
                 self._unresolve(primary, "max depth")
@@ -656,6 +683,7 @@ class WorkPool:
         # attempt is fully undone (never consume a volume 7-Zip did not use).
         retry_with: Optional[list[WorkItem]] = None
         files: list[str] = []
+        extracted_ref: PasswordRef = None
         try:
             probe = self.engine.probe(primary.path, password)
             state.last_status = probe.status
@@ -672,9 +700,12 @@ class WorkPool:
                     retry_with = used
             else:
                 extracted = self.engine.extract(primary.path, dest, probe.password)
+                extracted_ref = extracted.password_ref
                 files = _list_files(dest) if extracted.ok else []
                 if files:
                     success = True
+                elif extracted.status == "password":
+                    state.password_failures += 1
                 else:
                     state.other_failures += 1
                     state.last_status = (
@@ -689,7 +720,10 @@ class WorkPool:
         if not success:
             return False
 
-        ref = "entered" if password is not None else probe.password_ref
+        ref: PasswordRef = "entered" if password is not None else None
+        if ref is None:
+            # The probe may not know the password (readable headers).
+            ref = extracted_ref if extracted_ref is not None else probe.password_ref
         for volume in volumes:
             volume.state = State.CONSUMED
             volume.password_ref = ref
@@ -811,7 +845,7 @@ class WorkPool:
             if answer is None:
                 continue
             if self._attempt_set(primary, state, answer):
-                self.engine.remember(answer)
+                self._learn(answer)
                 return True
         return False
 

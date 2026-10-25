@@ -258,6 +258,7 @@ This replaces the per-group `_should_delete_original_archives` and `_reconcile_r
 - [Hashing large duplicate candidates] → A hash is computed only for same-key, same-index volumes whose sizes already match, and only after a set succeeded.
 - [Behavior drift for inputs that work today] → Port the existing `test_main.py` and nested `test_archive_utils.py` scenarios as parity tests against the pool before switching `extract_files()`.
 - [Several input roots now produce several output folders] → Called out in the README and release notes. A single-path invocation is unaffected.
+- [Uncloaking now also runs on extracted files] → A rule with an explicit archive token renames without a signature check: `notes.7z.001.txt` becomes `notes.7z.001`, as it already did for input files. For an extracted regular file this means a renamed file in the output and a kept source, but no data loss: the set fails, and the file is preserved. A follow-up can require the archive signature when a derived file is renamed to a primary volume.
 - [The work directory lives inside the input root] → It is excluded from the scan. Leftovers from a crash are reported, and stranded source volumes are auto-restored.
 
 ## Migration Plan

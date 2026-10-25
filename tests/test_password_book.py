@@ -130,6 +130,20 @@ def test_password_book_skips_comment_lines(monkeypatch, tmp_path):
     assert set(book.get_passwords()) == {"123456", "mypassword", "local"}
 
 
+def test_password_book_keeps_file_order_without_duplicates(monkeypatch, tmp_path):
+    """Password indexes shown to the user (password #N) must be stable."""
+    (tmp_path / "passwords.txt").write_text("zz\naa\nzz\nmm\n", encoding="utf-8")
+    target = tmp_path / "archives"
+    target.mkdir()
+    (target / "passwords.txt").write_text("bb\naa\n", encoding="utf-8")
+
+    book = _book_in(monkeypatch, tmp_path)
+    book.load_passwords(str(target / "passwords.txt"))
+    book.add_password("cc")
+
+    assert book.get_passwords() == ["zz", "aa", "mm", "cc", "bb"]
+
+
 def test_password_book_save_keeps_comments_and_order(monkeypatch, tmp_path):
     """Issue #22: saving learned passwords must not erase the user's comments."""
     path = tmp_path / "passwords.txt"

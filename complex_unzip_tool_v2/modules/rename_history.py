@@ -23,6 +23,8 @@ from typing import Optional
 
 HISTORY_FILENAME = ".unzip-rename-history.tmp.json"
 SCHEMA_VERSION = 1
+KIND_UNCLOAK = "uncloak"
+KIND_RELOCATION = "relocation"
 
 
 class RenameHistory:
@@ -37,16 +39,73 @@ class RenameHistory:
     # Public API
     # ------------------------------------------------------------------
 
-    def record(self, original: str, renamed: str) -> None:
-        """Record a successful rename. Entry starts unbound (group=None)."""
+    def record(self, original: str, renamed: str, kind: str = KIND_UNCLOAK) -> None:
+        """Record a successful rename of a source file. Entry starts unbound.
+
+        `kind` is "uncloak" for cloaked-name normalization, or "relocation"
+        for a source volume temporarily moved for multipart assembly.
+        """
         self.entries.append(
             {
                 "original": os.path.abspath(original),
                 "renamed": os.path.abspath(renamed),
                 "group": None,
+                "kind": kind,
             }
         )
         self._persist()
+
+    def clear_relocation(self, renamed: str) -> None:
+        """Drop the relocation entry of a volume that was moved back."""
+        target = os.path.abspath(renamed)
+        before = len(self.entries)
+        self.entries = [
+            e
+            for e in self.entries
+            if not (e.get("kind") == KIND_RELOCATION and e["renamed"] == target)
+        ]
+        if len(self.entries) != before:
+            self._persist()
+
+    def restore_relocations(self) -> int:
+        """Move every relocated source volume back; return how many moved.
+
+        Used at startup after an interrupted run, without asking: these are
+        tool moves that would otherwise strand a source in a work directory.
+        """
+        restored = 0
+        for entry in [e for e in self.entries if e.get("kind") == KIND_RELOCATION]:
+            renamed, original = entry["renamed"], entry["original"]
+            if os.path.exists(renamed):
+                target = original
+                if os.path.exists(target):
+                    target = self._collision_safe_path(original)
+                try:
+                    os.makedirs(os.path.dirname(target), exist_ok=True)
+                    os.replace(renamed, target)
+                except OSError:
+                    continue
+                restored += 1
+            self.entries.remove(entry)
+            self._persist()
+        return restored
+
+    def uncloak_entries(self) -> list[dict]:
+        return [e for e in self.entries if e.get("kind") == KIND_UNCLOAK]
+
+    def clear_for(self, renamed_path: str) -> int:
+        """Drop the uncloak entries of a deleted source. Returns count."""
+        target = os.path.abspath(renamed_path)
+        before = len(self.entries)
+        self.entries = [
+            e
+            for e in self.entries
+            if not (e.get("kind") == KIND_UNCLOAK and e["renamed"] == target)
+        ]
+        cleared = before - len(self.entries)
+        if cleared:
+            self._persist()
+        return cleared
 
     def bind(self, renamed_path: str, group_key: str) -> bool:
         """Bind the entry whose `renamed` matches the given path to a group key.
@@ -61,9 +120,7 @@ class RenameHistory:
                 return True
         return False
 
-    def revert_group(
-        self, group_key: str
-    ) -> tuple[int, list[tuple[str, str]]]:
+    def revert_group(self, group_key: str) -> tuple[int, list[tuple[str, str]]]:
         """Rename every file bound to `group_key` back to its original path.
 
         Returns (count_reverted, sample) where sample is up to 5 tuples of
@@ -95,9 +152,7 @@ class RenameHistory:
 
             reverted += 1
             if len(sample) < 5:
-                sample.append(
-                    (os.path.basename(renamed), os.path.basename(target))
-                )
+                sample.append((os.path.basename(renamed), os.path.basename(target)))
             self.entries.remove(entry)
             self._persist()
 
@@ -142,9 +197,7 @@ class RenameHistory:
 
             reverted += 1
             if len(sample) < 5:
-                sample.append(
-                    (os.path.basename(renamed), os.path.basename(target))
-                )
+                sample.append((os.path.basename(renamed), os.path.basename(target)))
             self.entries.remove(entry)
             self._persist()
 
@@ -191,6 +244,9 @@ class RenameHistory:
             input_root=data.get("input_root", root),
             started_at=data.get("started_at"),
         )
+        # Files written by 1.3.x have no kind; all of their entries are uncloaks.
+        for entry in entries:
+            entry.setdefault("kind", KIND_UNCLOAK)
         history.entries = entries
         return history
 
@@ -296,3 +352,16 @@ class RenameHistory:
             if not os.path.exists(candidate):
                 return candidate
             counter += 1
+
+
+class RelocationLog:
+    """Work-pool relocation log persisted as `relocation` history entries."""
+
+    def __init__(self, history: RenameHistory) -> None:
+        self.history = history
+
+    def record(self, original: str, renamed: str) -> None:
+        self.history.record(original, renamed, kind=KIND_RELOCATION)
+
+    def clear(self, renamed: str) -> None:
+        self.history.clear_relocation(renamed)

@@ -491,6 +491,65 @@ def test_set_password_prompted_once_at_quiescence(tmp_path):
     assert result.unresolved == []
 
 
+def test_set_password_ref_comes_from_extraction_when_probe_cannot_tell(tmp_path):
+    class ReadableHeadersEngine(FakeEngine):
+        def probe(self, archive_path, password=None):
+            outcome = super().probe(archive_path, password)
+            if outcome.ok and password is None:
+                return wp.Outcome("ok", None, None, volumes=outcome.volumes)
+            return outcome
+
+    write(tmp_path / "X.7z.001", volume("S", 1, 2, {"f": "f"}, password="p2"))
+    write(tmp_path / "X.7z.002", volume("S", 2, 2, password="p2"))
+    result, _ = run_pool(tmp_path, engine=ReadableHeadersEngine(["p1", "p2"]))
+    primary = next(i for i in result.items if i.name == "X.7z.001")
+    assert primary.state is wp.State.CONSUMED
+    assert primary.password_ref == 2
+
+
+def test_learned_password_retries_deferred_sets_without_asking_again(tmp_path):
+    asked = []
+
+    def prompt(path):
+        asked.append(os.path.basename(path))
+        return "s"
+
+    for name in ("A", "B"):
+        write(tmp_path / f"{name}.7z.001", volume(name, 1, 2, {name: name}, "s"))
+        write(tmp_path / f"{name}.7z.002", volume(name, 2, 2, password="s"))
+    result, _ = run_pool(tmp_path, prompt=prompt)
+    assert asked == ["A.7z.001"]
+    assert output_files(tmp_path) == ["A", "B"]
+    assert result.unresolved == []
+
+
+def test_extraction_password_failure_qualifies_the_set_for_a_prompt(tmp_path):
+    class ReadableHeadersEngine(FakeEngine):
+        """Headers list without a password; only the payload is encrypted."""
+
+        def probe(self, archive_path, password=None):
+            if password is not None:
+                return super().probe(archive_path, password)
+            data = self._load(archive_path)
+            secret = data.get("password") if isinstance(data, dict) else None
+            outcome = super().probe(archive_path, secret or "")
+            if outcome.ok:
+                return wp.Outcome("ok", None, None, volumes=outcome.volumes)
+            return outcome
+
+    asked = []
+
+    def prompt(path):
+        asked.append(os.path.basename(path))
+        return "p"
+
+    write(tmp_path / "X.7z.001", volume("S", 1, 2, {"f": "f"}, password="p"))
+    write(tmp_path / "X.7z.002", volume("S", 2, 2, password="p"))
+    result, _ = run_pool(tmp_path, engine=ReadableHeadersEngine(), prompt=prompt)
+    assert asked == ["X.7z.001"]
+    assert output_files(tmp_path) == ["f"]
+
+
 def test_attempt_cap(tmp_path):
     write(tmp_path / "A.7z", archive({"X.7z.001": volume("S1", 1, 2, {"f": "f"})}))
     write(tmp_path / "B.7z", archive({"X.7z.002": volume("S9", 2, 2)}))
@@ -593,3 +652,12 @@ def test_complete_source_set_in_one_folder_is_assembled_in_place(tmp_path, name)
     assert relocations.recorded == []
     assert deleted(result) == sorted([name, second])
     assert result.unresolved == []
+
+
+def test_leftover_work_dirs_are_listed(tmp_path):
+    (tmp_path / "temp.deepunzip-old1").mkdir()
+    (tmp_path / "temp.deepunzip-note.txt").write_text("not a dir")
+    (tmp_path / "other").mkdir()
+    assert wp.leftover_work_dirs(str(tmp_path)) == [
+        str(tmp_path / "temp.deepunzip-old1")
+    ]

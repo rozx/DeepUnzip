@@ -7,6 +7,7 @@ from complex_unzip_tool_v2.modules.const import (
     MULTI_PART_PATTERNS,
     IGNORED_FILES,
     OUTPUT_FOLDER,
+    WORK_DIR_PREFIX,
 )
 from complex_unzip_tool_v2.classes.ArchiveGroup import ArchiveGroup
 from complex_unzip_tool_v2.modules.utils import get_string_similarity
@@ -184,8 +185,12 @@ def read_dir(file_paths: list[str]) -> list[str]:
         if os.path.isdir(path):
             # Read files from directory
             for root, dirs, files in os.walk(path):
-                # Skip the output folder and any subdirectories within it
-                dirs[:] = [d for d in dirs if d != OUTPUT_FOLDER]
+                # Skip the output folder and run work directories (with contents)
+                dirs[:] = [
+                    d
+                    for d in dirs
+                    if d != OUTPUT_FOLDER and not d.startswith(WORK_DIR_PREFIX)
+                ]
 
                 for filename in files:
                     if filename not in IGNORED_FILES:
@@ -435,6 +440,15 @@ def uncloak_file_extension_for_groups(
                         warning_callback(warning_msg)
 
 
+def create_cloaked_detector(rules_file_path: str | None = None) -> CloakedFileDetector:
+    """Create a cloaked-file detector with the default (or given) rules file."""
+    if rules_file_path is None:
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        config_dir = os.path.join(os.path.dirname(current_dir), "config")
+        rules_file_path = os.path.join(config_dir, "cloaked_file_rules.json")
+    return CloakedFileDetector(rules_file_path)
+
+
 def uncloak_file_extensions(
     file_paths: list[str], rules_file_path: str = None, history=None
 ) -> list[str]:
@@ -450,14 +464,7 @@ def uncloak_file_extensions(
     Returns:
         The updated file paths list with proper extensions.
     """
-    # Use default rules file if not provided
-    if rules_file_path is None:
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        config_dir = os.path.join(os.path.dirname(current_dir), "config")
-        rules_file_path = os.path.join(config_dir, "cloaked_file_rules.json")
-
-    # Initialize the detector
-    detector = CloakedFileDetector(rules_file_path)
+    detector = create_cloaked_detector(rules_file_path)
 
     # Process all files
     updated_paths = detector.uncloak_files(file_paths, history=history)

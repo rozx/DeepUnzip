@@ -80,23 +80,23 @@ The tasks follow TDD (`CLAUDE.md`): write the failing test first, with 7-Zip moc
 
 ## 5. Rename history (stage 2)
 
-- [ ] 5.1 Add an entry `kind` (`uncloak` / `relocation`). Files written by 1.3.x without `kind` load as `uncloak`.
-- [ ] 5.2 Startup recovery:
+- [x] 5.1 Add an entry `kind` (`uncloak` / `relocation`). Files written by 1.3.x without `kind` load as `uncloak`.
+- [x] 5.2 Startup recovery:
   - `relocation` entries are restored automatically, without a prompt;
   - `uncloak` entries keep the default-"no" prompt.
-- [ ] 5.3 One history file per input root. Bind entries to source items instead of group names. Clear the entries of deleted sources, and revert those of kept ones (`PoolResult.deleted_sources` / `kept_sources`).
+- [x] 5.3 One history file per input root. Bind entries to source items instead of group names. Clear the entries of deleted sources, and revert those of kept ones (`PoolResult.deleted_sources` / `kept_sources`).
 
 ## 6. Switch the extraction flow (stage 2)
 
-- [ ] 6.1 Extract `extract_one_level()` (the password loop, including "skip all prompts" for the rest of the run) from the `extract_nested_archives` closure.
-- [ ] 6.2 Make `read_dir` skip `temp.deepunzip-*` work directories. Report a leftover work directory at startup.
-- [ ] 6.3 Replace Steps 5–8 of `main.extract_files()` with per-root pool runs, each writing to its own `<root>/unzipped/`. Wire up:
+- [x] 6.1 Extract `extract_one_level()` (the password loop, including "skip all prompts" for the rest of the run) from the `extract_nested_archives` closure.
+- [x] 6.2 Make `read_dir` skip `temp.deepunzip-*` work directories. Report a leftover work directory at startup.
+- [x] 6.3 Replace Steps 5–8 of `main.extract_files()` with per-root pool runs, each writing to its own `<root>/unzipped/`. Wire up:
   - the real engine (`extract_one_level`, a probe that rejects a bare one-volume `Split` and reports `Volumes = N`);
   - `CloakedFileDetector` with `RenameHistory` for sources;
   - `safe_remove` with the deletion mode;
   - the relocation log;
   - a thin adapter from pool events to today's `rich_utils` helpers.
-- [ ] 6.4 Rewrite the affected `tests/test_main.py` tests against the new flow.
+- [x] 6.4 Rewrite the affected `tests/test_main.py` tests against the new flow.
 - [ ] 6.5 Manual end-to-end check on a copy of the reproduction set:
   - both sets extract;
   - no `.002` is lost;

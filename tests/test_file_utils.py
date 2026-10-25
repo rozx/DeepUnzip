@@ -317,6 +317,17 @@ class TestReadDir:
         assert any("file2.zip" in path for path in result)
         assert any("nested.7z" in path for path in result)
 
+    def test_read_directory_skips_output_and_work_directories(self):
+        """Leftover work directories and the output folder are never inputs."""
+        for folder in ("temp.deepunzip-abc123", "unzipped"):
+            os.makedirs(os.path.join(self.test_dir, folder, "deep"))
+            with open(os.path.join(self.test_dir, folder, "deep", "x.7z"), "w") as f:
+                f.write("x")
+        result = fu.read_dir([self.test_dir])
+        assert not any("temp.deepunzip-" in path for path in result)
+        assert not any(os.sep + "unzipped" + os.sep in path for path in result)
+        assert any("nested.7z" in path for path in result)
+
     def test_read_individual_files(self):
         """Test reading individual file paths."""
         result = fu.read_dir(self.test_files)

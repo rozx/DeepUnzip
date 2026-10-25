@@ -1,5 +1,9 @@
 OUTPUT_FOLDER = "unzipped"
 
+# Run work directory created inside each input root by the work pool
+# 工作池在每个输入根目录中创建的运行工作目录
+WORK_DIR_PREFIX = "temp.deepunzip-"
+
 # Files to ignore when scanning directories
 # 扫描目录时忽略的文件
 IGNORED_FILES = {".DS_Store", "thumbs.db", "desktop.ini", "passwords.txt"}

@@ -8,6 +8,7 @@ import pytest
 
 from complex_unzip_tool_v2.modules.rename_history import (
     HISTORY_FILENAME,
+    RelocationLog,
     RenameHistory,
 )
 
@@ -118,9 +119,7 @@ class TestRevertGroup:
         assert Path(original).read_bytes() == b"existing"
         # Renamed file went to a __reverted_<token> sibling
         assert not Path(renamed).exists()
-        siblings = [
-            p.name for p in tmp_path.iterdir() if "__reverted_" in p.name
-        ]
+        siblings = [p.name for p in tmp_path.iterdir() if "__reverted_" in p.name]
         assert len(siblings) == 1
         assert sample[0][0] == "name.7z.002"
         assert "__reverted_" in sample[0][1]
@@ -256,7 +255,9 @@ class TestAtomicWrite:
         assert not tmp_file.exists()
         assert (tmp_path / HISTORY_FILENAME).exists()
 
-    def test_main_file_unchanged_when_persist_fails_mid_write(self, tmp_path, monkeypatch):
+    def test_main_file_unchanged_when_persist_fails_mid_write(
+        self, tmp_path, monkeypatch
+    ):
         h = RenameHistory(str(tmp_path))
         h.record(str(tmp_path / "a.bin"), str(tmp_path / "a.7z.001"))
         original_contents = (tmp_path / HISTORY_FILENAME).read_bytes()
@@ -301,3 +302,83 @@ class TestBoundGroupKeys:
 
 if __name__ == "__main__":
     pytest.main([__file__])
+
+
+# ---------------------------------------------------------------------------
+# Entry kinds, relocations and per-source reconciliation (work pool)
+# ---------------------------------------------------------------------------
+
+
+class TestEntryKinds:
+    def test_uncloak_is_the_default_kind(self, tmp_path):
+        h = RenameHistory(str(tmp_path))
+        h.record(str(tmp_path / "a.bin"), str(tmp_path / "a.7z.001"))
+        assert h.entries[0]["kind"] == "uncloak"
+
+    def test_legacy_entries_without_kind_load_as_uncloak(self, tmp_path):
+        legacy = {
+            "version": 1,
+            "input_root": str(tmp_path),
+            "started_at": "2026-09-01T00:00:00",
+            "entries": [
+                {
+                    "original": str(tmp_path / "a.bin"),
+                    "renamed": str(tmp_path / "a.7z.001"),
+                    "group": "dir-a",
+                }
+            ],
+        }
+        (tmp_path / HISTORY_FILENAME).write_text(json.dumps(legacy), encoding="utf-8")
+        loaded = RenameHistory.load_pending(str(tmp_path))
+        assert loaded is not None
+        assert loaded.entries[0]["kind"] == "uncloak"
+        assert loaded.uncloak_entries() == loaded.entries
+
+
+class TestRelocations:
+    def test_relocation_is_recorded_and_cleared(self, tmp_path):
+        h = RenameHistory(str(tmp_path))
+        log = RelocationLog(h)
+        log.record(str(tmp_path / "s" / "X.7z.002"), str(tmp_path / "w" / "X.7z.002"))
+        assert [e["kind"] for e in h.entries] == ["relocation"]
+        log.clear(str(tmp_path / "w" / "X.7z.002"))
+        assert h.entries == []
+
+    def test_leftover_relocations_are_restored(self, tmp_path):
+        (tmp_path / "s").mkdir()
+        moved = Path(_make(tmp_path, "moved.7z.002"))
+        h = RenameHistory(str(tmp_path))
+        h.record(str(tmp_path / "s" / "X.7z.002"), str(moved), kind="relocation")
+        h.record(str(tmp_path / "gone.bin"), str(tmp_path / "gone.7z"))
+
+        pending = RenameHistory.load_pending(str(tmp_path))
+        assert pending is not None
+        assert pending.restore_relocations() == 1
+        assert (tmp_path / "s" / "X.7z.002").exists() and not moved.exists()
+        # Only the uncloak entry is left for the user to decide on.
+        assert [e["kind"] for e in pending.entries] == ["uncloak"]
+
+    def test_restoring_a_relocation_never_overwrites(self, tmp_path):
+        original = Path(_make(tmp_path, "X.7z.002", b"other"))
+        moved = Path(_make(tmp_path, "moved.7z.002", b"mine"))
+        h = RenameHistory(str(tmp_path))
+        h.record(str(original), str(moved), kind="relocation")
+        assert h.restore_relocations() == 1
+        assert original.read_bytes() == b"other"
+        restored = [p for p in tmp_path.iterdir() if p.read_bytes() == b"mine"]
+        assert len(restored) == 1 and restored[0] != moved
+
+    def test_missing_relocated_file_is_dropped(self, tmp_path):
+        h = RenameHistory(str(tmp_path))
+        h.record(str(tmp_path / "a"), str(tmp_path / "b"), kind="relocation")
+        assert h.restore_relocations() == 0
+        assert h.entries == []
+
+
+class TestPerSource:
+    def test_clear_for_drops_only_that_sources_uncloak_entries(self, tmp_path):
+        h = RenameHistory(str(tmp_path))
+        h.record(str(tmp_path / "a.bin"), str(tmp_path / "a.7z"))
+        h.record(str(tmp_path / "b.bin"), str(tmp_path / "b.7z"))
+        assert h.clear_for(str(tmp_path / "a.7z")) == 1
+        assert [os.path.basename(e["renamed"]) for e in h.entries] == ["b.7z"]
