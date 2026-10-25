@@ -32,6 +32,8 @@ class RenameHistory:
 
     def __init__(self, input_root: str, started_at: Optional[str] = None):
         self.input_root = os.path.abspath(input_root)
+        # The root the file was written for; differs after the folder moved.
+        self.recorded_root = self.input_root
         self.started_at = started_at or datetime.now().isoformat(timespec="seconds")
         self.entries: list[dict] = []
 
@@ -240,10 +242,10 @@ class RenameHistory:
         if not entries:
             return None
 
-        history = cls(
-            input_root=data.get("input_root", root),
-            started_at=data.get("started_at"),
-        )
+        # Keep reading and writing the file where it was found; the stored
+        # root only feeds the moved-folder warning (root_matches).
+        history = cls(input_root=root, started_at=data.get("started_at"))
+        history.recorded_root = os.path.abspath(data.get("input_root", root))
         # Files written by 1.3.x have no kind; all of their entries are uncloaks.
         for entry in entries:
             entry.setdefault("kind", KIND_UNCLOAK)
@@ -252,7 +254,7 @@ class RenameHistory:
 
     def root_matches(self, input_root: str) -> bool:
         """Whether this history was created against the given input root."""
-        return os.path.abspath(input_root) == self.input_root
+        return os.path.abspath(input_root) == self.recorded_root
 
     def has_entries(self) -> bool:
         return bool(self.entries)

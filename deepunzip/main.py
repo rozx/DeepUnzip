@@ -123,7 +123,7 @@ def _maybe_recover_pending_renames(
 
     events.notice("warning", "recovery.pending", count=len(pending.entries))
     if not pending.root_matches(input_root):
-        events.notice("warning", "recovery.other_root", root=pending.input_root)
+        events.notice("warning", "recovery.other_root", root=pending.recorded_root)
     for entry in pending.entries[:RECOVERY_LIST_LIMIT]:
         events.notice(
             "info",

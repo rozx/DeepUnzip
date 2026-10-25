@@ -245,6 +245,25 @@ class TestLoadPending:
         assert loaded.root_matches(str(tmp_path)) is True
         assert loaded.root_matches(str(tmp_path / "different")) is False
 
+    def test_moved_root_keeps_using_the_file_where_it_was_found(self, tmp_path):
+        old, new = tmp_path / "old", tmp_path / "new"
+        old.mkdir()
+        h = RenameHistory(str(old))
+        h.record(str(old / "a.bin"), str(old / "a.7z.001"))
+        h.record(str(old / "b.bin"), str(old / "b.7z.001"))
+        old.rename(new)
+
+        loaded = RenameHistory.load_pending(str(new))
+        assert loaded.root_matches(str(new)) is False
+        assert loaded.recorded_root == str(old)
+        loaded.clear_for(str(old / "a.7z.001"))
+        assert not old.exists()
+        assert (
+            len(json.loads((new / HISTORY_FILENAME).read_text("utf-8"))["entries"]) == 1
+        )
+        loaded.delete_file()
+        assert not (new / HISTORY_FILENAME).exists()
+
 
 class TestAtomicWrite:
     def test_no_temp_file_remains_after_normal_write(self, tmp_path):
