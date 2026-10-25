@@ -318,17 +318,21 @@ def _print_root_summary(result: work_pool.PoolResult, use_recycle_bin: bool) -> 
         print_warning("Work directory kept 工作目录已保留:", 1)
         print_file_path(result.work_dir, 2)
 
+    def is_archive(item: work_pool.WorkItem) -> bool:
+        """A container, or a whole multipart set (counted by its primary)."""
+        if item.kind is work_pool.Kind.CONTAINER:
+            return True
+        if item.kind is work_pool.Kind.VOLUME:
+            return item.volume is not None and item.volume.is_primary
+        return item.reason == "not a valid archive"
+
     archives = sum(
         1
         for i in result.items
-        if i.kind is not work_pool.Kind.REGULAR
+        if is_archive(i)
         and i.state in (work_pool.State.CONSUMED, work_pool.State.UNRESOLVED)
     )
-    failed = sum(
-        1
-        for i in unresolved
-        if i.kind is not work_pool.Kind.REGULAR or i.reason == "not a valid archive"
-    )
+    failed = sum(1 for i in unresolved if is_archive(i))
     update_stats(
         archives=archives,
         successful=archives - failed,

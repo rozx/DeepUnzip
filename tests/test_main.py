@@ -120,6 +120,10 @@ def test_spanned_zip_inside_a_container_is_extracted_in_the_same_run(fake_7z, tm
     assert "Set.zip" in fake_7z["extracted"]
     assert _outputs(tmp_path) == ["Set/inner.txt"]
     assert not (tmp_path / "outer.zip").exists()
+    # One container plus one two-volume set: a set counts once.
+    from complex_unzip_tool_v2.modules import rich_utils
+
+    assert rich_utils._stats["total_archives"] == 2
 
 
 @pytest.mark.parametrize("use_recycle_bin", [True, False])

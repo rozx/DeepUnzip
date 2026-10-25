@@ -97,7 +97,7 @@ The tasks follow TDD (`CLAUDE.md`): write the failing test first, with 7-Zip moc
   - the relocation log;
   - a thin adapter from pool events to today's `rich_utils` helpers.
 - [x] 6.4 Rewrite the affected `tests/test_main.py` tests against the new flow.
-- [ ] 6.5 Manual end-to-end check on a copy of the reproduction set:
+- [x] 6.5 Manual end-to-end check on a copy of the reproduction set:
   - both sets extract;
   - no `.002` is lost;
   - all four sources go to the Recycle Bin;
