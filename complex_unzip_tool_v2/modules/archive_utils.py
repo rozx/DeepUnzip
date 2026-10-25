@@ -4,11 +4,7 @@ import shutil
 import tempfile
 from typing import Callable, List, Dict, Optional, Tuple
 import re
-from complex_unzip_tool_v2.modules.rich_utils import (
-    print_warning,
-    print_info,
-    print_success,
-)
+from complex_unzip_tool_v2.modules.events import notice
 
 # Re-exported: SevenZipEngine.classify calls archive_utils.detect_archive_extension,
 # so tests can replace every 7-Zip-facing helper on this one module.
@@ -704,9 +700,10 @@ def extractArchiveWith7z(
             # Detect path-related issues and fallback to sanitized path extraction
             msg = str(e).lower()
             if any(k in msg for k in PATH_ERROR_KEYWORDS):
-                print_warning(
-                    "Path-related extraction error detected, trying alternative extraction method...",
-                    2,
+                notice(
+                    "warning",
+                    "notice.path_fallback",
+                    name=os.path.basename(archive_path),
                 )
                 return _extractWithSanitizedPaths(
                     archive_path,
@@ -743,7 +740,6 @@ def _extractWithSanitizedPaths(
     try:
         # Create a temporary directory for extraction
         temp_dir = tempfile.mkdtemp(prefix="complex_unzip_temp_")
-        print_info(f"Using temporary extraction directory: {temp_dir}", 3)
 
         # Try extracting to temp directory first
         temp_cmd = _build_7z_extract_cmd(
@@ -764,7 +760,6 @@ def _extractWithSanitizedPaths(
         # Now move files from temp directory to final destination with sanitized names
         try:
             _moveAndSanitizeFiles(temp_dir, output_path)
-            print_success("Successfully extracted with sanitized file paths", 2)
             return True
         except Exception as e:
             raise ArchiveError(f"Failed to move extracted files: {e}")
@@ -856,12 +851,6 @@ def _moveAndSanitizeFiles(source_dir: str, target_dir: str) -> None:
                 target_subdir = os.path.join(parent_dir, f"{dir_name}_{counter}")
                 counter += 1
 
-            if counter > 1:
-                print_info(
-                    f"Directory conflict resolved: {os.path.basename(base_target_subdir)} → {os.path.basename(target_subdir)}",
-                    3,
-                )
-
         # Create target directory
         os.makedirs(target_subdir, exist_ok=True)
 
@@ -884,23 +873,14 @@ def _moveAndSanitizeFiles(source_dir: str, target_dir: str) -> None:
                 shutil.copy2(source_file, target_file)
                 os.remove(source_file)
 
-                if sanitized_filename != file or counter > 1:
-                    print_info(
-                        f"Moved file: {file} → {os.path.basename(target_file)}", 3
-                    )
-
             except OSError:
                 # If copy fails, try a more robust approach
                 try:
                     with open(source_file, "rb") as src, open(target_file, "wb") as dst:
                         shutil.copyfileobj(src, dst)
                     os.remove(source_file)
-                    print_info(
-                        f"Moved file (fallback): {file} → {os.path.basename(target_file)}",
-                        3,
-                    )
                 except OSError as e2:
-                    print_warning(f"Failed to move file {file}: {e2}", 2)
+                    notice("warning", "notice.move_failed", name=file, error=e2)
                     # Don't raise exception, just continue with other files
 
 

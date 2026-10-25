@@ -267,3 +267,30 @@ def test_passwords_never_appear_in_any_output(tmp_path, mode):
         assert '"password_index": 1' in out and '"password_index": "entered"' in out
     else:
         assert "password #1" in out and "entered password" in out
+
+
+class _ClosedPipe(io.StringIO):
+    """A stdout whose reader went away (`deepunzip … | head`)."""
+
+    def __init__(self, error):
+        super().__init__()
+        self.error = error
+        self.writes = 0
+
+    def write(self, text):
+        self.writes += 1
+        raise self.error
+
+    def flush(self):
+        pass
+
+
+@pytest.mark.parametrize("error", [BrokenPipeError(), OSError(22, "EINVAL")])
+@pytest.mark.parametrize("json_mode", [True, False])
+def test_a_closed_output_never_stops_the_run(tmp_path, error, json_mode):
+    stream = _ClosedPipe(error)
+    renderer = render.create_renderer(json_mode=json_mode, stream=stream)
+    result = drive(renderer, tmp_path, **reproduction(tmp_path))
+    renderer.close()
+    assert stream.writes == 1  # output stops at the first failed write
+    assert len(result.output_files) == 1  # …and the run still finishes

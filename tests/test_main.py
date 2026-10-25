@@ -1,3 +1,4 @@
+import json
 import os
 
 import pytest
@@ -12,6 +13,10 @@ from complex_unzip_tool_v2.modules.rename_history import (
     HISTORY_FILENAME,
     RenameHistory,
 )
+
+# The fake_7z fixture stubs the exit; exit-code tests put the real one back
+# (it only pauses in a frozen Windows build).
+_real_exit = main._ask_for_user_input_and_exit
 
 
 # ---------------------------------------------------------------------------
@@ -115,15 +120,12 @@ def test_spanned_zip_inside_a_container_is_extracted_in_the_same_run(fake_7z, tm
     fake_7z["contents"]["outer.zip"] = {"Set.zip": "zip", "Set.z01": "z01"}
     fake_7z["contents"]["Set.zip"] = {"inner.txt": "inner"}
 
-    main.extract_files([str(tmp_path)], use_recycle_bin=False)
+    (result,) = main.extract_files([str(tmp_path)], use_recycle_bin=False)
 
     assert "Set.zip" in fake_7z["extracted"]
     assert _outputs(tmp_path) == ["Set/inner.txt"]
     assert not (tmp_path / "outer.zip").exists()
-    # One container plus one two-volume set: a set counts once.
-    from complex_unzip_tool_v2.modules import rich_utils
-
-    assert rich_utils._stats["total_archives"] == 2
+    assert result.unresolved == []
 
 
 @pytest.mark.parametrize("use_recycle_bin", [True, False])
@@ -147,17 +149,15 @@ def test_nested_cleanup_follows_user_recycle_bin_choice(
 def test_top_level_non_archive_is_kept_and_not_counted_as_failure(fake_7z, tmp_path):
     """A readme next to the archives must be skipped quietly: kept on disk,
     no error lines, not counted as a failed extraction."""
-    from complex_unzip_tool_v2.modules import rich_utils
-
     readme = tmp_path / "请先看我.txt"
     readme.write_text("解压密码见下方", encoding="utf-8")
 
-    main.extract_files([str(tmp_path)], use_recycle_bin=True)
+    (result,) = main.extract_files([str(tmp_path)], use_recycle_bin=True)
 
     assert readme.exists()
     assert fake_7z["removed"] == {}
-    assert rich_utils._stats["errors"] == []
-    assert rich_utils._stats["failed_extractions"] == 0
+    assert result.unresolved == []
+    assert result.kept_sources == []
 
 
 def test_unknown_password_with_closed_stdin_keeps_the_source(
@@ -172,10 +172,11 @@ def test_unknown_password_with_closed_stdin_keeps_the_source(
 
     monkeypatch.setattr("builtins.input", closed_stdin)
 
-    main.extract_files([str(tmp_path)], use_recycle_bin=True)
+    (result,) = main.extract_files([str(tmp_path)], use_recycle_bin=True)
 
     assert (tmp_path / "locked.7z").exists()
     assert fake_7z["removed"] == {}
+    assert [item.reason for item in result.unresolved] == ["password"]
 
 
 def test_each_input_root_gets_its_own_output_folder(fake_7z, tmp_path):
@@ -302,13 +303,13 @@ def test_leftover_relocation_is_restored_without_asking(fake_7z, monkeypatch, tm
 def _capture_cli_extract(monkeypatch) -> list:
     """Stub out the real extraction so CLI parsing can be observed in isolation."""
     calls: list = []
-    monkeypatch.setattr(
-        main,
-        "extract_files",
-        lambda paths, use_recycle_bin=True: calls.append((paths, use_recycle_bin)),
-    )
+
+    def run(paths, use_recycle_bin=True, json_mode=False):
+        calls.append((paths, use_recycle_bin))
+        return 0
+
+    monkeypatch.setattr(main, "run", run)
     monkeypatch.setattr(main, "_ask_for_user_input_and_exit", lambda *a, **k: None)
-    monkeypatch.setattr(main.archive_utils, "resolve_seven_zip_path", lambda: "7z")
     return calls
 
 
@@ -390,12 +391,197 @@ def test_cli_version_subcommand_still_works(monkeypatch, tmp_path):
     from typer.testing import CliRunner
 
     calls = _capture_cli_extract(monkeypatch)
-    shown: list = []
-    monkeypatch.setattr(main, "print_version", lambda v: shown.append(v))
     monkeypatch.chdir(tmp_path)
 
     result = CliRunner().invoke(main.app, ["version"])
 
     assert result.exit_code == 0, result.output
-    assert shown == [main.__version__]
+    assert main.__version__ in result.output
     assert calls == []
+
+
+# ---------------------------------------------------------------------------
+# Output modes, prompts and exit codes
+# ---------------------------------------------------------------------------
+
+
+def _json_run(monkeypatch, args):
+    from typer.testing import CliRunner
+
+    monkeypatch.setattr(main, "_ask_for_user_input_and_exit", _real_exit)
+    result = CliRunner().invoke(main.app, ["--json", *args])
+    lines = [json.loads(line) for line in result.stdout.splitlines()]
+    return result, lines
+
+
+def _no_prompts(monkeypatch):
+    monkeypatch.setattr(
+        "builtins.input", lambda *a, **k: pytest.fail("prompted in --json mode")
+    )
+
+
+def test_json_run_writes_only_json_lines_and_exits_0(fake_7z, monkeypatch, tmp_path):
+    (tmp_path / "a.7z").write_bytes(b"dummy")
+    fake_7z["contents"]["a.7z"] = {"a.txt": "a"}
+
+    result, lines = _json_run(monkeypatch, [str(tmp_path)])
+
+    assert result.exit_code == 0, result.output
+    assert lines[0]["event"] == "start" and lines[-1]["event"] == "summary"
+    assert lines[-1]["status"] == "ok" and lines[-1]["exit"] == 0
+    assert [line["path"] for line in lines if line["event"] == "item"] == ["a.7z"]
+
+
+def test_json_unknown_password_is_unresolved_without_a_prompt(
+    fake_7z, monkeypatch, tmp_path
+):
+    _no_prompts(monkeypatch)
+    monkeypatch.setattr(main, "_stdin_is_terminal", lambda: True)
+    (tmp_path / "locked.7z").write_bytes(b"dummy")
+    fake_7z["contents"]["locked.7z"] = {"a.txt": "a"}
+    fake_7z["failures"]["locked.7z"] = ArchivePasswordError("Wrong password")
+
+    result, lines = _json_run(monkeypatch, [str(tmp_path)])
+
+    assert result.exit_code == 1
+    (unresolved,) = [line for line in lines if line["event"] == "unresolved"]
+    assert unresolved["path"] == "locked.7z" and unresolved["reason"] == "password"
+    assert lines[-1]["status"] == "partial" and lines[-1]["exit"] == 1
+    assert (tmp_path / "locked.7z").exists()
+
+
+def test_redirected_stdin_never_prompts(fake_7z, monkeypatch, tmp_path):
+    from typer.testing import CliRunner
+
+    _no_prompts(monkeypatch)
+    (tmp_path / "locked.7z").write_bytes(b"dummy")
+    fake_7z["contents"]["locked.7z"] = {"a.txt": "a"}
+    fake_7z["failures"]["locked.7z"] = ArchivePasswordError("Wrong password")
+
+    monkeypatch.setattr(main, "_ask_for_user_input_and_exit", _real_exit)
+    result = CliRunner().invoke(main.app, [str(tmp_path)], input="")
+
+    assert result.exit_code == 1
+    assert "locked.7z  unresolved: wrong or missing password" in result.output
+
+
+def test_no_existing_path_exits_2(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        main, "extract_files", lambda *a, **k: pytest.fail("Extraction started")
+    )
+    missing = str(tmp_path / "missing")
+
+    result, lines = _json_run(monkeypatch, [missing])
+
+    assert result.exit_code == 2
+    assert [line["event"] for line in lines] == ["start", "error", "summary"]
+    assert lines[1]["code"] == "no_input"
+    assert lines[-1]["status"] == "error" and lines[-1]["exit"] == 2
+
+
+def test_json_without_paths_is_a_usage_error(monkeypatch):
+    result, lines = _json_run(monkeypatch, [])
+    assert result.exit_code == 2
+    assert lines[1]["code"] == "no_input"
+
+
+def test_missing_engine_exits_2_with_a_json_error(monkeypatch, tmp_path):
+    def missing(*args):
+        raise main.archive_utils.SevenZipNotFoundError("7-Zip executable not found")
+
+    monkeypatch.setattr(main.archive_utils, "resolve_seven_zip_path", missing)
+    (tmp_path / "a.7z").write_bytes(b"unchanged")
+
+    result, lines = _json_run(monkeypatch, [str(tmp_path)])
+
+    assert result.exit_code == 2
+    assert lines[1]["event"] == "error" and lines[1]["code"] == "engine_missing"
+    assert list(tmp_path.iterdir()) == [tmp_path / "a.7z"]
+
+
+def test_unexpected_exception_exits_2(fake_7z, monkeypatch, tmp_path):
+    def boom(*args, **kwargs):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(main, "extract_files", boom)
+
+    result, lines = _json_run(monkeypatch, [str(tmp_path)])
+
+    assert result.exit_code == 2
+    assert lines[1]["code"] == "unexpected" and "boom" in lines[1]["detail"]
+    assert lines[-1]["exit"] == 2
+
+
+def test_some_missing_paths_are_skipped_with_a_warning(fake_7z, tmp_path):
+    from typer.testing import CliRunner
+
+    missing = str(tmp_path / "missing.7z")
+
+    result = CliRunner().invoke(main.app, [str(tmp_path), missing])
+
+    assert result.exit_code == 0, result.output
+    assert f"Path not found, skipped: {missing}" in result.output
+
+
+def test_json_mode_never_pauses(monkeypatch):
+    import platform
+    import sys
+
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(platform, "system", lambda: "Windows")
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(sys.stdout, "isatty", lambda: True)
+    _no_prompts(monkeypatch)
+    with pytest.raises(SystemExit) as exc:
+        main._ask_for_user_input_and_exit(1, json_mode=True)
+    assert exc.value.code == 1
+
+
+def test_non_interactive_recovery_keeps_renames(fake_7z, monkeypatch, tmp_path):
+    _no_prompts(monkeypatch)
+    renamed = tmp_path / "leftover.7z.001"
+    renamed.write_bytes(b"volume")
+    history = RenameHistory(str(tmp_path))
+    history.record(str(tmp_path / "leftover.7z.001删"), str(renamed))
+
+    main._maybe_recover_pending_renames(str(tmp_path), interactive=False)
+
+    assert renamed.exists()
+
+
+@pytest.mark.parametrize("language, text", [("en", "Extract nested"), ("zh", "解开嵌套")])
+def test_help_follows_the_language(language, text):
+    import subprocess
+    import sys
+
+    result = subprocess.run(
+        [sys.executable, "-m", "complex_unzip_tool_v2", "--help"],
+        cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        env={**os.environ, "DEEPUNZIP_LANG": language, "PYTHONIOENCODING": "utf-8"},
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        timeout=60,
+    )
+    assert result.returncode == 0, result.stderr
+    assert text in result.stdout.decode("utf-8")
+
+
+def test_stdin_from_the_null_device_is_not_a_terminal():
+    """Windows reports NUL as a TTY; `< NUL` must still be non-interactive."""
+    import subprocess
+    import sys
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from complex_unzip_tool_v2.main import _stdin_is_terminal;"
+            "print(_stdin_is_terminal())",
+        ],
+        cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        timeout=60,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == b"False"

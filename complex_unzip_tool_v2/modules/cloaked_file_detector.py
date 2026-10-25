@@ -10,11 +10,7 @@ import uuid
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 
-from complex_unzip_tool_v2.modules.rich_utils import (
-    print_error,
-    print_success,
-    print_warning,
-)
+from complex_unzip_tool_v2.modules.events import notice
 from complex_unzip_tool_v2.modules.archive_extension_utils import (
     detect_archive_extension,
     uncloak_archive_filename,
@@ -114,10 +110,8 @@ class CloakedFileDetector:
             # Sort rules by priority (higher priority first)
             self.rules.sort(key=lambda r: r.priority, reverse=True)
 
-            print_success(f"Loaded {len(self.rules)} rules from {rules_file_path}")
-
         except Exception as e:
-            print_error(f"Failed to load rules from {rules_file_path}: {e}")
+            notice("warning", "notice.rules_failed", path=rules_file_path, error=e)
             self.rules = []
 
     def _match_rule(
@@ -445,7 +439,12 @@ class CloakedFileDetector:
             return True
 
         except Exception as e:
-            print_warning(f"Could not verify file signature for {file_path}: {e}")
+            notice(
+                "warning",
+                "notice.signature_failed",
+                name=os.path.basename(file_path),
+                error=e,
+            )
             return False  # Be conservative: do not rename on verification failure
 
     def _build_collision_path(self, file_path: str, normalized_path: str | None) -> str:
@@ -524,17 +523,20 @@ class CloakedFileDetector:
                     os.rename(file_path, duplicate_path)
                     if history is not None:
                         history.record(file_path, duplicate_path)
-                    print_warning(
-                        "Duplicate cloaked file detected; renamed to preserve multipart set: "
-                        f"{os.path.basename(file_path)} -> {os.path.basename(duplicate_path)} "
-                        f"(existing {os.path.basename(new_path)} kept)"
+                    notice(
+                        "warning",
+                        "notice.rename_duplicate",
+                        name=os.path.basename(file_path),
+                        existing=os.path.basename(new_path),
+                        target=os.path.basename(duplicate_path),
                     )
                     return duplicate_path
                 except Exception as e:
-                    print_warning(
-                        "Duplicate cloaked file detected; failed to rename duplicate "
-                        f"{os.path.basename(file_path)}: {e}. Using existing normalized "
-                        f"file {os.path.basename(new_path)}"
+                    notice(
+                        "warning",
+                        "notice.rename_failed",
+                        name=os.path.basename(file_path),
+                        error=e,
                     )
                     return new_path
             try:
@@ -542,12 +544,14 @@ class CloakedFileDetector:
                 os.rename(file_path, new_path)
                 if history is not None:
                     history.record(file_path, new_path)
-                print_success(
-                    f"Renamed: {os.path.basename(file_path)} -> {os.path.basename(new_path)}"
-                )
                 return new_path
             except Exception as e:
-                print_error(f"Failed to rename {file_path}: {e}")
+                notice(
+                    "warning",
+                    "notice.rename_failed",
+                    name=os.path.basename(file_path),
+                    error=e,
+                )
                 return file_path
 
         return file_path

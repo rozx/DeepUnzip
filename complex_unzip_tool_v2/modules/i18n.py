@@ -168,6 +168,7 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "These were recorded for another input folder: {root}",
         "zh": "这些记录来自另一个输入目录：{root}",
     },
+    "recovery.entry": {"en": "{renamed} → {original}", "zh": "{renamed} → {original}"},
     "recovery.more": {"en": "… and {count} more", "zh": "…… 另有 {count} 条"},
     "recovery.ask": {
         "en": "Revert these renames before starting? (y/N): ",
@@ -199,6 +200,41 @@ CATALOG: dict[str, dict[str, str]] = {
         "zh": "解压 {name} 时遇到路径问题，改用安全的文件名重试",
     },
     "notice.remove_failed": {"en": "{detail}", "zh": "{detail}"},
+    "notice.missing_path": {
+        "en": "Path not found, skipped: {path}",
+        "zh": "路径不存在，已跳过：{path}",
+    },
+    "notice.rules_failed": {
+        "en": "Could not load the uncloaking rules from {path}: {error}",
+        "zh": "无法加载伪装文件规则 {path}：{error}",
+    },
+    "notice.signature_failed": {
+        "en": "Could not check the file signature of {name}: {error}",
+        "zh": "无法检查 {name} 的文件签名：{error}",
+    },
+    "notice.move_failed": {
+        "en": "Could not move {name}: {error}",
+        "zh": "无法移动 {name}：{error}",
+    },
+    # ---------- file helper messages (passed to callbacks) ----------
+    "file.rename_error": {
+        "en": "Error renaming file {old} to {new}: {error}",
+        "zh": "重命名文件出错 {old} → {new}：{error}",
+    },
+    "file.remove_error": {
+        "en": "Error removing file {path}: {error}",
+        "zh": "删除文件出错 {path}：{error}",
+    },
+    "file.group_rename_missing": {
+        "en": "Could not rename {old} to {new}: the file does not exist. "
+        "The group is not updated.",
+        "zh": "无法将 {old} 改名为 {new}：文件不存在，分组未更新。",
+    },
+    "file.moved": {"en": "Moved: {path}", "zh": "已移动：{path}"},
+    "file.move_error": {
+        "en": "Error moving {path}: {error}",
+        "zh": "移动出错 {path}：{error}",
+    },
 }
 
 _language: Optional[str] = None

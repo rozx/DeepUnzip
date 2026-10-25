@@ -9,7 +9,7 @@ The tasks follow TDD with mocked 7-Zip. They are committed directly on `release/
   - unsupported override values are ignored;
   - tests with a monkeypatched environment and `ctypes`.
 - [x] 1.3 Catalog completeness test: fail when any key lacks `en` or `zh`. At runtime, a missing `zh` falls back to `en`.
-- [ ] 1.4 Move every user-facing string into the catalog, including Typer help and option text. That covers `main.py`, `archive_utils.py`, `file_utils.py`, `cloaked_file_detector.py`, `rename_history.py` and `password_util.py`. No inline bilingual strings remain.
+- [x] 1.4 Move every user-facing string into the catalog, including Typer help and option text. That covers `main.py`, `archive_utils.py`, `file_utils.py`, `cloaked_file_detector.py`, `rename_history.py` and `password_util.py`. No inline bilingual strings remain.
 
 ## 2. Renderers
 
@@ -44,20 +44,20 @@ The tasks follow TDD with mocked 7-Zip. They are committed directly on `release/
 
 ## 4. CLI wiring
 
-- [ ] 4.1 Add the `--json` option. The run is non-interactive when `--json` is set or stdin is not a TTY. In that case:
+- [x] 4.1 Add the `--json` option. The run is non-interactive when `--json` is set or stdin is not a TTY. In that case:
   - password prompts are skipped (the item becomes unresolved with reason `password`);
   - the recovery prompt takes its default;
   - there is no exit pause.
-- [ ] 4.2 Every `input()` prompt treats `EOFError` as its default. Test with a closed stdin and an unknown password: the run completes without an exception.
-- [ ] 4.3 Exit codes:
+- [x] 4.2 Every `input()` prompt treats `EOFError` as its default. Test with a closed stdin and an unknown password: the run completes without an exception.
+- [x] 4.3 Exit codes:
   - `0` when everything is resolved;
   - `1` when anything is unresolved;
   - `2` when the engine is missing or unusable, no valid input path is given, or an unexpected exception occurs;
   - `0` for `--help` and `--version`.
 
   The Windows pause rule is unchanged but never applies with `--json`. Add tests for each code.
-- [ ] 4.4 Connect the renderers to the pool driver. Remove the temporary `rich_utils` adapter and `modules/rich_utils.py`.
-- [ ] 4.5 Quality gates: `pytest -q`, `flake8`, `mypy`, `black`, plus `--help` in both languages.
+- [x] 4.4 Connect the renderers to the pool driver. Remove the temporary `rich_utils` adapter and `modules/rich_utils.py`.
+- [x] 4.5 Quality gates: `pytest -q`, `flake8`, `mypy`, `black`, plus `--help` in both languages.
 
 ## 5. Docs
 

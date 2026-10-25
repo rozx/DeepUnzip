@@ -119,7 +119,9 @@ def test_cli_handles_all_selected_set_parts_safely(
     monkeypatch.setattr(main.file_utils, "send2trash", recycle_file)
     arguments = [str(parts[0])] if recycle else ["--permanent-delete", str(parts[0])]
     result = CliRunner().invoke(main.app, arguments)
-    assert result.exit_code == 0, result.output
+    # A failed set, or a nested archive whose password prompt is skipped
+    # (stdin is not a terminal), leaves an unresolved item: exit code 1.
+    assert result.exit_code == (0 if outcome == "success" else 1), result.output
     if outcome == "success":
         assert all(not part.exists() for part in parts)
         assert all(not part.exists() for part in normalized)

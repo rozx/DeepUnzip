@@ -10,6 +10,7 @@ import tempfile
 import zipfile
 from pathlib import Path
 
+from complex_unzip_tool_v2 import __version__
 from complex_unzip_tool_v2.modules.archive_utils import (
     ArchivePasswordError,
     readArchiveContentWith7z,
@@ -128,7 +129,7 @@ def smoke(executable: Path | None = None) -> None:
                     archive.writestr("unrelated.txt", b"keep me")
                 unrelated_bytes = unrelated.read_bytes()
             output = run(command + ["--permanent-delete", str(target)])
-            assert "🚀" in output.decode("utf-8"), case_name
+            assert __version__ in output.decode("utf-8"), case_name
             outputs = [p for p in (case / "unzipped").rglob("*") if p.is_file()]
             assert any(
                 p.read_bytes() == payload.read_bytes() for p in outputs

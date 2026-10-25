@@ -244,7 +244,7 @@ class TestCloakedFileDetector:
     def test_init_with_invalid_rules_file(self):
         """Test initialization with invalid rules file."""
         with patch(
-            "complex_unzip_tool_v2.modules.cloaked_file_detector.print_error"
+            "complex_unzip_tool_v2.modules.cloaked_file_detector.notice"
         ) as mock_error:
             detector = CloakedFileDetector("nonexistent_file.json")
             assert len(detector.rules) == 0
@@ -253,7 +253,7 @@ class TestCloakedFileDetector:
     def test_load_rules_json_error(self):
         """Test handling of JSON decode error."""
         with patch(
-            "complex_unzip_tool_v2.modules.cloaked_file_detector.print_error"
+            "complex_unzip_tool_v2.modules.cloaked_file_detector.notice"
         ) as mock_print_error, patch(
             "builtins.open", mock_open(read_data='{"invalid": "json"}')
         ), patch(
@@ -438,7 +438,7 @@ class TestCloakedFileDetector:
     @patch(
         "complex_unzip_tool_v2.modules.cloaked_file_detector.detect_archive_extension"
     )
-    @patch("complex_unzip_tool_v2.modules.cloaked_file_detector.print_warning")
+    @patch("complex_unzip_tool_v2.modules.cloaked_file_detector.notice")
     def test_verify_with_signature_exception(self, mock_warning, mock_detect, detector):
         """On verification error, be conservative and do not rename."""
         mock_detect.side_effect = Exception("Test error")
@@ -483,7 +483,7 @@ class TestCloakedFileDetector:
 
     @patch("os.path.exists")
     @patch("os.rename")
-    @patch("complex_unzip_tool_v2.modules.cloaked_file_detector.print_success")
+    @patch("complex_unzip_tool_v2.modules.cloaked_file_detector.notice")
     def test_uncloak_file_success(
         self, mock_success, mock_rename, mock_exists, detector
     ):
@@ -496,11 +496,11 @@ class TestCloakedFileDetector:
             mock_rename.assert_called_once_with(
                 "/test/archive.7z", "/test/archive.7z.001"
             )
-            mock_success.assert_called_once()
+            mock_success.assert_not_called()  # a successful rename is silent
 
     @patch("os.path.exists")
     @patch("os.rename")
-    @patch("complex_unzip_tool_v2.modules.cloaked_file_detector.print_warning")
+    @patch("complex_unzip_tool_v2.modules.cloaked_file_detector.notice")
     def test_uncloak_file_collision_uses_existing(
         self, mock_warning, mock_rename, mock_exists, detector
     ):
@@ -542,7 +542,7 @@ class TestCloakedFileDetector:
 
     @patch("os.path.exists")
     @patch("os.rename")
-    @patch("complex_unzip_tool_v2.modules.cloaked_file_detector.print_error")
+    @patch("complex_unzip_tool_v2.modules.cloaked_file_detector.notice")
     def test_uncloak_file_rename_error(
         self, mock_error, mock_rename, mock_exists, detector
     ):

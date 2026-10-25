@@ -21,7 +21,7 @@ def test_cli_rejects_unsupported_platform_before_extraction(monkeypatch, tmp_pat
         main, "extract_files", lambda *a, **k: pytest.fail("Extraction started")
     )
     result = CliRunner().invoke(main.app, [str(archive)])
-    assert result.exit_code == 1
+    assert result.exit_code == 2
     assert "Unsupported 7-Zip platform" in Text.from_ansi(result.output).plain
     assert list(tmp_path.iterdir()) == [archive]
     assert archive.read_bytes() == b"unchanged"
@@ -41,7 +41,7 @@ def test_cli_missing_engine_preserves_input(monkeypatch, tmp_path):
     archive = tmp_path / "archive.zip删除"
     archive.write_bytes(b"unchanged")
     result = CliRunner().invoke(main.app, [str(archive)])
-    assert result.exit_code == 1
+    assert result.exit_code == 2
     assert "7-Zip executable not found" in Text.from_ansi(result.output).plain
     assert list(tmp_path.iterdir()) == [archive]
     assert archive.read_bytes() == b"unchanged"
@@ -73,7 +73,7 @@ def test_missing_engine_keeps_error_visible_without_losing_exit_code(
         monkeypatch.setattr(sys.stdout, "isatty", lambda: terminal)
         with pytest.raises(SystemExit) as exc:
             main.app(args=[str(tmp_path)])
-    assert exc.value.code == 1
+    assert exc.value.code == 2
     assert len(prompts) == int(terminal)
     assert not (tmp_path / "unzipped").exists()
 
@@ -112,7 +112,12 @@ def test_windows_cli_redirects_legacy_encoded_output_as_utf8(tmp_path, destinati
         "from complex_unzip_tool_v2.main import app; "
         "print('错误 🚀', file=sys.stderr); app()"
     )
-    env = {**os.environ, "PYTHONUTF8": "0", "PYTHONIOENCODING": "gbk"}
+    env = {
+        **os.environ,
+        "PYTHONUTF8": "0",
+        "PYTHONIOENCODING": "gbk",
+        "DEEPUNZIP_LANG": "zh",
+    }
     command = [sys.executable, "-c", script, str(tmp_path)]
     kwargs = dict(
         cwd=Path(__file__).resolve().parents[1],
@@ -130,5 +135,5 @@ def test_windows_cli_redirects_legacy_encoded_output_as_utf8(tmp_path, destinati
         result = subprocess.run(command, stdout=subprocess.PIPE, **kwargs)
         output = result.stdout
     assert result.returncode == 0, result.stderr
-    assert "🚀" in output.decode("utf-8")
+    assert "复杂解压工具" in output.decode("utf-8")
     assert "错误 🚀" in result.stderr.decode("utf-8")

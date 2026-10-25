@@ -142,11 +142,63 @@ def _find(result: PoolResult, item_id: int) -> Optional[WorkItem]:
 
 
 # ------------------------------
+# Event dispatch
+# ------------------------------
+
+
+def _silence_stdout(stream: Any) -> None:
+    """Point a closed stdout at the null device so the exit flush cannot fail."""
+    try:
+        if stream is sys.stdout:
+            os.dup2(os.open(os.devnull, os.O_WRONLY), stream.fileno())
+    except (AttributeError, OSError, ValueError):
+        pass
+
+
+class _Dispatcher:
+    """Calls `_on_<EventName>` for each event.
+
+    Output must never stop the run: when a write fails because the reader is
+    gone (`deepunzip … | head`: BrokenPipeError, or EINVAL on a Windows pipe),
+    the renderer goes quiet and the extraction finishes normally.
+    """
+
+    _output_closed = False
+
+    def __call__(self, event: ev.Event) -> None:
+        if self._output_closed:
+            return
+        handler: Optional[Callable[[Any], None]] = getattr(
+            self, f"_on_{type(event).__name__}", None
+        )
+        if handler is None:
+            return
+        try:
+            handler(event)
+        except OSError:
+            self._close_output()
+
+    def close(self) -> None:
+        pass
+
+    def _close_output(self) -> None:
+        self._output_closed = True
+
+
+class _Console(Console):
+    """Rich exits the program on a broken pipe; report it to the renderer instead."""
+
+    def on_broken_pipe(self) -> None:
+        self.quiet = True
+        raise BrokenPipeError
+
+
+# ------------------------------
 # Human renderers
 # ------------------------------
 
 
-class HumanRenderer:
+class HumanRenderer(_Dispatcher):
     """Item lines, the final lineage tree and the summary."""
 
     def __init__(self, console: Console, recycle_bin: bool = True) -> None:
@@ -157,15 +209,10 @@ class HumanRenderer:
         self._overflow = 0
         self._sets: list[ev.SetAssembled] = []
 
-    def __call__(self, event: ev.Event) -> None:
-        handler: Optional[Callable[[Any], None]] = getattr(
-            self, f"_on_{type(event).__name__}", None
-        )
-        if handler is not None:
-            handler(event)
-
-    def close(self) -> None:
-        pass
+    def _close_output(self) -> None:
+        super()._close_output()
+        self.console.quiet = True
+        _silence_stdout(self.console.file)
 
     # ---------- output ----------
 
@@ -358,12 +405,19 @@ class TreeRenderer(HumanRenderer):
         return self._live is not None
 
     def close(self) -> None:
-        self._stop_live()
+        try:
+            self._stop_live()
+        except OSError:
+            self._close_output()
+
+    def _close_output(self) -> None:
+        self._live = None  # nothing can be redrawn on a closed output
+        super()._close_output()
 
     def _stop_live(self) -> None:
-        if self._live is not None:
-            self._live.stop()
-            self._live = None
+        live, self._live = self._live, None
+        if live is not None:
+            live.stop()
 
     def _refresh(self) -> None:
         self._frame += 1
@@ -458,7 +512,7 @@ class TreeRenderer(HumanRenderer):
 # ------------------------------
 
 
-class JsonRenderer:
+class JsonRenderer(_Dispatcher):
     """--json: newline-delimited JSON events; the last line is the summary."""
 
     def __init__(
@@ -471,15 +525,9 @@ class JsonRenderer:
         self._paths: dict[int, str] = {}
         self._last_progress: dict[str, tuple[int, float]] = {}
 
-    def __call__(self, event: ev.Event) -> None:
-        handler: Optional[Callable[[Any], None]] = getattr(
-            self, f"_on_{type(event).__name__}", None
-        )
-        if handler is not None:
-            handler(event)
-
-    def close(self) -> None:
-        pass
+    def _close_output(self) -> None:
+        super()._close_output()
+        _silence_stdout(self.stream)
 
     def _write(self, name: str, **fields: Any) -> None:
         line = {"event": name, "schema_version": SCHEMA_VERSION, **fields}
@@ -623,7 +671,7 @@ def create_renderer(
     target = stream if stream is not None else sys.stdout
     if json_mode:
         return JsonRenderer(target)
-    console = Console(file=target, highlight=False, emoji=False, no_color=None)
+    console = _Console(file=target, highlight=False, emoji=False, no_color=None)
     if console.is_terminal:
         return TreeRenderer(console, recycle_bin)
     return PlainRenderer(console, recycle_bin)

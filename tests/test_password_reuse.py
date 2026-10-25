@@ -24,6 +24,8 @@ def password_directories(monkeypatch, tmp_path):
     )
     monkeypatch.setattr(main.archive_utils, "resolve_seven_zip_path", lambda: "7z")
     monkeypatch.setattr(main.file_utils, "send2trash", lambda path: Path(path).unlink())
+    # Password prompts are only shown when stdin is a terminal.
+    monkeypatch.setattr(main, "_stdin_is_terminal", lambda: True)
     # Multipart sets are probed by listing; headers are readable without a password.
     monkeypatch.setattr(
         main.archive_utils,
@@ -60,7 +62,7 @@ def test_cli_reuses_entered_password_for_later_archives(
     entered = []
 
     def prompt(text):
-        if text.startswith("Enter password"):
+        if text == main.t("prompt.password"):
             entered.append("learned-password")
             return "learned-password"
         return "1"
@@ -127,7 +129,7 @@ def test_cli_learned_password_unlocks_later_archives_but_keeps_failed_sources(
 
     result = CliRunner().invoke(main.app, [str(source)])
 
-    assert result.exit_code == 0, result.output
+    assert result.exit_code == 1, result.output  # locked.7z stays unresolved
     assert list(answers) == []  # one password entry, one skip for locked.7z
     assert (source / "archive0.7z").exists()
     assert not (source / "archive1.7z").exists()

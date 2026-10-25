@@ -13,6 +13,7 @@ from complex_unzip_tool_v2.classes.ArchiveGroup import ArchiveGroup
 from complex_unzip_tool_v2.modules.utils import get_string_similarity
 from complex_unzip_tool_v2.modules.cloaked_file_detector import CloakedFileDetector
 from complex_unzip_tool_v2.modules.regex import multipart_regex
+from complex_unzip_tool_v2.modules.i18n import t
 
 
 _MEANINGLESS_OUTPUT_FOLDER_ALLOWED_CHARS_RE = re.compile(
@@ -239,7 +240,7 @@ def rename_file(old_path: str, new_path: str, error_callback=None) -> bool:
         os.rename(old_path, new_path)
         return True
     except (OSError, IOError, PermissionError) as e:
-        error_msg = f"Error renaming file 重命名文件错误 {old_path} to {new_path}: {e}"
+        error_msg = t("file.rename_error", old=old_path, new=new_path, error=e)
         if error_callback:
             error_callback(error_msg)
         return False
@@ -270,7 +271,7 @@ def safe_remove(
                 return True
         return False
     except (OSError, IOError, PermissionError, FileNotFoundError) as e:
-        error_msg = f"Error removing file 删除文件错误 {file_path}: {e}"
+        error_msg = t("file.remove_error", path=file_path, error=e)
         if error_callback:
             error_callback(error_msg)
         return False
@@ -432,9 +433,8 @@ def uncloak_file_extension_for_groups(
                     if group.mainArchiveFile == original_file:
                         group.mainArchiveFile = new_path
                 else:
-                    warning_msg = (
-                        f"⚠ Failed to rename file '{original_file}' to '{new_path}'. "
-                        "File does not exist. Group not updated."
+                    warning_msg = t(
+                        "file.group_rename_missing", old=original_file, new=new_path
                     )
                     if warning_callback:
                         warning_callback(warning_msg)
@@ -503,10 +503,10 @@ def move_files_preserving_structure(
                 if progress_callback:
                     progress_callback()
                 if verbose and success_callback:
-                    success_callback(f"📁 Moved 已移动: {relative_path}")
+                    success_callback(t("file.moved", path=relative_path))
 
             except (OSError, IOError, PermissionError) as e:
-                error_msg = f"Error moving 移动错误 {file_path}: {e}"
+                error_msg = t("file.move_error", path=file_path, error=e)
                 if error_callback:
                     error_callback(error_msg)
 
