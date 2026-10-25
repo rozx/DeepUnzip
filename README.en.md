@@ -28,7 +28,6 @@ If you deal with archives often, you have probably run into these:
 - Volumes downloaded from a forum, Discord or Telegram, from `.part1.rar` to `.part8.rar`, or a mail attachment split into `.zip`, `.z01` and `.z02` to get under the size limit. As long as they are somewhere under the folder you pass in, even in different subfolders, DeepUnzip finds the whole set before extracting it.
 - Archives inside archives, such as a collection where every item was zipped on its own. DeepUnzip keeps opening them, level by level, until nothing is left to open.
 - A `.zip` renamed to something like `.zip.txt` to get past a mail or chat attachment filter. DeepUnzip recognizes archives by their content, not their extension.
-- Files shared on Chinese cloud drives such as Baidu Netdisk often get deliberately mangled names to dodge content filters: `movie.7z.001` becomes `movie.7z.001删除`, and the volumes are split up and packed into other archives. DeepUnzip restores the names and gathers the volumes from those archives.
 
 Doing this by hand means opening archives one by one, trying passwords, moving volumes around, and then working out which originals are safe to delete. DeepUnzip does it with one command, and before it deletes an original it checks that everything extracted from it was handled.
 
