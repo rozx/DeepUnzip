@@ -50,13 +50,13 @@ def test_plain_output_lists_items_then_tree_and_summary(tmp_path):
     stream, renderer = plain(recycle_bin=True)
     drive(renderer, tmp_path, **reproduction(tmp_path))
     out = stream.getvalue()
-    assert out.count("A.7z  opened → 1 files · password #1") == 1
-    assert out.count("B.rar  opened → 1 files · password #1") == 1
-    assert "X.7z.001  2 volumes assembled → 1 files" in out
-    assert "X.7z  1 files" in out
+    assert out.count("A.7z  opened → 1 file · password #1") == 1
+    assert out.count("B.rar  opened → 1 file · password #1") == 1
+    assert "X.7z.001  2 volumes assembled → 1 file" in out
+    assert "X.7z  1 file" in out
     assert ".7z.001 ← B.rar  uncloaked from X.7z.001删掉" in out
     assert ".7z.002 ← A.7z" in out
-    assert "output: 1 files →" in out
+    assert "output: 1 file →" in out
     assert "sources: 2 moved to the recycle bin" in out
     assert "exit code 0" in out
     assert "\x1b[" not in out

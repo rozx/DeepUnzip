@@ -3,7 +3,8 @@ User-facing text in English and Chinese.
 面向用户的中英文文案。
 
 Every user-facing string lives in CATALOG with an "en" and a "zh" entry; code
-calls `t(key, **params)`. The language is chosen once per run: DEEPUNZIP_LANG
+calls `t(key, **params)`. An entry may add "en_one" (or "zh_one"), used when
+the `count` parameter is 1 ("1 file" rather than "1 files"). The language is chosen once per run: DEEPUNZIP_LANG
 (zh/en) if set, otherwise the system UI language (zh* means Chinese),
 otherwise English. tests/test_i18n.py fails if a key lacks a language.
 """
@@ -54,14 +55,21 @@ CATALOG: dict[str, dict[str, str]] = {
     "error.engine": {"en": "{detail}", "zh": "{detail}"},
     "error.unexpected": {"en": "Unexpected error: {detail}", "zh": "意外错误：{detail}"},
     "error.cancelled": {"en": "Cancelled.", "zh": "已取消。"},
+    # ---------- counted nouns ----------
+    "count.files": {"en": "{count} files", "en_one": "1 file", "zh": "{count} 个文件"},
+    "count.sources": {
+        "en": "{count} sources",
+        "en_one": "1 source",
+        "zh": "{count} 个原文件",
+    },
     # ---------- item lines ----------
     "line.opened": {
-        "en": "{name}  opened → {files} files{password}",
-        "zh": "{name}  已打开 → {files} 个文件{password}",
+        "en": "{name}  opened → {files}{password}",
+        "zh": "{name}  已打开 → {files}{password}",
     },
     "line.assembled": {
-        "en": "{name}  {volumes} volumes assembled → {files} files{password}",
-        "zh": "{name}  已拼合 {volumes} 卷 → {files} 个文件{password}",
+        "en": "{name}  {volumes} volumes assembled → {files}{password}",
+        "zh": "{name}  已拼合 {volumes} 卷 → {files}{password}",
     },
     "line.kept": {
         "en": "{name}  kept (not an archive)",
@@ -81,10 +89,10 @@ CATALOG: dict[str, dict[str, str]] = {
     "live.current": {"en": "Current", "zh": "当前"},
     # ---------- final tree and summary ----------
     "tree.root": {
-        "en": "{root}  {sources} sources → {files} files  {elapsed}",
-        "zh": "{root}  {sources} 个原文件 → {files} 个文件  {elapsed}",
+        "en": "{root}  {sources} → {files}  {elapsed}",
+        "zh": "{root}  {sources} → {files}  {elapsed}",
     },
-    "tree.set": {"en": "{name}  {files} files", "zh": "{name}  {files} 个文件"},
+    "tree.set": {"en": "{name}  {files}", "zh": "{name}  {files}"},
     "tree.volume": {"en": "{volume} ← {source}", "zh": "{volume} ← {source}"},
     "tree.input": {"en": "input folder", "zh": "输入目录"},
     "tree.uncloaked": {"en": "uncloaked from {original}", "zh": "原名 {original}"},
@@ -94,8 +102,8 @@ CATALOG: dict[str, dict[str, str]] = {
     },
     "tree.in_place": {"en": "kept in place", "zh": "保留在原处"},
     "summary.output": {
-        "en": "output: {files} files → {folder}",
-        "zh": "输出：{files} 个文件 → {folder}",
+        "en": "output: {files} → {folder}",
+        "zh": "输出：{files} → {folder}",
     },
     "summary.recycled": {
         "en": "sources: {count} moved to the recycle bin",
@@ -301,5 +309,10 @@ def t(key: str, **params: object) -> str:
     entry = CATALOG.get(key)
     if entry is None:
         return key
-    text = entry.get(get_language()) or entry["en"]
+    language = get_language()
+    if language not in entry:
+        language = "en"
+    text = entry[language]
+    if params.get("count") == 1:
+        text = entry.get(f"{language}_one", text)
     return text.format(**params) if params else text

@@ -11,7 +11,7 @@ def _fields(text):
 
 def test_every_key_has_both_languages_with_the_same_placeholders():
     for key, entry in i18n.CATALOG.items():
-        assert set(entry) == {"en", "zh"}, key
+        assert {"en", "zh"} <= set(entry), key
         assert entry["en"].strip() and entry["zh"].strip(), key
         assert _fields(entry["en"]) == _fields(entry["zh"]), key
 
@@ -66,3 +66,17 @@ def test_posix_language_comes_from_locale_variables(env, expected):
 )
 def test_windows_ui_language_id(langid, expected):
     assert i18n.language_from_langid(langid) == expected
+
+
+def test_entries_only_use_known_variants():
+    for key, entry in i18n.CATALOG.items():
+        assert set(entry) <= {"en", "zh", "en_one", "zh_one"}, key
+
+
+def test_singular_variant_is_used_for_a_count_of_one(monkeypatch):
+    monkeypatch.setitem(
+        i18n.CATALOG, "test.files", {"en": "{count} files", "en_one": "1 file"}
+    )
+    assert i18n.t("test.files", count=1) == "1 file"
+    assert i18n.t("test.files", count=0) == "0 files"
+    assert i18n.t("test.files", count=2) == "2 files"

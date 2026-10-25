@@ -112,6 +112,11 @@ def shorten(name: str, width: int = NAME_WIDTH) -> str:
     return f"{head}…{tail}"
 
 
+def files_text(count: int) -> str:
+    """ "1 file" / "3 files" / "3 个文件"."""
+    return t("count.files", count=count)
+
+
 def password_text(ref: PasswordRef) -> str:
     if ref == "entered":
         return t("password.entered")
@@ -201,10 +206,16 @@ class _Console(Console):
 class HumanRenderer(_Dispatcher):
     """Item lines, the final lineage tree and the summary."""
 
-    def __init__(self, console: Console, recycle_bin: bool = True) -> None:
+    def __init__(
+        self,
+        console: Console,
+        recycle_bin: bool = True,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> None:
         self.console = console
         self.recycle_bin = recycle_bin
-        self._root_started = time.monotonic()
+        self.clock = clock
+        self._root_started = clock()
         self._lines = 0
         self._overflow = 0
         self._sets: list[ev.SetAssembled] = []
@@ -234,7 +245,7 @@ class HumanRenderer(_Dispatcher):
         self._print(Text(title, style="bold"))
 
     def _on_RootStarted(self, event: ev.RootStarted) -> None:
-        self._root_started = time.monotonic()
+        self._root_started = self.clock()
         self._lines = self._overflow = 0
         self._sets = []
         self._print(Text(event.root, style="cyan"))
@@ -247,7 +258,7 @@ class HumanRenderer(_Dispatcher):
             t(
                 "line.opened",
                 name=shorten(item.name),
-                files=event.files,
+                files=files_text(event.files),
                 password=password_text(item.password_ref),
             ),
         )
@@ -261,7 +272,7 @@ class HumanRenderer(_Dispatcher):
                 "line.assembled",
                 name=shorten(event.primary.name),
                 volumes=len(event.volumes),
-                files=event.files,
+                files=files_text(event.files),
                 password=password_text(event.primary.password_ref),
             ),
         )
@@ -307,9 +318,9 @@ class HumanRenderer(_Dispatcher):
         header = t(
             "tree.root",
             root=result.root,
-            sources=len(sources),
-            files=len(result.output_files),
-            elapsed=format_elapsed(time.monotonic() - self._root_started),
+            sources=t("count.sources", count=len(sources)),
+            files=files_text(len(result.output_files)),
+            elapsed=format_elapsed(self.clock() - self._root_started),
         )
         self._print(Text("", end=""))
         self._print(
@@ -341,7 +352,11 @@ class HumanRenderer(_Dispatcher):
         self._print_summary(result)
 
     def _print_set(self, result: PoolResult, assembled: ev.SetAssembled) -> None:
-        name = t("tree.set", name=set_name(assembled.primary), files=assembled.files)
+        name = t(
+            "tree.set",
+            name=set_name(assembled.primary),
+            files=files_text(assembled.files),
+        )
         self._print(Text.assemble(("  ", ""), (name, "bold")))
         for position, volume in enumerate(assembled.volumes):
             branch = "└─" if position == len(assembled.volumes) - 1 else "├─"
@@ -366,7 +381,7 @@ class HumanRenderer(_Dispatcher):
         lines = [
             t(
                 "summary.output",
-                files=len(result.output_files),
+                files=files_text(len(result.output_files)),
                 folder=result.output_dir,
             )
         ]
@@ -388,8 +403,13 @@ class PlainRenderer(HumanRenderer):
 class TreeRenderer(HumanRenderer):
     """Interactive terminal: two live progress lines below the item lines."""
 
-    def __init__(self, console: Console, recycle_bin: bool = True) -> None:
-        super().__init__(console, recycle_bin)
+    def __init__(
+        self,
+        console: Console,
+        recycle_bin: bool = True,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> None:
+        super().__init__(console, recycle_bin, clock)
         self._live: Optional[Live] = None
         self._round = 0
         self._done = 0
@@ -397,7 +417,7 @@ class TreeRenderer(HumanRenderer):
         self._current: Optional[str] = None
         self._percent = 0
         self._bytes: tuple[Optional[int], Optional[int]] = (None, None)
-        self._item_started = time.monotonic()
+        self._item_started = self.clock()
         self._frame = 0
 
     @property
@@ -440,7 +460,7 @@ class TreeRenderer(HumanRenderer):
             [
                 t("live.archives", done=self._done, total=total),
                 t("live.round", number=self._round),
-                format_elapsed(time.monotonic() - self._root_started),
+                format_elapsed(self.clock() - self._root_started),
             ]
         )
         grid.add_row(
@@ -453,7 +473,7 @@ class TreeRenderer(HumanRenderer):
             done, size = self._bytes
             if done is not None and size:
                 details.append(format_byte_pair(done, size))
-                seconds = time.monotonic() - self._item_started
+                seconds = self.clock() - self._item_started
                 if seconds > 0.5:
                     details.append(f"{format_bytes(done / seconds)}/s")
             spinner = _SPINNER[self._frame % len(_SPINNER)]
@@ -477,7 +497,7 @@ class TreeRenderer(HumanRenderer):
         self._current = event.item.name
         self._percent = 0
         self._bytes = (None, None)
-        self._item_started = time.monotonic()
+        self._item_started = self.clock()
         self._refresh()
 
     def _on_Progress(self, event: ev.Progress) -> None:
