@@ -9,6 +9,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from deepunzip.modules.render import configure_redirected_output
 from deepunzip.modules.seven_zip_runtime import (
     SevenZipNotFoundError,
     bundled_engine_path,
@@ -131,6 +132,7 @@ exe = EXE(
 
 
 def main() -> int:
+    configure_redirected_output()  # emoji must survive a GBK pipe on Windows
     # Get project root directory (parent of scripts directory)
     project_root = Path(__file__).parent.parent.absolute()
     scripts_dir = Path(__file__).parent.absolute()

@@ -132,6 +132,9 @@ def create_icon():
     return ico_path
 
 if __name__ == "__main__":
+    from deepunzip.modules.render import configure_redirected_output
+
+    configure_redirected_output()  # emoji must survive a GBK pipe on Windows
     try:
         icon_path = create_icon()
         print(f"\n🎯 Icon ready for use: {icon_path}")
