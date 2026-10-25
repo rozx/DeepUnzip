@@ -529,3 +529,91 @@ def test_set_attempt_is_announced_before_assembly(tmp_path):
     run_pool(tmp_path, emit=events.append)
     kinds = [type(e).__name__ for e in events if not isinstance(e, wp.RoundStarted)]
     assert kinds.index("ItemStarted") < kinds.index("SetAssembled")
+
+
+# ------------------------------
+# Review regressions
+# ------------------------------
+
+
+class LoneVolumeIsBrokenEngine(FakeEngine):
+    """Like 7-Zip: a spanned .zip without its .z01 cannot even be listed."""
+
+    def classify(self, path):
+        data = self._load(path)
+        if isinstance(data, dict) and data.get("alone") == "unsupported":
+            siblings = [
+                n
+                for n in os.listdir(os.path.dirname(path))
+                if n != os.path.basename(path)
+                and ma.parse_volume_name(n) is not None
+                and ma.parse_volume_name(n).key == ma.parse_volume_name(path).key
+            ]
+            if not siblings:
+                return "broken"
+        return super().classify(path)
+
+
+def test_source_ambiguous_primary_classified_broken_is_promoted(tmp_path):
+    write(tmp_path / "X.zip", volume("Z", 1, 2, {"z.txt": "z"}, alone="unsupported"))
+    write(tmp_path / "Z.7z", archive({"X.z01": volume("Z", 2, 2)}))
+    result, _ = run_pool(tmp_path, engine=LoneVolumeIsBrokenEngine())
+    assert output_files(tmp_path) == ["z.txt"]
+    assert deleted(result) == ["X.zip", "Z.7z"]
+    assert result.unresolved == []
+
+
+def test_derived_ambiguous_primary_classified_regular_is_promoted(tmp_path):
+    write(
+        tmp_path / "A.7z",
+        archive({"X.zip": volume("Z", 1, 2, {"z.txt": "z"}, alone="unsupported")}),
+    )
+    write(tmp_path / "B.7z", archive({"X.z01": volume("Z", 2, 2)}))
+    result, _ = run_pool(tmp_path, engine=LoneVolumeIsBrokenEngine())
+    assert output_files(tmp_path) == ["X/z.txt"]
+    assert deleted(result) == ["A.7z", "B.7z"]
+    assert result.unresolved == []
+
+
+def test_identical_duplicate_primary_does_not_pin_its_source(tmp_path):
+    first, second = volume("S1", 1, 2, {"f": "f"}), volume("S1", 2, 2)
+    write(tmp_path / "A.7z", archive({"X.7z.001": first, "X.7z.002": second}))
+    write(tmp_path / "B.7z", archive({"X.7z.001": first, "X.7z.002": second}))
+    result, _ = run_pool(tmp_path)
+    assert output_files(tmp_path) == ["X/f"]
+    assert deleted(result) == ["A.7z", "B.7z"]
+    assert result.unresolved == []
+
+
+def test_failed_volume_move_is_undone_and_the_run_finishes(tmp_path, monkeypatch):
+    write(tmp_path / "s1" / "X.7z.001", volume("S", 1, 2, {"f": "f"}))
+    write(tmp_path / "s2" / "X.7z.002", volume("S", 2, 2))
+    real_move = wp.shutil.move
+
+    def move(src, dst):
+        if ".assemble" in str(dst) and os.path.basename(src) == "X.7z.002":
+            raise PermissionError("locked")
+        return real_move(src, dst)
+
+    monkeypatch.setattr(wp.shutil, "move", move)
+    relocations = wp.MemoryRelocationLog()
+    result, _ = run_pool(tmp_path, relocations=relocations)
+    assert (tmp_path / "s1" / "X.7z.001").exists()
+    assert (tmp_path / "s2" / "X.7z.002").exists()
+    assert relocations.entries == {}
+    assert deleted(result) == []
+    assert "X.7z.001" in [i.name for i in result.unresolved]
+
+
+def test_set_password_prompt_is_not_repeated_by_the_container_fallback(tmp_path):
+    asked = []
+
+    def prompt(path):
+        asked.append(os.path.basename(path))
+        return None
+
+    write(tmp_path / "X.rar", volume("S", 1, 2, {"f": "f"}, password="s"))
+    write(tmp_path / "X.r00", volume("S", 2, 2, password="s"))
+    result, _ = run_pool(tmp_path, prompt=prompt)
+    assert asked == ["X.rar"]
+    assert deleted(result) == []

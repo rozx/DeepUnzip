@@ -27,7 +27,7 @@ from .modules import (
 from .classes.PasswordBook import PasswordBook
 from .modules.i18n import t
 from .modules.pool_engine import SevenZipEngine
-from .modules.rename_history import RelocationLog, RenameHistory
+from .modules.rename_history import KIND_RELOCATION, RelocationLog, RenameHistory
 from .modules.render import create_renderer
 
 EXIT_OK = 0
@@ -94,26 +94,32 @@ def _prompt_for_password(archive_path: str) -> work_pool.PromptAnswer:
         events.notice("warning", "prompt.invalid")
 
 
-def _maybe_recover_pending_renames(input_root: str, interactive: bool = True) -> None:
+def _maybe_recover_pending_renames(
+    input_root: str, interactive: bool = True
+) -> list[dict]:
     """Recover what an interrupted run left in `input_root`.
 
     Leftover work directories are reported. Source volumes that were moved
     for multipart assembly are restored without asking; uncloak renames are
     only reverted if the user agrees (default, and non-interactive: no).
+
+    Returns the relocation entries that could not be restored, so the caller
+    can carry them into this run's history instead of losing them.
     """
     for leftover in work_pool.leftover_work_dirs(input_root):
         events.notice("warning", "recovery.work_dir", path=leftover)
 
     pending = RenameHistory.load_pending(input_root)
     if pending is None:
-        return
+        return []
 
     restored = pending.restore_relocations()
     if restored:
         events.notice("info", "recovery.restored", count=restored)
+    stranded = [e for e in pending.entries if e.get("kind") == KIND_RELOCATION]
     if not pending.uncloak_entries():
         pending.delete_file()
-        return
+        return stranded
 
     events.notice("warning", "recovery.pending", count=len(pending.entries))
     if not pending.root_matches(input_root):
@@ -132,7 +138,7 @@ def _maybe_recover_pending_renames(input_root: str, interactive: bool = True) ->
     choice = _ask(t("recovery.ask")) if interactive else None
     if (choice or "").lower() not in ("y", "yes"):
         events.notice("info", "recovery.skipped")
-        return
+        return stranded
 
     total = 0
     for group_key in pending.bound_group_keys():
@@ -142,6 +148,7 @@ def _maybe_recover_pending_renames(input_root: str, interactive: bool = True) ->
     total += unbound_count
     pending.delete_file()
     events.notice("info", "recovery.reverted", count=total)
+    return [e for e in pending.entries if e.get("kind") == KIND_RELOCATION]
 
 
 def _ask_for_user_input_and_exit(exit_code: int = 0, json_mode: bool = False) -> None:
@@ -316,9 +323,12 @@ def extract_files(
         work_pool.group_input_roots(paths), start=1
     ):
         events.emit(events.RootStarted(index, root))
-        _maybe_recover_pending_renames(root, interactive)
+        stranded = _maybe_recover_pending_renames(root, interactive)
 
         history = RenameHistory(root)
+        for entry in stranded:
+            # Retried by _reconcile_history once this run finishes.
+            history.record(entry["original"], entry["renamed"], kind=KIND_RELOCATION)
         sources = file_utils.read_dir(root_paths)
 
         def uncloak(

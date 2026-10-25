@@ -157,3 +157,14 @@ def test_remember_adds_to_the_password_book():
     book = Book(["a"])
     SevenZipEngine(book).remember("typed")
     assert book.get_passwords() == ["a", "typed"]
+
+
+def test_extract_sizes_the_archive_once_for_all_passwords(monkeypatch, tmp_path):
+    import deepunzip.modules.pool_engine as pe
+
+    sized = []
+    monkeypatch.setattr(pe, "_archive_bytes", lambda archive: sized.append(1) or 10)
+    monkeypatch.setattr(au, "extractArchiveWith7z", _extract_needing("c", []))
+    engine = SevenZipEngine(Book(["a", "b", "c"]), emit=lambda event: None)
+    assert engine.extract("x.7z", str(tmp_path)).ok
+    assert sized == [1]

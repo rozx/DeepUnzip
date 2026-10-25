@@ -27,6 +27,7 @@ from deepunzip.modules.events import (  # re-exported for callers
     ItemOpened,
     ItemStarted,
     ItemUnresolved,
+    Notice,
     PromptNeeded,
     RootFinished,
     RoundStarted,
@@ -350,11 +351,14 @@ class WorkPool:
         self.emit = emit or (lambda _event: None)
 
         self.items: list[WorkItem] = []
+        self._by_id: dict[int, WorkItem] = {}
         self._next_id = 1
         self._key_versions: dict[tuple[str, str], int] = {}
         self._sets: dict[int, _SetState] = {}
         self._skip_all = False
         self._assembly_count = 0
+        # Set when a relocated volume could not be moved back (see _restore).
+        self._keep_work_dir = False
         # Bumped whenever a password is learned, so sets that failed on a
         # password are retried with it before anyone is prompted again.
         self._password_epoch = 0
@@ -445,6 +449,7 @@ class WorkPool:
             ),
         )
         self.items.append(item)
+        self._by_id[item_id] = item
         self._classify(item)
         return item
 
@@ -480,14 +485,19 @@ class WorkPool:
         )
 
     def _promote_ambiguous(self, key: tuple[str, str]) -> None:
-        """A continuation arrived: matching ambiguous primaries become set primaries."""
+        """A continuation arrived: matching ambiguous primaries become set primaries.
+
+        7-Zip cannot list a spanned `.zip` without its `.z01`, so such a primary
+        may have been classified as a broken (source) or regular (derived) file
+        before its continuation surfaced; it is promoted as well.
+        """
         for item in self.items:
             if (
                 item.volume is not None
                 and item.volume.ambiguous
                 and item.volume.key == key
-                and item.kind is Kind.CONTAINER
-                and item.state in (State.PENDING, State.UNRESOLVED)
+                and item.kind is not Kind.VOLUME
+                and item.state in (State.PENDING, State.UNRESOLVED, State.FINAL)
             ):
                 item.kind = Kind.VOLUME
                 item.state = State.PENDING
@@ -497,7 +507,7 @@ class WorkPool:
         self._key_versions[key] = self._key_versions.get(key, 0) + 1
 
     def _get(self, item_id: int) -> WorkItem:
-        return next(i for i in self.items if i.id == item_id)
+        return self._by_id[item_id]
 
     def _unresolve(self, item: WorkItem, reason: str) -> None:
         item.state = State.UNRESOLVED
@@ -523,7 +533,11 @@ class WorkPool:
             os.makedirs(dest, exist_ok=True)
             return self.engine.extract(item.path, dest, password)
 
-        outcome = self._with_prompt(item.path, attempt(None), attempt)
+        outcome = attempt(None)
+        set_state = self._sets.get(item.id)
+        if set_state is None or not set_state.prompted:
+            # A set primary falling back to a container was already asked once.
+            outcome = self._with_prompt(item.path, outcome, attempt)
         if outcome.ok:
             files = _list_files(dest)
             if not files:
@@ -670,8 +684,8 @@ class WorkPool:
             return False
         # Create the destination before any volume moves away, so it can never
         # take a path that a temporarily relocated volume must return to.
-        dest = self._set_dest(primary, primary.path)
-        moved = self._assemble(volumes)
+        dest = self._container_dest(primary)
+        moved: list[tuple[WorkItem, str]] = []
         success = False
         # 7-Zip used fewer volumes than chosen: retry with only those, once this
         # attempt is fully undone (never consume a volume 7-Zip did not use).
@@ -679,6 +693,21 @@ class WorkPool:
         files: list[str] = []
         extracted_ref: PasswordRef = None
         try:
+            try:
+                self._assemble(volumes, moved)
+            except OSError as error:
+                # A locked volume: undo the moves made so far (finally) and
+                # treat the combination as failed instead of aborting the run.
+                state.other_failures += 1
+                state.last_status = "failed"
+                self.emit(
+                    Notice(
+                        "warning",
+                        "notice.move_failed",
+                        {"name": primary.name, "error": error},
+                    )
+                )
+                return False
             probe = self.engine.probe(primary.path, password)
             state.last_status = probe.status
             if not probe.ok:
@@ -736,40 +765,51 @@ class WorkPool:
         self.emit(SetAssembled(primary, tuple(volumes), len(files)))
         return True
 
-    def _set_dest(self, primary: WorkItem, home: str) -> str:
-        parent = self.work_dir if primary.is_source else os.path.dirname(home)
-        return _unique_dir(os.path.join(parent, derive_folder_name(primary.name)))
-
-    def _assemble(self, volumes: list[WorkItem]) -> list[tuple[WorkItem, str]]:
+    def _assemble(
+        self, volumes: list[WorkItem], moves: list[tuple[WorkItem, str]]
+    ) -> None:
         """Bring the chosen volumes together so 7-Zip sees exactly them.
 
-        Returns the moves made, so `_restore` can undo them. When the volumes
+        Each move made is appended to `moves` as soon as it happens, so
+        `_restore` can undo them even if a later move fails. When the volumes
         already share a folder with no other same-set file in it, nothing moves.
         """
         if self._in_place(volumes):
-            return []
+            return
         self._assembly_count += 1
         folder = os.path.join(
             self.work_dir, ASSEMBLY_DIR_NAME, str(self._assembly_count)
         )
         os.makedirs(folder, exist_ok=True)
-        moves = []
         for volume in volumes:
             original = volume.path
             target = os.path.join(folder, os.path.basename(original))
             if volume.is_source:
                 self.relocations.record(original, target)
-            shutil.move(original, target)
+            try:
+                shutil.move(original, target)
+            except OSError:
+                if volume.is_source:
+                    self.relocations.clear(target)
+                raise
             volume.path = target
             moves.append((volume, original))
-        return moves
 
     def _restore(self, moves: list[tuple[WorkItem, str]], success: bool) -> None:
-        """Move every relocated volume back where it came from."""
+        """Move every relocated volume back where it came from.
+
+        A volume that cannot be moved back stays where it is, with its
+        relocation entry kept for recovery; the work directory is then kept
+        so it is never removed along with that volume.
+        """
         folders = set()
         for volume, original in moves:
             folders.add(os.path.dirname(volume.path))
-            shutil.move(volume.path, original)
+            try:
+                shutil.move(volume.path, original)
+            except OSError:
+                self._keep_work_dir = True
+                continue
             if volume.is_source:
                 self.relocations.clear(volume.path)
             volume.path = original
@@ -801,7 +841,7 @@ class WorkPool:
         leftovers = {
             os.path.abspath(i.path): i
             for i in self._pending(Kind.VOLUME)
-            if i.volume is not None and i.volume.key == key and not i.volume.is_primary
+            if i.volume is not None and i.volume.key == key
         }
         used = [
             c
@@ -930,18 +970,21 @@ class WorkPool:
             if wanted and not self._move_to_output(item):
                 failed = True
                 self._unresolve(item, "move failed")
-        if failed:
+        if failed or self._keep_work_dir:
             return True
         shutil.rmtree(self.work_dir, ignore_errors=True)
         return False
 
     def _cleanup_sources(self, result: PoolResult) -> None:
+        descendants_of: dict[int, list[WorkItem]] = {}
+        for item in self.items:
+            for source_id in item.lineage:
+                if source_id != item.id:
+                    descendants_of.setdefault(source_id, []).append(item)
         for source in (i for i in self.items if i.is_source):
             if source.state is State.KEPT:
                 continue
-            descendants = [
-                i for i in self.items if source.id in i.lineage and i is not source
-            ]
+            descendants = descendants_of.get(source.id, [])
             deletable = (
                 source.state is State.CONSUMED
                 and bool(descendants)

@@ -75,12 +75,13 @@ class SevenZipEngine:
 
     # ---------- helpers ----------
 
-    def _progress(self, archive: str) -> Optional[Callable[[int], None]]:
+    def _progress(
+        self, archive: str, total: Optional[int]
+    ) -> Optional[Callable[[int], None]]:
         """A callback turning 7-Zip percentages into Progress events, or None."""
         emit = self.emit
         if emit is None:
             return None
-        total = _archive_bytes(archive)
         last: list[int] = []
 
         def report(percent: int) -> None:
@@ -126,6 +127,8 @@ class SevenZipEngine:
         self, archive: str, dest: str, password: Optional[str] = None
     ) -> Outcome:
         saw_password = False
+        # Sized once: every password attempt extracts the same volumes.
+        total = _archive_bytes(archive) if self.emit is not None else None
         for candidate in self._candidates(password):
             _reset_dir(dest)
             try:
@@ -135,7 +138,7 @@ class SevenZipEngine:
                     password=candidate,
                     seven_zip_path=self.seven_zip_path,
                     overwrite=True,
-                    on_progress=self._progress(archive),
+                    on_progress=self._progress(archive, total),
                 )
             except ArchivePasswordError:
                 saw_password = True

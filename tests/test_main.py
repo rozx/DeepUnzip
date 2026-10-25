@@ -300,6 +300,35 @@ def test_leftover_relocation_is_restored_without_asking(fake_7z, monkeypatch, tm
     assert not stranded.exists()
 
 
+def test_relocation_that_cannot_be_restored_is_retried_not_forgotten(
+    fake_7z, monkeypatch, tmp_path
+):
+    home = tmp_path / "src" / "X.7z.002"
+    stranded = tmp_path / "temp.deepunzip-old" / ".assemble" / "1" / "X.7z.002"
+    stranded.parent.mkdir(parents=True)
+    stranded.write_bytes(b"volume")
+    (tmp_path / "src").mkdir()
+    h = RenameHistory(str(tmp_path))
+    h.record(str(home), str(stranded), kind="relocation")
+
+    real_replace = os.replace
+
+    def replace(src, dst):
+        if os.path.abspath(src) == str(stranded):
+            raise PermissionError("locked")
+        return real_replace(src, dst)
+
+    monkeypatch.setattr("deepunzip.modules.rename_history.os.replace", replace)
+    monkeypatch.setattr("builtins.input", lambda *a, **k: "n")
+
+    main.extract_files([str(tmp_path)], use_recycle_bin=False)
+
+    # The startup restore failed; the entry was carried into this run's
+    # history and the volume was moved home when the run finished.
+    assert home.read_bytes() == b"volume"
+    assert not stranded.exists()
+
+
 def _capture_cli_extract(monkeypatch) -> list:
     """Stub out the real extraction so CLI parsing can be observed in isolation."""
     calls: list = []
