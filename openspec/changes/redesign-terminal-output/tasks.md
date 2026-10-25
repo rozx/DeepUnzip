@@ -61,5 +61,5 @@ The tasks follow TDD with mocked 7-Zip. They are committed directly on `release/
 
 ## 5. Docs
 
-- [ ] 5.1 In `CLAUDE.md` / `AGENTS.md`, replace the "all user-facing strings bilingual inline" rule with the catalog rule (add keys in both languages, and never use inline user-facing strings).
-- [ ] 5.2 Draft the upgrade-notes text for `docs/releaseNotes/v2.0.0.md` (exit codes, single-language output, `DEEPUNZIP_LANG`, `--json`) and the README usage section text, for use in `rename-to-deepunzip` and in release task 8.3.
+- [x] 5.1 In `CLAUDE.md` / `AGENTS.md`, replace the "all user-facing strings bilingual inline" rule with the catalog rule (add keys in both languages, and never use inline user-facing strings).
+- [x] 5.2 Draft the upgrade-notes text for `docs/releaseNotes/v2.0.0.md` (exit codes, single-language output, `DEEPUNZIP_LANG`, `--json`) and the README usage section text, for use in `rename-to-deepunzip` and in release task 8.3.

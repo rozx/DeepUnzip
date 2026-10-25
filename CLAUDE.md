@@ -43,14 +43,14 @@ A CLI that extracts complex archives: password-protected, multipart, nested, and
 
 ### Extraction flow: the work pool (the big picture)
 
-[main.py](complex_unzip_tool_v2/main.py) `extract_files()` loads the password book once ([password_util.py](complex_unzip_tool_v2/modules/password_util.py) → [PasswordBook](complex_unzip_tool_v2/classes/PasswordBook.py), which keeps file order so "password #N" is stable). Then, for each **input root** (a folder passed on the command line, or a file's folder; nested roots merge: `work_pool.group_input_roots`), it:
+[main.py](complex_unzip_tool_v2/main.py) `run()` picks the renderer, checks the engine and the paths, calls `extract_files()` and returns the exit code (see "Output" below). `extract_files()` loads the password book once ([password_util.py](complex_unzip_tool_v2/modules/password_util.py) → [PasswordBook](complex_unzip_tool_v2/classes/PasswordBook.py), which keeps file order so "password #N" is stable). Then, for each **input root** (a folder passed on the command line, or a file's folder; nested roots merge: `work_pool.group_input_roots`), it:
 
 1. recovers what an interrupted run left behind (`_maybe_recover_pending_renames`): it reports `temp.deepunzip-*` work directories, restores `relocation` history entries automatically, and prompts (default "no") for `uncloak` entries;
 2. scans the root with [file_utils.py](complex_unzip_tool_v2/modules/file_utils.py) `read_dir`, which skips `unzipped/` and work directories and adds the sibling volumes of a selected file;
 3. runs a [WorkPool](complex_unzip_tool_v2/modules/work_pool.py) over the scanned sources with a [SevenZipEngine](complex_unzip_tool_v2/modules/pool_engine.py);
-4. reconciles rename history from the result (clears the entries of deleted sources, reverts the rest) and prints the root summary.
+4. reconciles rename history from the result (clears the entries of deleted sources, reverts the rest).
 
-Finally it saves newly learned passwords and prints the final summary.
+Finally it saves newly learned passwords and returns the results; the renderer prints each root's lineage tree and summary from the `RootFinished` event.
 
 The pool runs in **rounds until a round changes nothing**. Every file, scanned or extracted at any depth, becomes a `WorkItem` with a lineage (the set of sources it descends from), and goes through the same cycle:
 
@@ -90,7 +90,14 @@ After a root finishes, `main._reconcile_history` clears the entries of deleted s
 - **Sources are deleted by lineage, at the end of the run only.** `WorkPool._cleanup_sources` deletes a source only if it was consumed, has at least one descendant, and no descendant is unresolved (password failure, missing volume, error, empty archive, failed move). Regular files in the input root are `kept` and never touched. Deletion defaults to the Recycle Bin (`send2trash`); `--permanent-delete` overrides.
 - **Nothing is lost.** Before the work directory is removed, every unresolved derived item (orphan volume, failed set, password-failed archive, …) is moved to the output, with a failed set's volumes kept together. If a move fails, the work directory is kept.
 - Domain errors live in [ArchiveExceptions.py](complex_unzip_tool_v2/classes/ArchiveExceptions.py) / [ArchiveTypes.py](complex_unzip_tool_v2/classes/ArchiveTypes.py); `_raise_for_7z_error()` maps 7-Zip output to them (notably "not an archive" → `ArchiveUnsupportedError`, **not** corruption, so regular files like `.mp4` aren't flagged as corrupt during nested scans).
-- All user-facing strings are **bilingual (English 中文)**; output goes through [rich_utils.py](complex_unzip_tool_v2/modules/rich_utils.py) helpers — match that style, don't `print()` directly.
+
+### Output
+
+- **Events, then exactly one renderer.** The work pool, the engine and library code never print: they emit typed events from [events.py](complex_unzip_tool_v2/modules/events.py) (`events.emit`, or `events.notice(level, key, **params)` for warnings and info). [render.py](complex_unzip_tool_v2/modules/render.py) turns them into output: `TreeRenderer` when stdout is a terminal (live progress, then the lineage tree), `PlainRenderer` when it is redirected, `JsonRenderer` with `--json` (JSON lines only on stdout, `schema_version` 1, `summary` last). File names are printed as `rich.text.Text`, never as markup. A failed write (closed pipe) silences the renderer; it never stops the run.
+- **Message catalog, one language per run.** Every user-facing string, including Typer help, is a key in [i18n.py](complex_unzip_tool_v2/modules/i18n.py) `CATALOG` with both `en` and `zh` text and the same placeholders (`tests/test_i18n.py` enforces it). Code calls `t(key, **params)`; never write inline user-facing strings, and never bilingual ones. The language is `DEEPUNZIP_LANG` (`zh`/`en`), else the system UI language, else English; tests pin English in `tests/conftest.py`.
+- **Passwords are never output**, only their position in the book (`password #N`, `password_index`) or "entered".
+- **Exit codes:** `0` everything resolved, `1` something unresolved, `2` fatal or usage error (engine missing, no existing path, unexpected exception). A run is non-interactive with `--json` or when stdin is not a console (`main._stdin_is_terminal`; Windows reports `< NUL` as a TTY): no password prompt, recovery takes its default, no exit pause.
+- **Progress:** extraction with a sink runs `7z x … -bsp2`; [seven_zip_progress.py](complex_unzip_tool_v2/modules/seven_zip_progress.py) parses the percentages from stderr and keeps the remaining lines as error text for `_raise_for_7z_error()`.
 
 ## Conventions & workflow
 

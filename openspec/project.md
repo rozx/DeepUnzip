@@ -73,7 +73,10 @@ complex_unzip_tool_v2/
 │   ├── cloaked_file_detector.py  # Filename uncloaking
 │   ├── const.py               # Constants
 │   ├── regex.py               # Regex patterns
-│   ├── rich_utils.py          # Rich UI utilities
+│   ├── events.py              # Run events and the event sink
+│   ├── i18n.py                # Message catalog (en/zh) and language selection
+│   ├── render.py              # Terminal, plain and JSON renderers
+│   ├── seven_zip_progress.py  # 7-Zip progress stream parser
 │   └── utils.py               # General utilities
 └── config/              # Configuration files
     └── cloaked_file_rules.json  # Cloaked file detection rules

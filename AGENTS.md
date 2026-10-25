@@ -167,8 +167,14 @@ This repo uses **OpenSpec**. Active specs live in `openspec/specs/`, proposed ch
 - The work pool deletes all discovered parts after the set extracts successfully, and retains them all on extraction or password failure.
 - Regression coverage: `tests/test_multipart_file_input.py`; real source/frozen coverage: `scripts/smoke_test.py`.
 
+## User-facing text and output
+- Every user-facing string lives in `complex_unzip_tool_v2/modules/i18n.py` `CATALOG` with an `en` and a `zh` entry that use the same placeholders; code calls `t(key, **params)`. Add new keys in both languages. Never write inline user-facing strings, and never inline bilingual ones (`"Wrong password 密码错误"`). Each run uses one language: `DEEPUNZIP_LANG` (`zh`/`en`), else the system UI language, else English.
+- Library code does not print. It emits events (`modules/events.py`); warnings use `events.notice("warning", key, **params)`. Exactly one renderer (`modules/render.py`) writes the output: terminal view, plain lines when redirected, or JSON lines with `--json`.
+- `--json` writes only JSON lines to stdout and never prompts or pauses. Exit codes: `0` all resolved, `1` something unresolved, `2` fatal or usage error.
+- Passwords never appear in any output; refer to them as `password #N`.
+
 ## Redirected Windows output
-- Configure redirected stdout/stderr as UTF-8 before the first Rich output. Preserve interactive terminal streams and wrappers without `reconfigure`.
+- Configure redirected stdout/stderr as UTF-8 before the first Rich output (`render.configure_redirected_output`). Preserve interactive terminal streams and wrappers without `reconfigure`.
 - Keep the PyInstaller `X utf8` option. The frozen CLI pauses only when both stdin and stdout are interactive Windows terminals.
 - Smoke tests deliberately use legacy GBK Python stream settings on Windows and validate UTF-8 output bytes.
 
