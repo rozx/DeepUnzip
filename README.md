@@ -1,185 +1,181 @@
-# 复杂解压工具 v2 | Complex Unzip Tool v2
+<p align="center">
+  <img src="icons/app_icon.svg" width="128" height="128" alt="DeepUnzip">
+</p>
 
-![GitHub Release](https://img.shields.io/github/v/release/rozx/Complex-unzip-tool-v2)
-[![Python](https://img.shields.io/badge/python-3.11+-green.svg)](https://python.org)
-[![License](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/rozx/Complex-unzip-tool-v2)
+<h1 align="center">深度解压 DeepUnzip</h1>
 
-🌐 **中文** | [English](README.en.md)
+<p align="center">
+  <a href="https://github.com/rozx/DeepUnzip/releases/latest"><img src="https://img.shields.io/github/v/release/rozx/DeepUnzip" alt="Release"></a>
+  <a href="https://github.com/rozx/DeepUnzip/releases/latest"><img src="https://img.shields.io/github/release-date/rozx/DeepUnzip" alt="Release date"></a>
+  <a href="https://github.com/rozx/DeepUnzip/releases"><img src="https://img.shields.io/github/downloads/rozx/DeepUnzip/total" alt="Downloads"></a>
+  <a href="https://github.com/rozx/DeepUnzip/releases/latest"><img src="https://img.shields.io/github/downloads/rozx/DeepUnzip/latest/total" alt="Latest downloads"></a>
+  <a href="https://github.com/rozx/DeepUnzip/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/rozx/DeepUnzip/ci.yml?branch=main&amp;label=CI" alt="CI"></a>
+  <a href="https://github.com/rozx/DeepUnzip/stargazers"><img src="https://img.shields.io/github/stars/rozx/DeepUnzip" alt="Stars"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/rozx/DeepUnzip" alt="License"></a>
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey" alt="Platform">
+</p>
 
-**一键解压从网盘下载的"伪装"压缩包 —— 专为百度网盘等网盘场景打造。**
+**简体中文** | [English](README.en.md) | [繁體中文](README.zh-TW.md) | [日本語](README.ja.md) | [한국어](README.ko.md)
 
----
+深度解压：一次解开套娃、加密、分卷和伪装的压缩包。
 
-## 🤔 解决什么问题？
+## 运行效果
 
-网盘（尤其是百度网盘）上分享的压缩包常被**伪装**：文件名被故意加入乱码以规避内容审查 —— 例如 `movie.7z.001` 变成 `movie.7z.00删1`，或把 `.rar` 改名成一串随机字符。下载后这些文件**无法直接解压**，分卷也被打散。
+![深度解压的运行结果](docs/images/terminal-zh.svg)
 
-本工具会自动**还原真实文件名（解伪装）**、**重新分组**分卷、**逐一尝试密码**，并**递归解压**所有内容（含嵌套压缩包），一次搞定。
+上图是一次真实运行的结果：文件夹里有一个改了名的分卷，另外两个分卷分别装在两个压缩包里，其中一个还加了密码。深度解压先打开外层压缩包，找齐三个分卷，用密码本里的第二个密码解开，最后列出每个分卷的来历。
 
-> 受启发自：https://github.com/TR-Supowe/Complex-Unzip-Tool
+## 解决什么问题
 
----
+压缩包用得多了，总会遇到下面这些情况：
 
-## 🚀 快速开始
+- 下载目录里攒了几十个压缩包，比如游戏 Mod、素材包，或者 Google Takeout 拆成的一串照片导出包。把整个文件夹交给深度解压，一次全部解开；解开了的压缩包移到回收站，解不开的原样留下。
+- 同一个论坛、群组或作者发的资源，密码来来回回就那几个。把它们写进 `passwords.txt`，程序会按顺序逐个尝试，不用每次手动输入；运行中新输入的密码也会自动记进去。
+- 从论坛、Discord 或 Telegram 下载的 `.part1.rar` 到 `.part8.rar`，或者因为邮件附件大小限制被拆成 `.zip`、`.z01`、`.z02` 的文件。只要都在同一个输入文件夹里，哪怕分散在不同的子文件夹，程序也会自己找齐再解压。
+- 压缩包里还有压缩包，比如合集里的每个作品又单独打了包。程序会一层层解开，直到没有压缩包为止。
+- 为了通过邮件或聊天软件的附件过滤，`.zip` 被改成了 `.zip.txt` 这样的名字。程序按文件内容而不是扩展名识别压缩包。
+- 网盘上的资源为了躲避审查，文件名被故意改坏，`movie.7z.001` 变成 `movie.7z.001删除`，分卷还被拆开，各自装进别的压缩包。程序会还原文件名，再从各个压缩包里把分卷找齐。
 
-1. **下载**：从 **[Releases](https://github.com/rozx/Complex-unzip-tool-v2/releases)** 页面选择对应系统和架构的发布包。Windows 解开 `.zip` 后得到 `complex-unzip-tool-v2.exe`。
-2. **拖拽**：在 Windows 上，将压缩包文件或文件夹拖拽到 `.exe` 上。
-3. **完成**：工具会自动解伪装、分组并解压所有内容。
+手动处理这些情况，要一个个打开、试密码、挪分卷，最后还得自己判断哪些原文件可以删。深度解压把这些合成一条命令，删除原文件前会确认它解出的东西都处理好了。
 
-macOS / Linux 下载对应的 `.tar.gz`，解开后在终端运行。以下以 Apple Silicon Mac 为例，其他平台请替换包名：
+## 功能
 
-```bash
-tar -xzf complex-unzip-tool-v2-v1.3.2-macos-arm64.tar.gz
-./complex-unzip-tool-v2 "$HOME/Downloads/Archives"
+- 按规则还原被改坏的文件名，规则写在 `config/cloaked_file_rules.json`，可以自己添加。如果文件最后没能解开，原文件名会被改回来。
+- 支持 `.7z.001`、`.part1.rar`、`.rar` + `.r00`、`.zip` + `.z01` 等分卷格式。分卷可以散落在不同文件夹，也可以藏在别的压缩包里。
+- 从 `passwords.txt` 里按顺序试密码。运行中手动输入的密码会用于后面的压缩包，并在结束时保存下来。
+- 逐层解开嵌套的压缩包，直到没有新东西可解。
+- 原文件只有在解出的内容全部处理成功后才会删除，默认移到回收站。解不开的东西会保留，并在结尾写明原因和位置。
+- 提供 `--json` 输出和明确的退出码，方便写进脚本。
+- 发布包自带 Python 和 7-Zip 26.03，下载后直接运行。
+
+## 快速开始
+
+1. 在 [Releases](https://github.com/rozx/DeepUnzip/releases) 下载对应系统的发布包（见下方「发布包」）。
+2. Windows：解开 `.zip`，把要处理的文件夹或压缩包拖到 `deepunzip.exe` 上。
+3. macOS / Linux：解开 `.tar.gz`，在终端运行：
+
+   ```bash
+   tar -xzf deepunzip-v2.0.0-macos-arm64.tar.gz
+   ./deepunzip ~/Downloads/资源
+   ```
+
+解出的文件在输入文件夹里的 `unzipped/` 下。
+
+## 用法
+
+```text
+deepunzip [选项] <文件或文件夹>...
 ```
 
-| 平台 | v1.3.2 发布包 | 内置 7-Zip 26.03 |
-| --- | --- | --- |
-| Windows x64 | `complex-unzip-tool-v2-v1.3.2-windows-x64.zip` | `7z.exe` + `7z.dll` |
-| macOS Intel | `complex-unzip-tool-v2-v1.3.2-macos-x64.tar.gz` | 通用二进制 `7zz` |
-| macOS Apple Silicon | `complex-unzip-tool-v2-v1.3.2-macos-arm64.tar.gz` | 通用二进制 `7zz` |
-| Linux x64 | `complex-unzip-tool-v2-v1.3.2-linux-x64.tar.gz` | 静态二进制 `7zzs` |
-| Linux ARM64 | `complex-unzip-tool-v2-v1.3.2-linux-arm64.tar.gz` | 静态二进制 `7zzs` |
+传入文件夹时处理其中的所有文件；只传入一个分卷时，同一文件夹里同组的其余分卷会自动带上，包括名字被改过的。输出写到输入文件夹（或文件所在文件夹）下的 `unzipped/`。
 
-发布包已包含 Python 和 7-Zip，无需另行安装，运行时不联网下载引擎。每个包附带说明和许可证，Release 另附 `SHA256SUMS`。二进制来源、校验值和许可证见 [7z/README.md](7z/README.md)。
-
-macOS 的应用分别按 Intel 和 Apple Silicon 架构构建。Linux 独立包在 Ubuntu 24.04 上构建，需要兼容的系统库；macOS 签名及公证、Windows 发行者签名尚未配置。也可按下方「开发」步骤从源码运行或自行构建。
-
----
-
-## 📖 使用指南
-
-### 基本用法
-
-```powershell
-# 解压文件夹内的所有压缩包
-complex-unzip-tool-v2.exe "D:\Downloads\Archives"
-
-# 解压指定文件（只传主卷即可自动收集同目录的同组分卷）
-complex-unzip-tool-v2.exe "D:\file.zip" "D:\movie.7z.001"
-```
-
-解压结果输出到 `unzipped/` 文件夹。成功后原始压缩包会被移到系统的**回收站 / 废纸篓**（可恢复）。Linux 需要可用的桌面废纸篓目录；回收失败时保留原文件。
-
-只传入一个分卷文件时，会按还原后的文件名收集同目录、同一命名格式的同组分卷，包括带伪装字符的续卷；成功后统一清理，解压或密码失败时全部保留。Windows 下重定向到文件或管道的输出使用 UTF-8，完成后无需按回车退出。
+| 选项 | 作用 |
+| --- | --- |
+| `--permanent-delete`, `-pd` | 直接删除已解开的原文件，不移到回收站 |
+| `--json` | 输出供程序读取的 JSON 行，不询问任何问题 |
+| `--version`, `-v` | 显示版本 |
+| `--help` | 显示帮助 |
 
 ### 密码
 
-很多网盘压缩包带密码。把密码写进 `passwords.txt`，工具会自动逐一尝试（空密码会最先尝试）。
+在 `passwords.txt` 里每行写一个密码。程序会读取两个位置的密码本并合并：
 
-**支持两个位置，二者会自动合并：**
+- 程序旁边的 `passwords.txt`（从源码运行时是项目根目录）；
+- 输入文件夹（或输入文件所在文件夹）里的 `passwords.txt`。
 
-1. **目标目录（待解压文件夹）** —— 把 `passwords.txt` 放在你传给工具的文件夹里，或与待解压文件同级目录。适合「这批文件专用」的密码。
-2. **工具目录** —— 把 `passwords.txt` 放在可执行文件旁（Windows 为 `.exe`；macOS / Linux 为 `complex-unzip-tool-v2`）。源码运行时使用项目根目录。该位置不受当前工作目录或拖放启动方式影响。
+空密码总是最先尝试。以 `#` 开头的行是注释，以 `#` 开头的密码写成 `\#abc`。文件可以是 UTF-8、GBK、Big5 或 UTF-16 编码。
 
-**文件格式**（每行一个密码，空行忽略，以 `#` 开头的行为注释，以 `#` 开头的密码写成 `\#`，自动去重）：
+所有密码都不对时，程序会询问：输入密码、跳过这个压缩包，或者跳过之后所有的密码询问。输入的密码如果解开了文件，会追加到程序旁边的 `passwords.txt`。输出里不会出现密码本身，只会写「密码 #2」这样的序号。
 
-```text
-# 常用弱口令
-123456
-www.example.com
-mypassword
-\#以井号开头的密码
-```
+### 语言
 
-密码本身以 `#` 开头时，请在前面加反斜杠写成 `\#`（如 `\#abc` 表示密码 `#abc`）；自动保存的密码会自动转义。从旧版本升级时，请检查密码本中是否有以 `#` 开头的密码，并按此方式修改。
+输出支持简体中文、繁体中文、英文、日文和韩文，默认跟随系统界面语言，其他语言的系统输出英文。设置环境变量 `DEEPUNZIP_LANG` 可以指定语言，可选值为 `zh`、`zh-TW`、`en`、`ja`、`ko`。
 
-- 📝 **自动记忆**：手动输入并成功解压的密码会立即用于本次运行后续的单包、分卷和嵌套档案。运行结束时，新密码会追加到工具目录的 `passwords.txt`，下次直接复用；已有的注释和顺序保持不变，以 `#` 开头的密码会自动保存为 `\#`。
-- 目标目录的密码本仅作为读取来源（与工具目录相同时除外）。工具目录不可写时会提示保存失败，仍会完成解压收尾；请将程序放到可写目录以保存新密码。构建不会将个人密码本内嵌到程序中。
-- 🈶 **编码自适应**：自动识别 UTF-8 / GBK / GB2312 / Big5 / UTF-16（含 BOM），中文密码无需担心乱码。
+### 退出码
 
-从旧版本升级时，如果密码本曾被写到桌面、下载目录等启动目录，请将需要长期使用的条目合并到新程序旁的 `passwords.txt`。
-
-### 命令行选项
-
-| 选项 | 说明 |
+| 退出码 | 含义 |
 | --- | --- |
-| `--version`, `-v` | 显示版本 |
-| `--permanent-delete` | 永久删除原文件而非移入回收站 |
-| `--help` | 显示帮助 |
+| `0` | 全部解开，或者没有需要处理的东西 |
+| `1` | 运行完成，但有解不开的项目，对应的原文件已保留 |
+| `2` | 无法运行：找不到 7-Zip、给出的路径都不存在，或程序出错 |
 
-> 🛡️ **默认安全**：当密码错误或分卷缺失时，原文件绝不会被删除。
+### 在脚本里使用
 
----
+加上 `--json` 后，标准输出每行是一个 JSON 对象，最后一行总是 `summary`：
 
-## ✨ 主要特性
-
-- 🎭 **文件名解伪装** —— 通过可配置规则（`config/cloaked_file_rules.json`）还原乱码文件名；解压失败时自动撤销重命名。
-- 📦 **多分卷支持** —— 支持 `.001/.002`、`.part1/.part2`、`.rar/.r00`、`.zip/.z01` 等格式，自动查找并重组散落的分卷。
-- 🔐 **智能密码** —— 自动尝试密码本并缓存成功密码。
-- 🏗️ **嵌套解压** —— 递归解压压缩包中的压缩包。
-- 🖱️ **独立运行** —— 各平台可构建内置 Python 与 7-Zip 的单文件程序；Windows 还支持拖拽到 `.exe`。
-- 🌐 **中英双语界面** —— 清晰的中英文进度输出。
-
----
-
-## 🛠️ 开发
-
-需要 Python 3.11+ 与 [Poetry](https://python-poetry.org/)。支持上表所列平台及架构。
-
-```powershell
-git clone https://github.com/rozx/Complex-unzip-tool-v2.git
-cd Complex-unzip-tool-v2
-poetry install
-
-poetry run main "D:\path\to\archives"   # 运行（别名 cuz）
-poetry run pytest -q                     # 运行测试
-poetry run build                         # 构建当前平台的独立程序 -> dist/
+```json
+{"event": "summary", "schema_version": 1, "status": "partial", "files": 12, "output_dirs": ["D:\\Downloads\\unzipped"], "sources": {"deleted": 3, "kept": 1}, "unresolved": [{"root": 1, "path": "locked.7z", "reason": "password"}], "exit": 1}
 ```
 
-macOS / Linux 运行示例：
+`--json` 模式下不会询问密码，也不会在结束时等待回车。标准输入不是终端时（例如计划任务）同样不会询问。
+
+## 工作原理
+
+1. 扫描输入文件夹，按规则还原被改坏的文件名。
+2. 一轮一轮地处理。每轮把能打开的压缩包解开一层，解出来的文件进入下一轮。
+3. 外层都解开以后，开始拼分卷。程序先在主卷所在的文件夹里找同组的分卷，找不齐再往外层文件夹扩大范围，最远到输入文件夹。每种组合先用文件大小和 7z 文件头筛一遍，再交给 7-Zip 验证。
+4. 运行中输入的新密码会用于后面的压缩包，之前因为密码失败的分卷组也会用它再试一次。
+5. 某一轮没有任何进展时结束。解出的文件移到 `unzipped/`。从压缩包里解出、但处理不了的东西（打不开的内层压缩包、凑不齐的分卷）也放到那里；输入文件夹里原有的文件留在原处。
+6. 一个原文件只有在它解出的所有内容都处理成功后才会被删除。
+
+运行中途被打断时，下次运行会把挪走的分卷放回原处，并询问是否撤销上次的改名。
+
+## 发布包
+
+| 平台 | 文件 |
+| --- | --- |
+| Windows x64 | `deepunzip-v2.0.0-windows-x64.zip` |
+| macOS Intel | `deepunzip-v2.0.0-macos-x64.tar.gz` |
+| macOS Apple Silicon | `deepunzip-v2.0.0-macos-arm64.tar.gz` |
+| Linux x64 | `deepunzip-v2.0.0-linux-x64.tar.gz` |
+| Linux ARM64 | `deepunzip-v2.0.0-linux-arm64.tar.gz` |
+
+每个包含有程序、自带的 7-Zip 和许可证文件，Release 页面另有 `SHA256SUMS`。Linux 版在 Ubuntu 24.04 上构建。程序没有做代码签名，macOS 也没有公证。7-Zip 的来源和校验值见 [7z/README.md](7z/README.md)。
+
+这一版的变化见[发布说明](docs/releaseNotes/v2.0.0.md)。
+
+## 常见问题
+
+### 为什么有些原文件没被删除？
+
+它解出的内容里有东西没处理成功，比如密码不对或分卷不全。运行结束时的列表会写明每一项的原因和位置。补上密码或分卷后再运行一次即可。
+
+### Windows 提示「Windows 已保护你的电脑」
+
+程序没有代码签名，第一次运行时可能出现这个提示。点「更多信息」，再点「仍要运行」。
+
+### macOS 提示无法验证开发者
+
+程序没有经过公证。在终端执行 `xattr -d com.apple.quarantine ./deepunzip` 后再运行。
+
+### 文件名被改成了规则里没有的样子
+
+在 `config/cloaked_file_rules.json` 里加一条规则，格式见 [AGENTS.md](AGENTS.md) 的「Renaming/Uncloaking rules」一节。欢迎把新规则提交回来。
+
+### 文件夹里出现了 `temp.deepunzip-` 开头的文件夹
+
+这是上次运行中断后留下的工作文件夹。下次运行时会提示它的位置，确认里面没有需要的文件后可以删除。
+
+## 开发
+
+需要 Python 3.11+ 和 [Poetry](https://python-poetry.org/)。
 
 ```bash
-poetry run main "$HOME/Downloads/Archives"
-poetry run pytest -q
-poetry run build
-./dist/complex-unzip-tool-v2 --help
+git clone https://github.com/rozx/DeepUnzip.git
+cd DeepUnzip
+poetry install
+
+poetry run deepunzip <文件或文件夹>   # 从源码运行，也可以用 dz
+poetry run pytest -q                   # 运行测试
+poetry run build                       # 构建当前平台的独立程序到 dist/
 ```
 
-构建需在目标操作系统和架构上进行。Windows 输出 `.exe`，macOS / Linux 输出无扩展名的可执行文件；构建只包含当前平台的引擎。macOS 的应用本身按当前 Python 架构构建，内置 7-Zip 为通用二进制。当前构建不配置发行者签名或公证。
+构建要在目标系统和架构上进行。架构、开发约定和发布流程见 [AGENTS.md](AGENTS.md) 和 [CLAUDE.md](CLAUDE.md)。
 
-从源码运行时，若 Unix 引擎的执行权限在复制过程中丢失，可对相应文件执行 `chmod +x 7z/macos/7zz`、`chmod +x 7z/linux-x64/7zzs` 或 `chmod +x 7z/linux-arm64/7zzs`。引擎缺失或不可执行时，工具会在修改输入文件前报错。
+修改终端输出后，用 `poetry run python -m scripts.generate_screenshots` 重新生成上面的截图。
 
-架构、约定与解压流程详见 [AGENTS.md](AGENTS.md) 与 [CLAUDE.md](CLAUDE.md)。
+## 许可证与致谢
 
-### GitHub CI 与自动发布
+深度解压以 MIT 许可证发布，见 [LICENSE](LICENSE)。解压引擎是 [7-Zip](https://www.7-zip.org/)，随每个发布包附带，遵循它自己的许可证（GNU LGPL 和 unRAR 限制）。
 
-[CI](.github/workflows/ci.yml) 在推送或提交 PR 到 `main`、`release/**` 时运行。五个平台分别执行完整测试、原生引擎校验、真实压缩包冒烟测试、独立程序构建及构建产物冒烟测试。每个平台的发布包在 Actions artifacts 中保留 14 天。
-
-同一分支或 PR 的新提交会取消对应事件的旧 CI。发布构建使用独立并发组，不会被普通 CI 取消。发布合并仍分别执行 `main` 推送检查和发布构建，以确保发布仅使用本次发布工作流生成的产物。
-
-[Release](.github/workflows/release.yml) 仅在以下条件同时满足时自动发布：
-
-1. PR 的来源分支为 `release/*`，例如 `release/v1.3`。
-2. PR 在合并时带有 `release` 标签。
-3. PR 被合并到 `main`。
-
-合并前，确认 `pyproject.toml`、包内 `__version__` 和 `.bumpversion.cfg` 使用一致且尚未发布的 `X.Y.Z`。准备后续版本时，可通过 `poetry run bump-minor`、`poetry run bump-patch` 等命令升版。分支名只控制触发，发布标签取自项目版本，例如 `v1.3.2`。同一 PR 必须包含对应的发布说明；1.3.2 的说明位于 [ReleaseNotes/RELEASE_NOTES_v1.3.2.md](ReleaseNotes/RELEASE_NOTES_v1.3.2.md)。文件缺失或为空时，会在平台构建前报错。
-
-提交前可本地检查版本和发布说明：
-
-```powershell
-poetry run python -m scripts.release version
-poetry run python -m scripts.release verify-notes
-```
-
-发布流程会从该 PR 的确切合并提交重新构建全部平台；全部成功后创建 GitHub Release，以 `ReleaseNotes/RELEASE_NOTES_vX.Y.Z.md` 的原文作为正文，并上传上方列出的五个平台发布包和 `SHA256SUMS`。
-
-工作流需先存在于 `main`，之后符合条件的合并才会触发自动发布。标签应在合并前添加；仅关闭 PR、合并后补标签或直接推送 tag 都不会发布。使用内置 `GITHUB_TOKEN`，仅最终发布任务拥有 `contents: write`。
-
-失败时可在 Actions 中重新运行失败任务。上传中断会保留草稿；同版本、同合并提交的草稿可以继续上传，并以该提交中对应版本的说明文件更新正文。校验全部远端文件后才公开发布；已公开的 Release 不会覆盖，指向其他提交的已有 tag 或草稿会报错。
-
----
-
-## 🤝 参与贡献
-
-欢迎提交 Issue 与 PR。请保持改动小而有测试，并遵循 [CLAUDE.md](CLAUDE.md) 中的 TDD 流程。
-
-## 📄 许可证
-
-MIT 许可证 —— 详见 [LICENSE](LICENSE)。
-
-## 👤 作者
-
-**Rozx** —— [GitHub](https://github.com/rozx)
+作者：[Rozx](https://github.com/rozx)

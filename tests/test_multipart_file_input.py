@@ -3,9 +3,9 @@ import os
 from pathlib import Path
 from typer.testing import CliRunner
 
-import complex_unzip_tool_v2.main as main
+import deepunzip.main as main
 
-from complex_unzip_tool_v2.modules.file_utils import read_dir
+from deepunzip.modules.file_utils import read_dir
 
 
 def test_single_primary_input_collects_only_its_numbered_volumes(tmp_path):
@@ -86,20 +86,29 @@ def test_cli_handles_all_selected_set_parts_safely(
     unrelated = tmp_path / "unrelated.7z.001"
     unrelated.write_bytes(b"unrelated source")
 
-    def extract(archive_path, output_path, **kwargs):
+    def listing(archive_path, password="", **kwargs):
+        # The complete set sits in one folder, so it is extracted in place.
         assert Path(archive_path) == normalized[0]
-        output = Path(output_path) / "result.txt"
-        output.parent.mkdir()
-        output.write_text("extracted", encoding="utf-8")
-        return {
-            "success": outcome != "failure",
-            "final_files": [str(output)],
-            "password_failed_archives": ["nested.7z"]
-            if outcome == "password-skip"
-            else [],
-        }
+        return "7z", [{"name": "result.txt"}], 3
 
-    monkeypatch.setattr(main.archive_utils, "extract_nested_archives", extract)
+    def extract(archive_path, output_path, password="", **kwargs):
+        if Path(archive_path).name == "nested.7z":
+            raise main.archive_utils.ArchivePasswordError("Wrong password")
+        assert Path(archive_path) == normalized[0]
+        if outcome == "failure":
+            raise main.archive_utils.ArchiveCorruptedError("CRC failed")
+        (Path(output_path) / "result.txt").write_text("extracted", encoding="utf-8")
+        if outcome == "password-skip":
+            (Path(output_path) / "nested.7z").write_bytes(b"locked nested archive")
+        return True
+
+    monkeypatch.setattr(main.archive_utils, "_list_archive_with7z", listing)
+    monkeypatch.setattr(main.archive_utils, "extractArchiveWith7z", extract)
+    monkeypatch.setattr(
+        main.archive_utils,
+        "is_valid_archive",
+        lambda path, **kwargs: Path(path).name == "nested.7z",
+    )
     monkeypatch.setattr(main.archive_utils, "resolve_seven_zip_path", lambda: "7z")
     recycled = []
 
@@ -110,7 +119,9 @@ def test_cli_handles_all_selected_set_parts_safely(
     monkeypatch.setattr(main.file_utils, "send2trash", recycle_file)
     arguments = [str(parts[0])] if recycle else ["--permanent-delete", str(parts[0])]
     result = CliRunner().invoke(main.app, arguments)
-    assert result.exit_code == 0, result.output
+    # A failed set, or a nested archive whose password prompt is skipped
+    # (stdin is not a terminal), leaves an unresolved item: exit code 1.
+    assert result.exit_code == (0 if outcome == "success" else 1), result.output
     if outcome == "success":
         assert all(not part.exists() for part in parts)
         assert all(not part.exists() for part in normalized)

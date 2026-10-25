@@ -29,7 +29,7 @@ def read_version(root: Path = ROOT) -> str:
     if not re.fullmatch(r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)", version):
         raise ValueError("Releases require a stable X.Y.Z project version")
     module = ast.parse(
-        (root / "complex_unzip_tool_v2/__init__.py").read_text(encoding="utf-8")
+        (root / "deepunzip/__init__.py").read_text(encoding="utf-8")
     )
     package_versions = [
         ast.literal_eval(node.value)
@@ -47,9 +47,24 @@ def read_version(root: Path = ROOT) -> str:
     return str(version)
 
 
+def verify_branch(ref: str, root: Path = ROOT) -> None:
+    """Require a release branch whose version-like suffix matches the project.
+
+    `release/2.0.0` and `release/v2.0.0` must name the project version; a
+    suffix that is not a version (`release/rename`) is accepted.
+    """
+    if not ref.startswith("release/"):
+        raise ValueError(f"Release branches must start with release/: {ref}")
+    suffix = ref[len("release/") :]
+    suffix = suffix[1:] if suffix.startswith("v") else suffix
+    version = read_version(root)
+    if re.fullmatch(r"\d+\.\d+\.\d+", suffix) and suffix != version:
+        raise ValueError(f"Branch {ref} does not match the project version {version}")
+
+
 def read_release_notes(root: Path = ROOT) -> str:
     """Read the required release notes for the exact project version."""
-    path = root / "ReleaseNotes" / f"RELEASE_NOTES_v{read_version(root)}.md"
+    path = root / "docs" / "releaseNotes" / f"v{read_version(root)}.md"
     if not path.is_file():
         raise ValueError(f"Release notes not found: {path}")
     notes = path.read_text(encoding="utf-8")
@@ -71,7 +86,7 @@ def package(root: Path, target: str, output: Path) -> Path:
     """Archive a tested standalone executable with its redistribution notices."""
     suffix, engine_dir, extension = TARGETS[target]
     version = read_version(root)
-    executable = f"complex-unzip-tool-v2{suffix}"
+    executable = f"deepunzip{suffix}"
     files = {
         executable: root / "dist" / executable,
         "LICENSE": root / "LICENSE",
@@ -84,7 +99,7 @@ def package(root: Path, target: str, output: Path) -> Path:
         if not path.is_file():
             raise FileNotFoundError(path)
     output.mkdir(parents=True, exist_ok=True)
-    archive = output / f"complex-unzip-tool-v2-v{version}-{target}{extension}"
+    archive = output / f"deepunzip-v{version}-{target}{extension}"
     if extension == ".zip":
         with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as zipped:
             for name, path in files.items():
@@ -103,7 +118,7 @@ def package(root: Path, target: str, output: Path) -> Path:
 def verify_assets(directory: Path, version: str) -> Path:
     """Reject incomplete or mixed releases before producing the public index."""
     names = [
-        f"complex-unzip-tool-v2-v{version}-{target}{values[2]}"
+        f"deepunzip-v{version}-{target}{values[2]}"
         for target, values in TARGETS.items()
     ]
     expected = set(names) | {name + ".sha256" for name in names}
@@ -129,6 +144,8 @@ def main() -> None:
     commands.add_parser("version")
     commands.add_parser("verify-notes")
     commands.add_parser("verify-engines")
+    branch = commands.add_parser("verify-branch")
+    branch.add_argument("ref")
     pack = commands.add_parser("package")
     pack.add_argument("target", choices=TARGETS)
     pack.add_argument("--output", type=Path, default=ROOT / "artifacts")
@@ -141,6 +158,8 @@ def main() -> None:
         read_release_notes()
     elif args.command == "verify-engines":
         verify_engines()
+    elif args.command == "verify-branch":
+        verify_branch(args.ref)
     elif args.command == "package":
         print(package(ROOT, args.target, args.output))
     else:

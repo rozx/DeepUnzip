@@ -1,9 +1,23 @@
+# Publishes after a release PR merges into main. The PR must carry the release
+# label and come from a release/* branch in this repository (prepared by the
+# release-ready skill). The tag is v<project version>; a version-like branch
+# suffix must equal it. The body is docs/releaseNotes/v<version>.md.
 name: Release
 
 on:
-  pull_request_target:
+  pull_request:
     branches: [main]
     types: [closed]
+
+# Release merges publish one at a time and are never cancelled. Other closed
+# PRs get their own group: a group keeps only one pending run, so a skipped
+# no-op run must never displace a waiting release.
+concurrency:
+  group: >-
+    ${{ github.event.pull_request.merged &&
+    startsWith(github.event.pull_request.head.ref, 'release/') &&
+    'release' || format('release-skip-{0}', github.run_id) }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -14,7 +28,8 @@ jobs:
       github.event.pull_request.merged == true &&
       github.event.pull_request.base.ref == 'main' &&
       startsWith(github.event.pull_request.head.ref, 'release/') &&
-      contains(github.event.pull_request.labels.*.name, 'release')
+      contains(github.event.pull_request.labels.*.name, 'release') &&
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
@@ -34,9 +49,11 @@ jobs:
         id: version
         env:
           RELEASE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
         shell: bash
         run: |
           version="$(python -m scripts.release version)"
+          python -m scripts.release verify-branch "$HEAD_REF"
           python -m scripts.release verify-notes
           tag="v$version"
           if git show-ref --verify --quiet "refs/tags/$tag"; then
@@ -60,9 +77,6 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: write
-    concurrency:
-      group: release-${{ needs.prepare.outputs.tag }}
-      cancel-in-progress: false
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

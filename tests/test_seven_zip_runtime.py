@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from complex_unzip_tool_v2.classes.ArchiveTypes import SevenZipNotFoundError
-from complex_unzip_tool_v2.modules import archive_utils as au
+from deepunzip.classes.ArchiveTypes import SevenZipNotFoundError
+from deepunzip.modules import archive_utils as au
 
 
 @pytest.mark.parametrize(

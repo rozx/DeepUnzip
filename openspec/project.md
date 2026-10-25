@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Complex Unzip Tool v2 is a robust and intelligent command-line archive extraction utility for Windows x64, macOS Intel/Apple Silicon, and Linux x64/ARM64. It handles complex archive scenarios including password-protected files, multipart archives, nested structures, and cloaked/obfuscated filenames. The tool provides automated extraction with smart features like drag-and-drop support, intelligent password management, and multilingual support (English/Chinese).
+DeepUnzip is a robust and intelligent command-line archive extraction utility for Windows x64, macOS Intel/Apple Silicon, and Linux x64/ARM64. It handles complex archive scenarios including password-protected files, multipart archives, nested structures, and cloaked/obfuscated filenames. The tool provides automated extraction with smart features like drag-and-drop support, intelligent password management, and multilingual support (English/Chinese).
 
 Inspired by: https://github.com/TR-Supowe/Complex-Unzip-Tool
 
@@ -24,7 +24,7 @@ Inspired by: https://github.com/TR-Supowe/Complex-Unzip-Tool
 - **PyInstaller**: Standalone executable builder (version ^6.15.0)
 
 ### Build & Packaging
-- **Poetry scripts**: `main`, `cuz`, `build`, `bump`, `bump-patch`, `bump-minor`, `bump-major`
+- **Poetry scripts**: `deepunzip`, `dz` (deprecated aliases: `main`, `cuz`), `build`, `bump`, `bump-patch`, `bump-minor`, `bump-major`
 - **Custom build scripts**: `scripts/build.py`, `scripts/build.bat`, `scripts/generate_icon.py`
 - **Version management**: `bump2version` (version ^1.0.1)
 
@@ -40,7 +40,7 @@ Inspired by: https://github.com/TR-Supowe/Complex-Unzip-Tool
 **Naming Conventions**:
 - **Files**: snake_case (e.g., `archive_utils.py`, `cloaked_file_detector.py`)
 - **Classes**: PascalCase (e.g., `ArchiveGroup`, `PasswordBook`, `CloakedFileDetector`)
-- **Functions/Variables**: snake_case (e.g., `extract_nested_archives`, `is_valid_archive`)
+- **Functions/Variables**: snake_case (e.g., `parse_volume_name`, `is_valid_archive`)
 - **Constants**: UPPER_SNAKE_CASE (e.g., in `modules/const.py`)
 
 **Type Hints**:
@@ -57,8 +57,8 @@ Inspired by: https://github.com/TR-Supowe/Complex-Unzip-Tool
 
 **Module Organization**:
 ```
-complex_unzip_tool_v2/
-├── __main__.py          # Entry point for poetry run main
+deepunzip/
+├── __main__.py          # Entry point for poetry run deepunzip
 ├── main.py              # CLI application (Typer app)
 ├── classes/             # Domain models and business logic
 │   ├── ArchiveExceptions.py  # Custom exception hierarchy
@@ -73,7 +73,10 @@ complex_unzip_tool_v2/
 │   ├── cloaked_file_detector.py  # Filename uncloaking
 │   ├── const.py               # Constants
 │   ├── regex.py               # Regex patterns
-│   ├── rich_utils.py          # Rich UI utilities
+│   ├── events.py              # Run events and the event sink
+│   ├── i18n.py                # Message catalog (en/zh) and language selection
+│   ├── render.py              # Terminal, plain and JSON renderers
+│   ├── seven_zip_progress.py  # 7-Zip progress stream parser
 │   └── utils.py               # General utilities
 └── config/              # Configuration files
     └── cloaked_file_rules.json  # Cloaked file detection rules
@@ -85,7 +88,7 @@ complex_unzip_tool_v2/
 - **Error Handling**: Raise domain exceptions from `classes/ArchiveExceptions.py`
 - **Path Handling**: Prefer `pathlib.Path` over string paths
 - **Configuration-Driven**: Cloaked file rules in JSON config file
-- **Dependency Injection**: Pass dependencies (like group_relocator) as callbacks
+- **Dependency Injection**: Pass dependencies as callables (e.g. the work pool's engine, prompt, uncloaker and remover)
 
 **Key Patterns**:
 - **Archive Operations**: Centralized in `archive_utils.py` and `archive_extension_utils.py`
@@ -219,15 +222,16 @@ poetry run pytest -v
 
 ### Nested Archive Handling
 
-**Behavior**:
-- Primary parts extracted recursively
-- Continuation parts relocated to multipart group directory
-- Reconciliation pass after single-archive extraction to catch missed parts
-- Non-archive files (e.g., .mp4) not flagged as corrupted
+**Behavior** (work pool, one per input root):
+- Every file, scanned or extracted at any depth, is uncloaked, classified and grouped the same way
+- Containers are opened one level per round; multipart sets are assembled across containers by widening scope up to the input root
+- Unresolved items are always preserved to the output; sources are deleted by lineage at the end
+- Non-archive files (e.g., .mp4) are not flagged as corrupted
 
 **Key Functions**:
-- `extract_nested_archives()` - Main nested extraction logic
-- `relocate_multipart_parts_from_directory()` - Reconciliation pass
+- `work_pool.WorkPool.run()` - Round-based extraction of one input root
+- `multipart_assembly.iter_combinations()` / `prefilter()` - Multipart combination search
+- `pool_engine.SevenZipEngine` - 7-Zip classify / extract / probe with the password book
 - `is_valid_archive()` - Archive validation with 7-Zip
 
 ## Important Constraints
@@ -295,12 +299,12 @@ poetry run pytest -v
 - **poetry.lock**: Locked dependency versions
 - **.flake8**: Flake8 configuration
 - **.bumpversion.cfg**: Bump2version configuration
-- **cloaked_file_rules.json**: Cloaked file detection rules (in `complex_unzip_tool_v2/config/`)
+- **cloaked_file_rules.json**: Cloaked file detection rules (in `deepunzip/config/`)
 
 ### Entry Points
-- **CLI Entry**: `complex_unzip_tool_v2/__main__.py` and `complex_unzip_tool_v2/main.py`
-- **Poetry Scripts**: `main`, `cuz`, `build`, `bump`, `bump-patch`, `bump-minor`, `bump-major`
-- **Standalone Executable**: `dist/complex-unzip-tool-v2.exe` on Windows; `dist/complex-unzip-tool-v2` on macOS/Linux (build on the target OS/architecture)
+- **CLI Entry**: `deepunzip/__main__.py` and `deepunzip/main.py`
+- **Poetry Scripts**: `deepunzip`, `dz` (deprecated aliases: `main`, `cuz`), `build`, `bump`, `bump-patch`, `bump-minor`, `bump-major`
+- **Standalone Executable**: `dist/deepunzip.exe` on Windows; `dist/deepunzip` on macOS/Linux (build on the target OS/architecture)
 
 ### Testing Infrastructure
 - **Test Runner**: pytest
@@ -310,7 +314,7 @@ poetry run pytest -v
 ### Documentation
 - **README.md**: User-facing documentation (bilingual: English/Chinese)
 - **AGENTS.md**: AI agent guidelines and project conventions
-- **Release Notes**: `ReleaseNotes/` directory with version-specific notes
+- **Release Notes**: `docs/releaseNotes/vX.Y.Z.md`, bilingual, written by the `release-ready` skill (`.claude/skills/release-ready/`) on the `release/vX.Y.Z` branch
 - **OpenSpec**: `openspec/` directory for spec-driven development
 
 ## Quick Reference
@@ -318,7 +322,7 @@ poetry run pytest -v
 ### Common Commands
 ```powershell
 # Run the tool
-poetry run main "C:\path\to\archives"
+poetry run deepunzip "C:\path\to\archives"
 
 # Run tests
 poetry run pytest -q
@@ -327,22 +331,22 @@ poetry run pytest -q
 poetry run build
 
 # Format code
-poetry run black complex_unzip_tool_v2/ tests/
+poetry run black deepunzip/ tests/
 
 # Lint code
-poetry run flake8 complex_unzip_tool_v2/ tests/
+poetry run flake8 deepunzip/ tests/
 
 # Type check
-poetry run mypy complex_unzip_tool_v2/
+poetry run mypy deepunzip/
 ```
 
 ### Key File Locations
 - **7-Zip Binary**: See `7z/README.md` for the native platform paths
-- **Config**: `complex_unzip_tool_v2/config/cloaked_file_rules.json`
-- **CLI Entry**: `complex_unzip_tool_v2/__main__.py`
-- **Main Logic**: `complex_unzip_tool_v2/main.py`
-- **Core Modules**: `complex_unzip_tool_v2/modules/`
-- **Domain Classes**: `complex_unzip_tool_v2/classes/`
+- **Config**: `deepunzip/config/cloaked_file_rules.json`
+- **CLI Entry**: `deepunzip/__main__.py`
+- **Main Logic**: `deepunzip/main.py`
+- **Core Modules**: `deepunzip/modules/`
+- **Domain Classes**: `deepunzip/classes/`
 - **Tests**: `tests/`
 
 ### Quality Gates Checklist

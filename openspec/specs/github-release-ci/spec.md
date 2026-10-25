@@ -2,14 +2,19 @@
 
 ## Purpose
 Automatically validate native builds and publish complete, versioned downloads when maintainers merge an explicitly labeled release pull request.
-
 ## Requirements
-
 ### Requirement: Five native build targets
-CI SHALL test and build Windows x64, macOS x64/ARM64, and Linux x64/ARM64 using native hosted runners. Each build SHALL verify the bundled engines, the existing test suite, and real source/standalone archive extraction before uploading an artifact.
+CI SHALL run fast checks on every push and pull request to `main` or `release/**`, on Ubuntu and Windows. The fast checks are version and engine verification, compilation, the publisher syntax check, and the full unit test suite.
+
+The release workflow SHALL test and build Windows x64, macOS x64/ARM64 and Linux x64/ARM64 on native hosted runners. A maintainer SHALL be able to request the same full build manually. Each full build SHALL verify the bundled engines, the existing test suite, and real source/standalone archive extraction before uploading an artifact.
+
+#### Scenario: Ordinary push
+- **WHEN** a commit is pushed to `release/v2.0.0`
+- **THEN** CI SHALL run the fast checks on Ubuntu and Windows
+- **AND** it SHALL NOT build or package the five standalone targets
 
 #### Scenario: A platform fails
-- **WHEN** any platform's tests, build, or smoke check fails
+- **WHEN** any platform's tests, build, or smoke check fails during a release build
 - **THEN** the run SHALL fail and SHALL NOT publish a release
 
 #### Scenario: A newer commit supersedes ordinary CI
@@ -18,22 +23,40 @@ CI SHALL test and build Windows x64, macOS x64/ARM64, and Linux x64/ARM64 using 
 - **AND** reusable release builds SHALL remain isolated from ordinary CI cancellation and publish only artifacts from their own workflow run
 
 ### Requirement: Release trigger is an eligible merged PR
-Publication SHALL occur only after a PR from `release/*` merges into `main` with the `release` label present at merge time. Every release build and tag SHALL correspond to that PR's merge commit.
+Publication SHALL occur only after a pull request whose source branch is `release/*` *in this repository* merges into `main` with the `release` label present at merge time. The workflow SHALL be triggered by the `pull_request` closed event, not `pull_request_target`. When the branch suffix after `release/`, with an optional leading `v` removed, has the form `X.Y.Z`, it SHALL equal the project version. Every release build and tag SHALL correspond to that PR's merge commit. Release runs SHALL be serialized in a single concurrency group and never cancelled.
 
 #### Scenario: Eligible merge
-- **WHEN** a labeled `release/v1.3` PR merges into `main`
+- **WHEN** a labeled `release/v2.0.0` PR from this repository merges into `main` with project version `2.0.0`
 - **THEN** the release pipeline SHALL build all five targets from that merge commit
 
+#### Scenario: Branch version differs from the project version
+- **WHEN** a labeled `release/v2.0.1` PR merges while the project version is `2.0.0`
+- **THEN** the release workflow SHALL fail before any platform build
+
+#### Scenario: Non-version branch suffix
+- **WHEN** a labeled `release/rename` PR merges
+- **THEN** the branch suffix SHALL NOT be compared with the project version
+
 #### Scenario: Non-release event
-- **WHEN** a PR is closed without merging, lacks the label, uses another source branch, or targets another base branch
+- **WHEN** a PR is closed without merging, lacks the label, uses another source branch, comes from a fork, or targets another base branch
 - **THEN** no release SHALL be published
 
 ### Requirement: Consistent version and complete downloadable assets
-The release SHALL use `vX.Y.Z` from the consistent project version declarations, include five platform archives and a checksum index, preserve Unix execute permissions, and include redistribution notices. Missing assets, inconsistent versions, or checksum mismatches SHALL block publication.
+The release SHALL use `vX.Y.Z` from the consistent project version declarations, include five platform archives and a checksum index, preserve Unix execute permissions, and include redistribution notices. Missing assets, inconsistent versions, or checksum mismatches SHALL block publication. Platform archives SHALL be named `deepunzip-vX.Y.Z-<target>.<ext>`, where:
+
+- `<target>` is one of `windows-x64`, `macos-x64`, `macos-arm64`, `linux-x64`, `linux-arm64`;
+- `<ext>` is `.zip` for Windows and `.tar.gz` otherwise.
+
+Each archive SHALL contain the `deepunzip` executable.
 
 #### Scenario: All builds succeed
 - **WHEN** all five verified platform archives are available for one version
 - **THEN** the release SHALL publish them together with release notes and `SHA256SUMS`
+
+#### Scenario: Asset names for 2.0.0
+- **WHEN** version 2.0.0 is released
+- **THEN** the Windows asset SHALL be `deepunzip-v2.0.0-windows-x64.zip` containing `deepunzip.exe`
+- **AND** the Linux ARM64 asset SHALL be `deepunzip-v2.0.0-linux-arm64.tar.gz` containing `deepunzip`
 
 ### Requirement: Safe publication retries
 An interrupted draft for the same version and merge commit SHALL be resumable. Published releases SHALL remain unchanged, and existing tags SHALL never move to another commit.
@@ -47,12 +70,13 @@ An interrupted draft for the same version and merge commit SHALL be resumable. P
 - **THEN** the complete asset set SHALL be uploaded and verified before the draft becomes public
 
 ### Requirement: Version-specific repository release notes
-The release body SHALL use the exact Markdown contents of `ReleaseNotes/RELEASE_NOTES_vX.Y.Z.md` from the same merge commit being built. Missing or empty notes SHALL fail before platform builds begin. GitHub-generated notes and files for other versions SHALL NOT be used as fallbacks.
+The release body SHALL use the exact Markdown contents of `docs/releaseNotes/vX.Y.Z.md` from the same merge commit being built. Missing or empty notes SHALL fail before platform builds begin. GitHub-generated notes and files for other versions SHALL NOT be used as fallbacks.
 
 #### Scenario: Matching release notes exist
-- **WHEN** the project version is `1.3.0` and `ReleaseNotes/RELEASE_NOTES_v1.3.0.md` is nonempty
+- **WHEN** the project version is `2.0.0` and `docs/releaseNotes/v2.0.0.md` is nonempty
 - **THEN** a new release or resumed draft SHALL publish that file's contents as its body
 
 #### Scenario: Release notes are missing or empty
 - **WHEN** the exact version's release notes file is missing or contains only whitespace
 - **THEN** the release workflow SHALL fail during prepare without building or creating a release
+

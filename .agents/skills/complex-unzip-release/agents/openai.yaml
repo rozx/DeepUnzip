@@ -1,4 +1,0 @@
-interface:
-  display_name: "项目发布准备"
-  short_description: "为本项目升级版本、编写双语发布说明并完成发布 PR 的准备与校验"
-  default_prompt: "请使用 $complex-unzip-release，在当前发布分支上准备下一个版本的发布说明、版本升级和发布 PR。"

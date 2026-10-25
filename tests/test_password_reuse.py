@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-import complex_unzip_tool_v2.main as main
+import deepunzip.main as main
 
 
 @pytest.fixture
@@ -15,15 +15,23 @@ def password_directories(monkeypatch, tmp_path):
     tool.mkdir()
     source.mkdir()
     book_path = tool / "passwords.txt"
-    book_module = importlib.import_module("complex_unzip_tool_v2.classes.PasswordBook")
+    book_module = importlib.import_module("deepunzip.classes.PasswordBook")
     monkeypatch.setattr(sys, "frozen", False, raising=False)
     monkeypatch.setattr(
         book_module,
         "__file__",
-        str(tool / "complex_unzip_tool_v2/classes/PasswordBook.py"),
+        str(tool / "deepunzip/classes/PasswordBook.py"),
     )
     monkeypatch.setattr(main.archive_utils, "resolve_seven_zip_path", lambda: "7z")
     monkeypatch.setattr(main.file_utils, "send2trash", lambda path: Path(path).unlink())
+    # Password prompts are only shown when stdin is a terminal.
+    monkeypatch.setattr(main, "_stdin_is_terminal", lambda: True)
+    # Multipart sets are probed by listing; headers are readable without a password.
+    monkeypatch.setattr(
+        main.archive_utils,
+        "_list_archive_with7z",
+        lambda *a, **k: ("7z", [{"name": "entry"}], None),
+    )
     return source, book_path
 
 
@@ -54,7 +62,7 @@ def test_cli_reuses_entered_password_for_later_archives(
     entered = []
 
     def prompt(text):
-        if text.startswith("Enter password"):
+        if text == main.t("prompt.password"):
             entered.append("learned-password")
             return "learned-password"
         return "1"
@@ -69,10 +77,11 @@ def test_cli_reuses_entered_password_for_later_archives(
         extracted.append(name)
         output = Path(output_path)
         output.mkdir(parents=True, exist_ok=True)
+        stem = name.split(".")[0]
         if name.startswith("archive"):
-            (output / f"nested-{name}.7z").write_bytes(b"encrypted nested fixture")
+            (output / f"nested-{stem}.7z").write_bytes(b"encrypted nested fixture")
         else:
-            (output / f"{name}.txt").write_text("extracted", encoding="utf-8")
+            (output / f"{stem}.txt").write_text("extracted", encoding="utf-8")
         return True
 
     monkeypatch.setattr(main.archive_utils, "extractArchiveWith7z", extract)
@@ -90,54 +99,39 @@ def test_cli_reuses_entered_password_for_later_archives(
     assert not (source / "passwords.txt").exists()
 
 
-@pytest.mark.parametrize("multipart", [False, True])
-@pytest.mark.parametrize("nested_password_failure", [False, True])
-def test_cli_reuses_password_learned_on_alternative_archive_retry(
-    monkeypatch, password_directories, multipart, nested_password_failure
+def test_cli_learned_password_unlocks_later_archives_but_keeps_failed_sources(
+    monkeypatch, password_directories
 ):
-    """Retry-learned passwords reach later groups even with skipped nested files."""
+    """A typed password is reused; a nested archive it cannot open keeps its source."""
     source, book_path = password_directories
-    for index in range(2):
-        for side in ("primary", "alternative"):
-            directory = source / side / "batch"
-            directory.mkdir(parents=True, exist_ok=True)
-            extensions = ["7z.001", "7z.002"] if multipart else ["7z"]
-            for extension in extensions:
-                (directory / f"archive{index}.{extension}").write_bytes(
-                    b"source archive"
-                )
+    for name in ("archive0.7z", "archive1.7z"):
+        (source / name).write_bytes(b"encrypted fixture")
+    monkeypatch.setattr(
+        main.archive_utils,
+        "is_valid_archive",
+        lambda path, **kwargs: Path(path).name.endswith(".7z"),
+    )
 
-    attempts = []
-    kept_sources = []
+    answers = iter(["1", "learned-password", "2"])
+    monkeypatch.setattr("builtins.input", lambda *a, **k: next(answers))
 
-    def extract(archive_path, output_path, password_list, **kwargs):
-        attempts.append(list(password_list))
-        if len(attempts) == 1:
-            raise OSError("Try an alternative archive")
-        if len(attempts) == 2:
-            kept_sources.extend(Path(archive_path).parent.glob("archive*"))
-        output = Path(output_path) / f"{Path(archive_path).name}.txt"
-        output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text("extracted", encoding="utf-8")
-        return {
-            "success": True,
-            "final_files": [str(output)],
-            "extracted_archives": [archive_path],
-            "errors": [],
-            "password_failed_archives": ["nested.7z"]
-            if nested_password_failure
-            else [],
-            "user_provided_passwords": ["retry-password"] if len(attempts) == 2 else [],
-        }
+    def extract(archive_path, output_path, password="", **kwargs):
+        name = Path(archive_path).name
+        if name == "locked.7z" or password != "learned-password":
+            raise main.archive_utils.ArchivePasswordError("Incorrect password")
+        output = Path(output_path)
+        (output / f"{name.split('.')[0]}.txt").write_text("extracted", encoding="utf-8")
+        if name == "archive0.7z":
+            (output / "locked.7z").write_bytes(b"other password")
+        return True
 
-    monkeypatch.setattr(main.archive_utils, "extract_nested_archives", extract)
+    monkeypatch.setattr(main.archive_utils, "extractArchiveWith7z", extract)
 
     result = CliRunner().invoke(main.app, [str(source)])
 
-    assert result.exit_code == 0, result.output
-    assert len(attempts) == 3
-    assert "retry-password" in attempts[2]
-    assert len(list((source / "unzipped").rglob("*.txt"))) == 2
-    assert book_path.read_text(encoding="utf-8").splitlines() == ["retry-password"]
-    if nested_password_failure:
-        assert all(path.exists() for path in kept_sources)
+    assert result.exit_code == 1, result.output  # locked.7z stays unresolved
+    assert list(answers) == []  # one password entry, one skip for locked.7z
+    assert (source / "archive0.7z").exists()
+    assert not (source / "archive1.7z").exists()
+    assert (source / "unzipped" / "locked.7z").exists()
+    assert book_path.read_text(encoding="utf-8").splitlines() == ["learned-password"]

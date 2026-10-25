@@ -3,12 +3,35 @@ import os
 import types
 import importlib
 
-import complex_unzip_tool_v2.modules.archive_utils as au
-from complex_unzip_tool_v2.classes.ArchiveTypes import (
+import deepunzip.modules.archive_utils as au
+from deepunzip.modules.pool_engine import SevenZipEngine
+from deepunzip.classes.ArchiveTypes import (
     ArchivePasswordError,
     ArchiveCorruptedError,
+    ArchiveMissingVolumeError,
     ArchiveUnsupportedError,
     ArchiveFileInfo,
+)
+
+# Recorded 7-Zip 26.03 output for a split set whose second volume is missing.
+SPLIT_7Z_MISSING_VOLUME_STDOUT = (
+    "ERROR: split.7z.001\n"
+    "split.7z\n"
+    "Open ERROR: Cannot open the file as [7z] archive\n"
+    "\n"
+    "ERRORS:\n"
+    "Unexpected end of archive\n"
+    "\n"
+    "Can't open as archive: 1\n"
+)
+SPLIT_ZIP_MISSING_VOLUME_STDOUT = (
+    "split.zip\n"
+    "ERRORS:\n"
+    "Unexpected end of archive\n"
+    "Path = split.zip\n"
+    "Type = zip\n"
+    "ERROR: CRC Failed : src\\blob.bin\n"
+    "Sub items Errors: 1\n"
 )
 
 
@@ -76,6 +99,38 @@ def test_raise_for_7z_error_not_archive_mapping():
             assert False, f"Expected ArchiveUnsupportedError for message: {msg}"
 
 
+def test_raise_for_7z_error_missing_7z_volume():
+    try:
+        au._raise_for_7z_error(
+            2, "", "split.7z.001", stdout=SPLIT_7Z_MISSING_VOLUME_STDOUT
+        )
+    except ArchiveMissingVolumeError:
+        pass
+    else:
+        assert False, "Expected ArchiveMissingVolumeError"
+
+
+def test_raise_for_7z_error_missing_volume_wins_over_crc_failure():
+    # A truncated split zip also reports CRC Failed; it must not look corrupted.
+    try:
+        au._raise_for_7z_error(
+            2, "", "split.zip.001", stdout=SPLIT_ZIP_MISSING_VOLUME_STDOUT
+        )
+    except ArchiveMissingVolumeError:
+        pass
+    else:
+        assert False, "Expected ArchiveMissingVolumeError"
+
+
+def test_raise_for_7z_error_missing_volume_message():
+    try:
+        au._raise_for_7z_error(2, "Missing volume : x.part2.rar", "x.part1.rar")
+    except ArchiveMissingVolumeError:
+        pass
+    else:
+        assert False, "Expected ArchiveMissingVolumeError"
+
+
 def test_is_valid_archive_false_on_garbage(monkeypatch):
     # Simulate the 7z listing raising ArchiveUnsupportedError
     def fake_read(*args, **kwargs):
@@ -96,45 +151,6 @@ def test_is_valid_archive_false_on_not_archive_message(monkeypatch):
 
     monkeypatch.setattr(au, "_run_7z_cmd", fake_run)
     assert au.is_valid_archive("video.mp4") is False
-
-
-def test_extract_nested_archives_treats_non_archive_as_regular_file(
-    monkeypatch, tmp_path
-):
-    # Create placeholder archive and output paths
-    archive_path = str(tmp_path / "outer.7z")
-    output_path = str(tmp_path / "out")
-    (tmp_path / "outer.7z").write_bytes(b"dummy")
-
-    # is_valid_archive: True for the outer archive, False for anything inside (e.g., .mp4)
-    def fake_is_valid(path, *args, **kwargs):
-        _ = (args, kwargs)
-        return os.path.basename(path) == "outer.7z"
-
-    monkeypatch.setattr(au, "is_valid_archive", fake_is_valid)
-
-    # extractArchiveWith7z: create a dummy non-archive file in the extraction folder and report success
-    def fake_extract(archive_path: str, output_path: str, *args, **kwargs) -> bool:
-        _ = (archive_path, args, kwargs)
-        os.makedirs(output_path, exist_ok=True)
-        with open(os.path.join(output_path, "video.mp4"), "wb") as f:
-            f.write(b"video-bytes")
-        return True
-
-    monkeypatch.setattr(au, "extractArchiveWith7z", fake_extract)
-
-    # Run nested extraction (non-interactive)
-    result = au.extract_nested_archives(
-        archive_path=archive_path,
-        output_path=output_path,
-        interactive=False,
-        use_recycle_bin=False,
-    )
-
-    assert result.get("success") is True
-    assert result.get("errors") == []
-    finals = result.get("final_files")
-    assert any(p.endswith("video.mp4") for p in finals)
 
 
 def test_is_valid_archive_true_on_password_protected(monkeypatch):
@@ -162,6 +178,7 @@ def test_build_7z_extract_cmd():
         "-psecret",
         "-o/out",
         "-y",
+        "--",
         "archive.zip",
         "file1.txt",
         "file2.txt",
@@ -178,279 +195,19 @@ def test_build_7z_extract_cmd_no_overwrite():
         overwrite=False,
     )
 
-    expected = ["7z.exe", "x", "-p", "-o/out", "-aos", "archive.zip"]
+    expected = ["7z.exe", "x", "-p", "-o/out", "-aos", "--", "archive.zip"]
     assert cmd == expected
 
 
-def test_extract_nested_archives_returns_false_when_passwords_fail(
-    monkeypatch, tmp_path
-):
-    # Always treat the input as a valid archive so extraction is attempted
-    monkeypatch.setattr(au, "is_valid_archive", lambda *args, **kwargs: True)
-
-    # Simulate 7z extraction always failing due to wrong password
-    def fail_extract(*args, **kwargs):
-        raise ArchivePasswordError("wrong password")
-
-    monkeypatch.setattr(au, "extractArchiveWith7z", fail_extract)
-
-    archive_path = str(tmp_path / "protected.7z")
-    output_path = str(tmp_path / "out")
-
-    # Create a placeholder file to represent the archive (not actually used by the mocked functions)
-    (tmp_path / "protected.7z").write_bytes(b"dummy")
-
-    result = au.extract_nested_archives(
-        archive_path=archive_path,
-        output_path=output_path,
-        password_list=["a", "b"],  # passwords to try
-        interactive=False,  # do not prompt for input in tests
-        use_recycle_bin=False,
+def test_build_7z_extract_cmd_never_reads_names_as_switches():
+    cmd = au._build_7z_extract_cmd(
+        seven_zip_path="7z.exe",
+        password="",
+        output_path="/out",
+        archive_path="-x.zip",
+        specific_files=["-oC:\\Users\\Public"],
     )
-
-    assert isinstance(result, dict)
-    assert result.get("success") is False
-    assert result.get("final_files") == []
-    assert result.get("extracted_archives") == []
-
-
-def test_extract_nested_archives_preserves_nested_archive_when_password_fails(
-    monkeypatch, tmp_path
-):
-    """If a nested archive fails due to password, it should be preserved in final_files and reported."""
-    archive_path = str(tmp_path / "outer.7z")
-    output_path = str(tmp_path / "out")
-    (tmp_path / "outer.7z").write_bytes(b"dummy")
-
-    def fake_is_valid(path, *args, **kwargs):
-        _ = (args, kwargs)
-        # Treat both outer and the nested protected archive as valid archives (password-protected is still valid)
-        return os.path.basename(path) in {"outer.7z", "protected.7z"}
-
-    monkeypatch.setattr(au, "is_valid_archive", fake_is_valid)
-
-    def fake_extract(archive_path: str, output_path: str, *args, **kwargs) -> bool:
-        os.makedirs(output_path, exist_ok=True)
-        if os.path.basename(archive_path) == "outer.7z":
-            # Outer extraction "succeeds" by producing a nested protected archive file
-            with open(os.path.join(output_path, "protected.7z"), "wb") as f:
-                f.write(b"protected-bytes")
-            return True
-        # Nested protected archive extraction fails due to wrong password
-        raise ArchivePasswordError("wrong password")
-
-    monkeypatch.setattr(au, "extractArchiveWith7z", fake_extract)
-
-    result = au.extract_nested_archives(
-        archive_path=archive_path,
-        output_path=output_path,
-        password_list=["a", "b"],
-        interactive=False,
-        use_recycle_bin=False,
-    )
-
-    assert isinstance(result, dict)
-    # Outer archive extracted, but nested one failed due to password
-    assert os.path.join(output_path, "protected.7z") in result.get("final_files", [])
-    assert os.path.join(output_path, "protected.7z") in result.get(
-        "password_failed_archives", []
-    )
-
-
-def test_nested_continuation_parts_are_relocated(monkeypatch, tmp_path):
-    """Continuation parts found inside nested extraction should be relocated via callback and not counted as finals."""
-    archive_path = str(tmp_path / "outer.7z")
-    output_path = str(tmp_path / "out")
-    (tmp_path / "outer.7z").write_bytes(b"dummy")
-
-    # Only the outer archive is considered valid
-    monkeypatch.setattr(
-        au, "is_valid_archive", lambda p, *a, **k: os.path.basename(p) == "outer.7z"
-    )
-
-    # Extraction creates a continuation part inside the output directory
-    def fake_extract(archive_path: str, output_path: str, *args, **kwargs) -> bool:
-        _ = (archive_path, args, kwargs)
-        os.makedirs(output_path, exist_ok=True)
-        # Create a nested continuation part that should be relocated and skipped
-        with open(os.path.join(output_path, "MySet.7z.002"), "wb") as f:
-            f.write(b"part-bytes")
-        return True
-
-    monkeypatch.setattr(au, "extractArchiveWith7z", fake_extract)
-
-    called_with: list[str] = []
-
-    def relocator(path: str) -> bool:
-        called_with.append(path)
-        return True  # indicate relocation happened
-
-    result = au.extract_nested_archives(
-        archive_path=archive_path,
-        output_path=output_path,
-        interactive=False,
-        use_recycle_bin=False,
-        group_relocator=relocator,
-    )
-
-    assert result.get("success") is True
-    # The continuation part should not appear in final files
-    finals = result.get("final_files")
-    assert finals is not None
-    assert not any(p.endswith("MySet.7z.002") for p in finals)
-    # Relocator should have been invoked with the nested file path
-    assert len(called_with) == 1
-    assert os.path.basename(called_with[0]) == "MySet.7z.002"
-
-
-def test_nested_continuation_parts_skipped_when_not_relocated(monkeypatch, tmp_path):
-    """If relocation says False, continuation parts are still skipped (not treated as finals)."""
-    archive_path = str(tmp_path / "outer.7z")
-    output_path = str(tmp_path / "out")
-    (tmp_path / "outer.7z").write_bytes(b"dummy")
-
-    monkeypatch.setattr(
-        au, "is_valid_archive", lambda p, *a, **k: os.path.basename(p) == "outer.7z"
-    )
-
-    def fake_extract(archive_path: str, output_path: str, *args, **kwargs) -> bool:
-        _ = (archive_path, args, kwargs)
-        os.makedirs(output_path, exist_ok=True)
-        with open(os.path.join(output_path, "AnotherSet.7z.003"), "wb") as f:
-            f.write(b"part-bytes")
-        return True
-
-    monkeypatch.setattr(au, "extractArchiveWith7z", fake_extract)
-
-    called_with: list[str] = []
-
-    def relocator_false(path: str) -> bool:
-        called_with.append(path)
-        return False  # indicate relocation did not occur
-
-    result = au.extract_nested_archives(
-        archive_path=archive_path,
-        output_path=output_path,
-        interactive=False,
-        use_recycle_bin=False,
-        group_relocator=relocator_false,
-    )
-
-    assert result.get("success") is True
-    finals = result.get("final_files")
-    # Continuation should still be skipped from finals even if not relocated
-    assert not any(p.endswith("AnotherSet.7z.003") for p in finals)
-    assert len(called_with) == 1
-    assert os.path.basename(called_with[0]) == "AnotherSet.7z.003"
-
-
-def test_nested_continuation_parts_relocated_across_all_formats(monkeypatch, tmp_path):
-    """Continuation parts of every supported format found inside nested
-    extraction must be relocated via callback and never counted as finals:
-    generic numbered splits (.zip.002/.rar.002/.iso.002) plus ZIPX/ARJ/ACE
-    continuations (.zx01/.a01/.c00)."""
-    continuation_names = [
-        "Set.zip.002",
-        "Set.rar.002",
-        "Set.iso.002",
-        "Set.zx01",
-        "Set.a01",
-        "Set.c00",
-    ]
-
-    for cont_name in continuation_names:
-        sub = tmp_path / cont_name.replace(".", "_")
-        sub.mkdir()
-        archive_path = str(sub / "outer.7z")
-        output_path = str(sub / "out")
-        (sub / "outer.7z").write_bytes(b"dummy")
-
-        monkeypatch.setattr(
-            au,
-            "is_valid_archive",
-            lambda p, *a, **k: os.path.basename(p) == "outer.7z",
-        )
-
-        def fake_extract(archive_path, output_path, *args, _name=cont_name, **kwargs):
-            _ = (archive_path, args, kwargs)
-            os.makedirs(output_path, exist_ok=True)
-            with open(os.path.join(output_path, _name), "wb") as f:
-                f.write(b"part-bytes")
-            return True
-
-        monkeypatch.setattr(au, "extractArchiveWith7z", fake_extract)
-
-        called_with: list[str] = []
-
-        def relocator(path, _sink=called_with):
-            _sink.append(path)
-            return True
-
-        result = au.extract_nested_archives(
-            archive_path=archive_path,
-            output_path=output_path,
-            interactive=False,
-            use_recycle_bin=False,
-            group_relocator=relocator,
-        )
-
-        finals = result.get("final_files") or []
-        assert not any(
-            os.path.basename(p) == cont_name for p in finals
-        ), f"{cont_name} should not be a final file"
-        assert [os.path.basename(p) for p in called_with] == [
-            cont_name
-        ], f"{cont_name} should be relocated as a continuation"
-
-
-def test_nested_multipart_missing_parts_are_preserved_in_final_files(
-    monkeypatch, tmp_path
-):
-    """If a nested multipart primary can't be extracted (even after matching), its parts must be preserved."""
-    archive_path = str(tmp_path / "outer.7z")
-    output_path = str(tmp_path / "out")
-    (tmp_path / "outer.7z").write_bytes(b"dummy")
-
-    # Treat the outer and the nested primary as valid archives.
-    def fake_is_valid(path, *args, **kwargs):
-        _ = (args, kwargs)
-        return os.path.basename(path) in {"outer.7z", "MySet.7z.001"}
-
-    monkeypatch.setattr(au, "is_valid_archive", fake_is_valid)
-
-    def fake_extract(archive_path: str, output_path: str, *args, **kwargs) -> bool:
-        _ = (args, kwargs)
-        os.makedirs(output_path, exist_ok=True)
-        base = os.path.basename(archive_path)
-        if base == "outer.7z":
-            # Place primary and continuation in different subfolders to require matching/moving.
-            d1 = os.path.join(output_path, "A")
-            d2 = os.path.join(output_path, "B")
-            os.makedirs(d1, exist_ok=True)
-            os.makedirs(d2, exist_ok=True)
-            with open(os.path.join(d1, "MySet.7z.001"), "wb") as f:
-                f.write(b"part1")
-            with open(os.path.join(d2, "MySet.7z.002"), "wb") as f:
-                f.write(b"part2")
-            return True
-        if base == "MySet.7z.001":
-            # Always fail to force the preservation path.
-            raise au.ArchiveError("Missing volume")
-        return True
-
-    monkeypatch.setattr(au, "extractArchiveWith7z", fake_extract)
-
-    result = au.extract_nested_archives(
-        archive_path=archive_path,
-        output_path=output_path,
-        interactive=False,
-        use_recycle_bin=False,
-    )
-
-    finals = result.get("final_files")
-    assert isinstance(finals, list)
-    assert any(p.endswith("MySet.7z.001") for p in finals)
-    assert any(p.endswith("MySet.7z.002") for p in finals)
+    assert cmd[cmd.index("--") + 1 :] == ["-x.zip", "-oC:\\Users\\Public"]
 
 
 # ---------------------------------------------------------------------------
@@ -585,45 +342,12 @@ def test_is_valid_archive_legacy_listing_without_header_still_valid(monkeypatch)
     assert au.is_valid_archive("legacy.7z") is True
 
 
-def test_nested_pe_is_kept_as_regular_file(monkeypatch, tmp_path):
+def test_nested_pe_is_not_opened_as_a_container(monkeypatch, tmp_path):
     """Issue #21: a DLL inside an archive must be kept, not exploded/deleted."""
-    archive_path = str(tmp_path / "outer.7z")
-    (tmp_path / "outer.7z").write_bytes(b"dummy")
-    output_path = str(tmp_path / "out")
-
-    listings = {"outer.7z": _SLT_SFX, "UnityPlayer.dll": _SLT_PLAIN_PE}
-    monkeypatch.setattr(au, "_resolve_seven_zip_path", lambda *a, **k: "7z.exe")
-    monkeypatch.setattr(
-        au,
-        "_run_7z_cmd",
-        lambda cmd: (listings[os.path.basename(cmd[-1])], "", 0),
-    )
-
-    extracted: list[str] = []
-
-    def fake_extract(archive_path: str, output_path: str, *args, **kwargs) -> bool:
-        _ = (args, kwargs)
-        extracted.append(os.path.basename(archive_path))
-        os.makedirs(output_path, exist_ok=True)
-        with open(os.path.join(output_path, "UnityPlayer.dll"), "wb") as f:
-            f.write(b"MZ-pe-bytes")
-        return True
-
-    monkeypatch.setattr(au, "extractArchiveWith7z", fake_extract)
-
-    result = au.extract_nested_archives(
-        archive_path=archive_path,
-        output_path=output_path,
-        interactive=False,
-        use_recycle_bin=False,
-    )
-
-    assert extracted == ["outer.7z"]
-    finals = result.get("final_files")
-    assert isinstance(finals, list)
-    dll = [p for p in finals if p.endswith("UnityPlayer.dll")]
-    assert len(dll) == 1
-    assert os.path.exists(dll[0])
+    dll = tmp_path / "UnityPlayer.dll"
+    dll.write_bytes(b"MZ-pe-bytes")
+    _fake_7z_listings_by_name(monkeypatch, {"UnityPlayer.dll": _SLT_PLAIN_PE})
+    assert _engine().classify(str(dll)) != "container"
 
 
 # ---------------------------------------------------------------------------
@@ -743,85 +467,18 @@ def _fake_7z_listings_by_name(monkeypatch, listings):
     )
 
 
-def test_nested_zip_document_is_kept_while_nested_zip_is_extracted(
-    monkeypatch, tmp_path
-):
-    archive_path = str(tmp_path / "outer.7z")
-    (tmp_path / "outer.7z").write_bytes(b"dummy")
-    output_path = str(tmp_path / "out")
-
+def test_zip_document_is_kept_while_plain_zip_is_opened(monkeypatch, tmp_path):
+    (tmp_path / "report.docx").write_bytes(b"PK-docx")
+    (tmp_path / "inner.zip").write_bytes(b"PK-zip")
     _fake_7z_listings_by_name(
         monkeypatch,
         {
-            "outer.7z": _slt_header("outer.7z", "7z"),
             "report.docx": _slt_header("report.docx", "zip"),
             "inner.zip": _slt_header("inner.zip", "zip"),
         },
     )
-    messages: list[str] = []
-    monkeypatch.setattr(au, "print_info", lambda msg, *a, **k: messages.append(msg))
-
-    extracted: list[str] = []
-
-    def fake_extract(archive_path: str, output_path: str, *args, **kwargs) -> bool:
-        _ = (args, kwargs)
-        name = os.path.basename(archive_path)
-        extracted.append(name)
-        os.makedirs(output_path, exist_ok=True)
-        children = (
-            {"report.docx": b"PK-docx", "inner.zip": b"PK-zip"}
-            if name == "outer.7z"
-            else {"readme.txt": b"hello"}
-        )
-        for child, data in children.items():
-            with open(os.path.join(output_path, child), "wb") as f:
-                f.write(data)
-        return True
-
-    monkeypatch.setattr(au, "extractArchiveWith7z", fake_extract)
-
-    result = au.extract_nested_archives(
-        archive_path=archive_path,
-        output_path=output_path,
-        interactive=False,
-        use_recycle_bin=False,
-    )
-
-    assert extracted == ["outer.7z", "inner.zip"]
-    finals = result.get("final_files")
-    assert isinstance(finals, list)
-    docx = [p for p in finals if p.endswith("report.docx")]
-    assert len(docx) == 1
-    assert os.path.exists(docx[0])
-    assert any(p.endswith("readme.txt") for p in finals)
-    assert any("report.docx" in m and "保留" in m for m in messages)
-
-
-def test_top_level_zip_document_is_not_extracted_or_deleted(monkeypatch, tmp_path):
-    doc = tmp_path / "report.docx"
-    doc.write_bytes(b"PK-docx")
-
-    _fake_7z_listings_by_name(
-        monkeypatch, {"report.docx": _slt_header("report.docx", "zip")}
-    )
-    warnings: list[str] = []
-    monkeypatch.setattr(au, "print_warning", lambda msg, *a, **k: warnings.append(msg))
-
-    def fail_extract(*args, **kwargs) -> bool:
-        raise AssertionError("zip-based document must not be extracted")
-
-    monkeypatch.setattr(au, "extractArchiveWith7z", fail_extract)
-
-    result = au.extract_nested_archives(
-        archive_path=str(doc),
-        output_path=str(tmp_path / "temp.report"),
-        interactive=False,
-        use_recycle_bin=False,
-    )
-
-    assert doc.exists()
-    assert result["success"] is False
-    assert any("report.docx" in m and "文档" in m for m in warnings)
+    assert _engine().classify(str(tmp_path / "report.docx")) == "regular"
+    assert _engine().classify(str(tmp_path / "inner.zip")) == "container"
 
 
 # ---------------------------------------------------------------------------
@@ -829,28 +486,30 @@ def test_top_level_zip_document_is_not_extracted_or_deleted(monkeypatch, tmp_pat
 # ---------------------------------------------------------------------------
 
 
+def _engine():
+    return SevenZipEngine(_NoPasswords())
+
+
+class _NoPasswords:
+    def get_passwords(self):
+        return []
+
+    def add_password(self, password):
+        pass
+
+
 def _run_top_level(monkeypatch, tmp_path, name, data, stdout, code):
+    """Classify a top-level input the way the work pool does."""
     path = tmp_path / name
     path.write_bytes(data)
     _fake_7z_listing(monkeypatch, stdout, code=code)
-
-    def fail_extract(*args, **kwargs) -> bool:
-        raise AssertionError("non-archive must not be extracted")
-
-    monkeypatch.setattr(au, "extractArchiveWith7z", fail_extract)
-    result = au.extract_nested_archives(
-        archive_path=str(path),
-        output_path=str(tmp_path / f"temp.{name}"),
-        interactive=False,
-        use_recycle_bin=False,
-    )
+    verdict = _engine().classify(str(path))
     assert path.exists()
-    assert result["success"] is False
-    return result
+    return verdict
 
 
 def test_top_level_plain_file_is_skipped_without_error(monkeypatch, tmp_path):
-    result = _run_top_level(
+    verdict = _run_top_level(
         monkeypatch,
         tmp_path,
         "请先看我.txt",
@@ -858,12 +517,11 @@ def test_top_level_plain_file_is_skipped_without_error(monkeypatch, tmp_path):
         "ERROR: 请先看我.txt : Cannot open the file as archive\n",
         2,
     )
-    assert result["errors"] == []
-    assert result.get("skipped_non_archive") is True
+    assert verdict == "regular"
 
 
 def test_top_level_broken_archive_is_still_reported(monkeypatch, tmp_path):
-    result = _run_top_level(
+    verdict = _run_top_level(
         monkeypatch,
         tmp_path,
         "data.7z",
@@ -871,12 +529,11 @@ def test_top_level_broken_archive_is_still_reported(monkeypatch, tmp_path):
         "ERROR: data.7z : Cannot open the file as archive\n",
         2,
     )
-    assert len(result["errors"]) == 1
-    assert not result.get("skipped_non_archive")
+    assert verdict == "broken"
 
 
 def test_top_level_zip_document_is_skipped_without_error(monkeypatch, tmp_path):
-    result = _run_top_level(
+    verdict = _run_top_level(
         monkeypatch,
         tmp_path,
         "report.docx",
@@ -884,8 +541,7 @@ def test_top_level_zip_document_is_skipped_without_error(monkeypatch, tmp_path):
         _slt_header("report.docx", "zip"),
         0,
     )
-    assert result["errors"] == []
-    assert result.get("skipped_non_archive") is True
+    assert verdict == "regular"
 
 
 def test_is_valid_archive_false_for_remaining_ooxml_and_odf_extensions(monkeypatch):
@@ -906,51 +562,12 @@ def test_is_valid_archive_false_for_remaining_ooxml_and_odf_extensions(monkeypat
         assert au.is_valid_archive(name) is False, name
 
 
-def test_nested_archive_kept_when_recycle_bin_fails(monkeypatch, tmp_path):
-    """PR review: if recycling a processed nested archive fails, keep it in
-    final_files; otherwise the temp-folder rmtree deletes it permanently."""
-    archive_path = str(tmp_path / "outer.7z")
-    (tmp_path / "outer.7z").write_bytes(b"dummy")
-    output_path = str(tmp_path / "out")
-
-    listings = {
-        "outer.7z": _slt_header("outer.7z", "7z"),
-        "inner.7z": _slt_header("inner.7z", "7z"),
-    }
-    monkeypatch.setattr(au, "_resolve_seven_zip_path", lambda *a, **k: "7z.exe")
-    monkeypatch.setattr(
-        au, "_run_7z_cmd", lambda cmd: (listings[os.path.basename(cmd[-1])], "", 0)
-    )
-    monkeypatch.setattr(au, "safe_remove", lambda *a, **k: False)
-
-    def fake_extract(archive_path: str, output_path: str, *args, **kwargs) -> bool:
-        _ = (args, kwargs)
-        os.makedirs(output_path, exist_ok=True)
-        name = "inner.7z" if os.path.basename(archive_path) == "outer.7z" else "a.txt"
-        with open(os.path.join(output_path, name), "wb") as f:
-            f.write(b"data")
-        return True
-
-    monkeypatch.setattr(au, "extractArchiveWith7z", fake_extract)
-
-    result = au.extract_nested_archives(
-        archive_path=archive_path,
-        output_path=output_path,
-        interactive=False,
-        use_recycle_bin=True,
-    )
-
-    finals = result["final_files"]
-    assert any(p.endswith("inner.7z") for p in finals)
-    assert any(p.endswith("a.txt") for p in finals)
-
-
 def test_top_level_damaged_archive_with_unknown_extension_is_reported(
     monkeypatch, tmp_path
 ):
     """PR review: a partial 7z saved as .dat still has its magic bytes, so it
     is reported as a failure rather than silently skipped."""
-    result = _run_top_level(
+    verdict = _run_top_level(
         monkeypatch,
         tmp_path,
         "partial.dat",
@@ -958,8 +575,7 @@ def test_top_level_damaged_archive_with_unknown_extension_is_reported(
         "ERROR: partial.dat : Cannot open the file as archive\n",
         2,
     )
-    assert len(result["errors"]) == 1
-    assert not result.get("skipped_non_archive")
+    assert verdict == "broken"
 
 
 def test_is_valid_archive_false_for_apple_iwork_documents(monkeypatch):
@@ -1017,40 +633,14 @@ def test_is_valid_archive_false_for_suffix_marker_formats(monkeypatch):
         assert au.is_valid_archive(name) is False, name
 
 
-def test_nested_cloaked_zip_named_like_document_is_extracted(monkeypatch, tmp_path):
-    archive_path = str(tmp_path / "outer.7z")
-    (tmp_path / "outer.7z").write_bytes(b"dummy")
-    listings = {
-        "outer.7z": _slt_header("outer.7z", "7z", entries=["资源.zip.docx"]),
-        "资源.zip.docx": _slt_header("资源.zip.docx", "zip", entries=_PLAIN_ZIP_ENTRIES),
-    }
-    monkeypatch.setattr(au, "_resolve_seven_zip_path", lambda *a, **k: "7z.exe")
-    monkeypatch.setattr(
-        au, "_run_7z_cmd", lambda cmd: (listings[os.path.basename(cmd[-1])], "", 0)
+def test_cloaked_zip_named_like_document_is_opened(monkeypatch, tmp_path):
+    path = tmp_path / "资源.zip.docx"
+    path.write_bytes(b"PKdata")
+    _fake_7z_listings_by_name(
+        monkeypatch,
+        {"资源.zip.docx": _slt_header("资源.zip.docx", "zip", entries=_PLAIN_ZIP_ENTRIES)},
     )
-    extracted: list = []
-
-    def fake_extract(archive_path: str, output_path: str, *args, **kwargs) -> bool:
-        _ = (args, kwargs)
-        name = os.path.basename(archive_path)
-        extracted.append(name)
-        os.makedirs(output_path, exist_ok=True)
-        child = "资源.zip.docx" if name == "outer.7z" else "readme.txt"
-        with open(os.path.join(output_path, child), "wb") as f:
-            f.write(b"PK\x03\x04data")
-        return True
-
-    monkeypatch.setattr(au, "extractArchiveWith7z", fake_extract)
-
-    result = au.extract_nested_archives(
-        archive_path=archive_path,
-        output_path=str(tmp_path / "out"),
-        interactive=False,
-        use_recycle_bin=False,
-    )
-
-    assert extracted == ["outer.7z", "资源.zip.docx"]
-    assert any(p.endswith("readme.txt") for p in result["final_files"])
+    assert _engine().classify(str(path)) == "container"
 
 
 def test_libreoffice_extension_kept_unless_plain_zip(monkeypatch):
@@ -1102,7 +692,7 @@ def test_manifestless_jar_is_kept(monkeypatch):
 def test_top_level_damaged_zip_named_like_document_is_reported(monkeypatch, tmp_path):
     """PR review: a truncated zip named payload.docx must not be hidden as a
     kept document; only an intact zip with the format marker is skipped."""
-    result = _run_top_level(
+    verdict = _run_top_level(
         monkeypatch,
         tmp_path,
         "payload.docx",
@@ -1110,5 +700,4 @@ def test_top_level_damaged_zip_named_like_document_is_reported(monkeypatch, tmp_
         "ERROR: payload.docx : Cannot open the file as archive\n",
         2,
     )
-    assert len(result["errors"]) == 1
-    assert not result.get("skipped_non_archive")
+    assert verdict == "broken"

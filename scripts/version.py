@@ -3,6 +3,8 @@
 import subprocess
 import sys
 
+from deepunzip.modules.render import configure_redirected_output
+
 
 def run_bump2version(part: str, allow_dirty: bool = True) -> None:
     """Run bump2version command with specified part.
@@ -11,6 +13,7 @@ def run_bump2version(part: str, allow_dirty: bool = True) -> None:
         part: Version part to bump (patch, minor, major)
         allow_dirty: Allow running with uncommitted changes
     """
+    configure_redirected_output()  # ✓/✗ must survive a GBK pipe on Windows
     cmd = ["bump2version"]
     if allow_dirty:
         cmd.append("--allow-dirty")

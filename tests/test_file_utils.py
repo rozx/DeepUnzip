@@ -7,8 +7,8 @@ import pytest
 from unittest.mock import Mock, patch, MagicMock
 from pathlib import Path
 
-import complex_unzip_tool_v2.modules.file_utils as fu
-from complex_unzip_tool_v2.classes.ArchiveGroup import ArchiveGroup
+import deepunzip.modules.file_utils as fu
+from deepunzip.classes.ArchiveGroup import ArchiveGroup
 
 
 class TestGetArchiveBaseName:
@@ -101,7 +101,7 @@ class TestArchiveGroupMainSelection:
     regardless of file insertion order (Bug B fix)."""
 
     def test_spanned_zip_keeps_zip_as_main(self):
-        from complex_unzip_tool_v2.classes.ArchiveGroup import ArchiveGroup
+        from deepunzip.classes.ArchiveGroup import ArchiveGroup
 
         for order in (
             ["set.zip", "set.z01", "set.z02"],
@@ -117,7 +117,7 @@ class TestArchiveGroupMainSelection:
             assert g.isMultiPart is True
 
     def test_volume_rar_keeps_rar_as_main(self):
-        from complex_unzip_tool_v2.classes.ArchiveGroup import ArchiveGroup
+        from deepunzip.classes.ArchiveGroup import ArchiveGroup
 
         for order in (
             ["arc.rar", "arc.r00", "arc.r01"],
@@ -133,7 +133,7 @@ class TestArchiveGroupMainSelection:
             assert g.isMultiPart is True
 
     def test_part1_rar_wins_over_partN(self):
-        from complex_unzip_tool_v2.classes.ArchiveGroup import ArchiveGroup
+        from deepunzip.classes.ArchiveGroup import ArchiveGroup
 
         g = ArchiveGroup("dir-data")
         g.add_file("data.part2.rar")
@@ -141,7 +141,7 @@ class TestArchiveGroupMainSelection:
         assert g.mainArchiveFile == "data.part1.rar"
 
     def test_7z_first_volume_wins(self):
-        from complex_unzip_tool_v2.classes.ArchiveGroup import ArchiveGroup
+        from deepunzip.classes.ArchiveGroup import ArchiveGroup
 
         g = ArchiveGroup("dir-x")
         g.add_file("x.7z.002")
@@ -151,7 +151,7 @@ class TestArchiveGroupMainSelection:
     def test_generic_numbered_first_volume_wins(self):
         """For a 7-Zip generic split of any extension, the `.001` is the entry
         point regardless of insertion order."""
-        from complex_unzip_tool_v2.classes.ArchiveGroup import ArchiveGroup
+        from deepunzip.classes.ArchiveGroup import ArchiveGroup
 
         for base, ext in (("x", "rar"), ("y", "iso"), ("z", "bin")):
             g = ArchiveGroup(f"dir-{base}")
@@ -161,7 +161,7 @@ class TestArchiveGroupMainSelection:
             assert g.isMultiPart is True
 
     def test_zipx_primary_wins_over_continuations(self):
-        from complex_unzip_tool_v2.classes.ArchiveGroup import ArchiveGroup
+        from deepunzip.classes.ArchiveGroup import ArchiveGroup
 
         for order in (
             ["a.zipx", "a.zx01", "a.zx02"],
@@ -175,7 +175,7 @@ class TestArchiveGroupMainSelection:
             assert g.isMultiPart is True
 
     def test_arj_primary_wins_over_continuations(self):
-        from complex_unzip_tool_v2.classes.ArchiveGroup import ArchiveGroup
+        from deepunzip.classes.ArchiveGroup import ArchiveGroup
 
         for order in (
             ["a.arj", "a.a01", "a.a02"],
@@ -189,7 +189,7 @@ class TestArchiveGroupMainSelection:
             assert g.isMultiPart is True
 
     def test_ace_primary_wins_over_continuations(self):
-        from complex_unzip_tool_v2.classes.ArchiveGroup import ArchiveGroup
+        from deepunzip.classes.ArchiveGroup import ArchiveGroup
 
         for order in (
             ["a.ace", "a.c00", "a.c01"],
@@ -317,6 +317,27 @@ class TestReadDir:
         assert any("file2.zip" in path for path in result)
         assert any("nested.7z" in path for path in result)
 
+    def test_read_directory_skips_output_and_work_directories(self):
+        """Leftover work directories and the output folder are never inputs."""
+        for folder in ("temp.deepunzip-abc123", "unzipped"):
+            os.makedirs(os.path.join(self.test_dir, folder, "deep"))
+            with open(os.path.join(self.test_dir, folder, "deep", "x.7z"), "w") as f:
+                f.write("x")
+        result = fu.read_dir([self.test_dir])
+        assert not any("temp.deepunzip-" in path for path in result)
+        assert not any(os.sep + "unzipped" + os.sep in path for path in result)
+        assert any("nested.7z" in path for path in result)
+
+    def test_read_directory_skips_the_rename_history_file(self):
+        """A leftover rename-history file is the tool's own state, not input."""
+        from deepunzip.modules.rename_history import HISTORY_FILENAME
+
+        with open(os.path.join(self.test_dir, HISTORY_FILENAME), "w") as f:
+            f.write("{}")
+        result = fu.read_dir([self.test_dir])
+        assert not any(HISTORY_FILENAME in path for path in result)
+        assert any("file1.txt" in path for path in result)
+
     def test_read_individual_files(self):
         """Test reading individual file paths."""
         result = fu.read_dir(self.test_files)
@@ -408,7 +429,7 @@ class TestSafeRemove:
         """Clean up test files."""
         shutil.rmtree(self.test_dir, ignore_errors=True)
 
-    @patch("complex_unzip_tool_v2.modules.file_utils.send2trash")
+    @patch("deepunzip.modules.file_utils.send2trash")
     def test_remove_to_recycle_bin(self, mock_send2trash):
         """Test removing file to recycle bin."""
         result = fu.safe_remove(self.test_file, use_recycle_bin=True)
@@ -514,7 +535,7 @@ class TestShouldGroupFiles:
 class TestAreMultipartRelated:
     """Tests for _are_multipart_related function."""
 
-    @patch("complex_unzip_tool_v2.modules.file_utils.re.search")
+    @patch("deepunzip.modules.file_utils.re.search")
     def test_multipart_archives_same_base(self, mock_search):
         """Test multipart archives with same base name."""
         mock_search.return_value = True
@@ -526,7 +547,7 @@ class TestAreMultipartRelated:
             )
             assert result is True
 
-    @patch("complex_unzip_tool_v2.modules.file_utils.re.search")
+    @patch("deepunzip.modules.file_utils.re.search")
     def test_multipart_archives_different_base(self, mock_search):
         """Test multipart archives with different base names."""
         mock_search.return_value = True
@@ -543,7 +564,7 @@ class TestAreMultipartRelated:
         result = fu._are_multipart_related("/path/archive.7z.001", "")
         assert result is False
 
-    @patch("complex_unzip_tool_v2.modules.file_utils.re.search")
+    @patch("deepunzip.modules.file_utils.re.search")
     def test_non_multipart_archives(self, mock_search):
         """Test non-multipart archives."""
         mock_search.return_value = False
@@ -738,288 +759,6 @@ class TestMoveFilesPreservingStructure:
 
             assert len(result) == 0  # No files successfully moved
             assert error_callback.call_count == 2  # Error called for each file
-
-
-class TestAddFileToGroupsStrictMatching:
-    """Regression tests for add_file_to_groups strict matching behavior."""
-
-    def setup_method(self):
-        self.base_dir = tempfile.mkdtemp()
-        # Create two separate multipart groups with similar names but different bases
-        self.group1_dir = os.path.join(self.base_dir, "A100")
-        self.group2_dir = os.path.join(self.base_dir, "A101")
-        os.makedirs(self.group1_dir)
-        os.makedirs(self.group2_dir)
-
-        # Group1: base B100
-        self.g1_p1 = os.path.join(self.group1_dir, "B100.7z.001")
-        self.g1_p2 = os.path.join(self.group1_dir, "B100.7z.002")
-        # Group2: base B101
-        self.g2_p1 = os.path.join(self.group2_dir, "B101.7z.001")
-        self.g2_p2 = os.path.join(self.group2_dir, "B101.7z.002")
-
-        for p in [self.g1_p1, self.g1_p2, self.g2_p1, self.g2_p2]:
-            with open(p, "w") as f:
-                f.write("dummy")
-
-        # Build groups
-        self.groups = []
-        g1 = ArchiveGroup("A100-B100")
-        g1.add_file(self.g1_p1)
-        self.groups.append(g1)
-
-        g2 = ArchiveGroup("A101-B101")
-        g2.add_file(self.g2_p1)
-        self.groups.append(g2)
-
-    def teardown_method(self):
-        shutil.rmtree(self.base_dir, ignore_errors=True)
-
-    def test_exact_base_name_is_required(self):
-        """B100.7z.002 should join only B100 group, not B101 based on similarity."""
-        added = fu.add_file_to_groups(self.g1_p2, self.groups)
-        assert added is self.groups[0]
-        assert self.groups[0].files and any(
-            fp.endswith("B100.7z.002") for fp in self.groups[0].files
-        )
-        # Ensure it did not end up in the other group
-        assert not any(fp.endswith("B100.7z.002") for fp in self.groups[1].files)
-
-    def test_no_group_on_different_base(self):
-        """B101.7z.002 must not be added to B100 group despite similar naming."""
-        # Intentionally pass B101 part 2 when only B100 group exists in same dir list first
-        groups_local = [self.groups[0]]  # only B100 group
-        # Create a loose file resembling different base
-        loose = os.path.join(self.group1_dir, "B101.7z.002")
-        with open(loose, "w") as f:
-            f.write("dummy")
-
-        added = fu.add_file_to_groups(loose, groups_local)
-        assert added is None
-        # File should remain at original location
-        assert os.path.exists(loose)
-
-
-class TestAddFileToGroupsDirectoryAwareness:
-    """Tests ensuring grouping only occurs within the same directory tree."""
-
-    def setup_method(self):
-        self.base_dir = tempfile.mkdtemp()
-        # Create two separate sibling dirs
-        self.dir_a = os.path.join(self.base_dir, "FolderA")
-        self.dir_b = os.path.join(self.base_dir, "FolderB")
-        os.makedirs(self.dir_a)
-        os.makedirs(self.dir_b)
-
-        # Same basename across folders
-        self.a_p1 = os.path.join(self.dir_a, "Same.7z.001")
-        self.a_p2 = os.path.join(self.dir_a, "Same.7z.002")
-        self.b_p2 = os.path.join(self.dir_b, "Same.7z.002")
-
-        for p in [self.a_p1, self.a_p2, self.b_p2]:
-            with open(p, "w") as f:
-                f.write("dummy")
-
-        # Group uses FolderA main archive
-        self.group = ArchiveGroup("FolderA-Same")
-        self.group.add_file(self.a_p1)
-
-    def teardown_method(self):
-        shutil.rmtree(self.base_dir, ignore_errors=True)
-
-    def test_group_same_folder(self):
-        groups = [self.group]
-        added = fu.add_file_to_groups(self.a_p2, groups)
-        assert added is self.group
-        assert any(fp.endswith("Same.7z.002") for fp in self.group.files)
-
-    def test_do_not_group_different_folder(self):
-        groups = [self.group]
-        added = fu.add_file_to_groups(self.b_p2, groups)
-        assert added is None
-        # File should remain where it is
-        assert os.path.exists(self.b_p2)
-
-
-class TestEnsureContainedMultipartGroups:
-    def test_creates_group_for_7z_set(self, tmp_path):
-        out_dir = tmp_path / "unzipped"
-        out_dir.mkdir(parents=True, exist_ok=True)
-
-        p1 = out_dir / "MySet.7z.001"
-        p2 = out_dir / "MySet.7z.002"
-        p1.write_bytes(b"1")
-        p2.write_bytes(b"2")
-
-        groups: list[ArchiveGroup] = []
-        created = fu.ensure_contained_multipart_groups([str(p1), str(p2)], groups)
-
-        assert created == 1
-        assert len(groups) == 1
-        g = groups[0]
-        assert g.isMultiPart is True
-        assert os.path.basename(g.mainArchiveFile).lower().endswith(".7z.001")
-        assert any(f.lower().endswith(".7z.002") for f in g.files)
-
-    def test_creates_group_for_spanned_zip_and_keeps_zip_as_main(self, tmp_path):
-        out_dir = tmp_path / "unzipped"
-        out_dir.mkdir(parents=True, exist_ok=True)
-
-        p_zip = out_dir / "Set.zip"
-        p_z01 = out_dir / "Set.z01"
-        p_zip.write_bytes(b"zip")
-        p_z01.write_bytes(b"z01")
-
-        groups: list[ArchiveGroup] = []
-        created = fu.ensure_contained_multipart_groups([str(p_zip), str(p_z01)], groups)
-
-        assert created == 1
-        assert len(groups) == 1
-        g = groups[0]
-        assert g.isMultiPart is True
-        assert os.path.basename(g.mainArchiveFile).lower().endswith(".zip")
-        assert any(f.lower().endswith(".z01") for f in g.files)
-
-    def test_does_not_create_group_for_standalone_zip(self, tmp_path):
-        out_dir = tmp_path / "unzipped"
-        out_dir.mkdir(parents=True, exist_ok=True)
-
-        p_zip = out_dir / "Standalone.zip"
-        p_zip.write_bytes(b"zip")
-
-        groups: list[ArchiveGroup] = []
-        created = fu.ensure_contained_multipart_groups([str(p_zip)], groups)
-
-        assert created == 0
-        assert groups == []
-
-    def test_creates_group_for_rar_volume_and_keeps_rar_as_main(self, tmp_path):
-        out_dir = tmp_path / "unzipped"
-        out_dir.mkdir(parents=True, exist_ok=True)
-
-        p_rar = out_dir / "Arc.rar"
-        p_r00 = out_dir / "Arc.r00"
-        p_rar.write_bytes(b"rar")
-        p_r00.write_bytes(b"r00")
-
-        groups: list[ArchiveGroup] = []
-        created = fu.ensure_contained_multipart_groups([str(p_rar), str(p_r00)], groups)
-
-        assert created == 1
-        assert len(groups) == 1
-        g = groups[0]
-        assert g.isMultiPart is True
-        assert os.path.basename(g.mainArchiveFile).lower().endswith(".rar")
-        assert any(f.lower().endswith(".r00") for f in g.files)
-
-    def test_does_not_create_group_for_standalone_rar(self, tmp_path):
-        out_dir = tmp_path / "unzipped"
-        out_dir.mkdir(parents=True, exist_ok=True)
-
-        p_rar = out_dir / "Standalone.rar"
-        p_rar.write_bytes(b"rar")
-
-        groups: list[ArchiveGroup] = []
-        created = fu.ensure_contained_multipart_groups([str(p_rar)], groups)
-
-        assert created == 0
-        assert groups == []
-
-    def test_creates_group_for_generic_numbered_split(self, tmp_path):
-        out_dir = tmp_path / "unzipped"
-        out_dir.mkdir(parents=True, exist_ok=True)
-
-        p1 = out_dir / "Set.iso.001"
-        p2 = out_dir / "Set.iso.002"
-        p1.write_bytes(b"1")
-        p2.write_bytes(b"2")
-
-        groups: list[ArchiveGroup] = []
-        created = fu.ensure_contained_multipart_groups([str(p1), str(p2)], groups)
-
-        assert created == 1
-        g = groups[0]
-        assert g.isMultiPart is True
-        assert os.path.basename(g.mainArchiveFile).lower().endswith(".iso.001")
-        assert any(f.lower().endswith(".iso.002") for f in g.files)
-
-    def test_creates_group_for_generic_numbered_split_from_001_alone(self, tmp_path):
-        # `.001` is unambiguous, so a group is created even without a sibling.
-        out_dir = tmp_path / "unzipped"
-        out_dir.mkdir(parents=True, exist_ok=True)
-
-        p1 = out_dir / "Lonely.rar.001"
-        p1.write_bytes(b"1")
-
-        groups: list[ArchiveGroup] = []
-        created = fu.ensure_contained_multipart_groups([str(p1)], groups)
-
-        assert created == 1
-        assert os.path.basename(groups[0].mainArchiveFile).lower().endswith(".rar.001")
-
-    def test_creates_group_for_zipx_set(self, tmp_path):
-        out_dir = tmp_path / "unzipped"
-        out_dir.mkdir(parents=True, exist_ok=True)
-
-        p_zipx = out_dir / "Z.zipx"
-        p_zx01 = out_dir / "Z.zx01"
-        p_zipx.write_bytes(b"zipx")
-        p_zx01.write_bytes(b"zx01")
-
-        groups: list[ArchiveGroup] = []
-        created = fu.ensure_contained_multipart_groups(
-            [str(p_zipx), str(p_zx01)], groups
-        )
-
-        assert created == 1
-        g = groups[0]
-        assert g.isMultiPart is True
-        assert os.path.basename(g.mainArchiveFile).lower().endswith(".zipx")
-
-    def test_creates_group_for_arj_set(self, tmp_path):
-        out_dir = tmp_path / "unzipped"
-        out_dir.mkdir(parents=True, exist_ok=True)
-
-        p_arj = out_dir / "A.arj"
-        p_a01 = out_dir / "A.a01"
-        p_arj.write_bytes(b"arj")
-        p_a01.write_bytes(b"a01")
-
-        groups: list[ArchiveGroup] = []
-        created = fu.ensure_contained_multipart_groups([str(p_arj), str(p_a01)], groups)
-
-        assert created == 1
-        assert os.path.basename(groups[0].mainArchiveFile).lower().endswith(".arj")
-
-    def test_creates_group_for_ace_set(self, tmp_path):
-        out_dir = tmp_path / "unzipped"
-        out_dir.mkdir(parents=True, exist_ok=True)
-
-        p_ace = out_dir / "C.ace"
-        p_c00 = out_dir / "C.c00"
-        p_ace.write_bytes(b"ace")
-        p_c00.write_bytes(b"c00")
-
-        groups: list[ArchiveGroup] = []
-        created = fu.ensure_contained_multipart_groups([str(p_ace), str(p_c00)], groups)
-
-        assert created == 1
-        assert os.path.basename(groups[0].mainArchiveFile).lower().endswith(".ace")
-
-    def test_does_not_create_group_for_standalone_arj_or_ace(self, tmp_path):
-        out_dir = tmp_path / "unzipped"
-        out_dir.mkdir(parents=True, exist_ok=True)
-
-        p_arj = out_dir / "Solo.arj"
-        p_ace = out_dir / "Solo2.ace"
-        p_arj.write_bytes(b"arj")
-        p_ace.write_bytes(b"ace")
-
-        groups: list[ArchiveGroup] = []
-        created = fu.ensure_contained_multipart_groups([str(p_arj), str(p_ace)], groups)
-
-        assert created == 0
-        assert groups == []
 
 
 class TestOutputPathNormalization:

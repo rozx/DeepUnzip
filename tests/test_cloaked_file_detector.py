@@ -7,7 +7,7 @@ import tempfile
 import pytest
 from unittest.mock import patch, mock_open
 
-from complex_unzip_tool_v2.modules.cloaked_file_detector import (
+from deepunzip.modules.cloaked_file_detector import (
     CloakedFileDetector,
     CloakedFileRule,
 )
@@ -166,7 +166,7 @@ class TestCloakedFileDetector:
         """Create a detector with the real config file to test actual behavior."""
         config_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)),
-            "complex_unzip_tool_v2",
+            "deepunzip",
             "config",
             "cloaked_file_rules.json",
         )
@@ -243,9 +243,7 @@ class TestCloakedFileDetector:
 
     def test_init_with_invalid_rules_file(self):
         """Test initialization with invalid rules file."""
-        with patch(
-            "complex_unzip_tool_v2.modules.cloaked_file_detector.print_error"
-        ) as mock_error:
+        with patch("deepunzip.modules.cloaked_file_detector.notice") as mock_error:
             detector = CloakedFileDetector("nonexistent_file.json")
             assert len(detector.rules) == 0
             mock_error.assert_called_once()
@@ -253,7 +251,7 @@ class TestCloakedFileDetector:
     def test_load_rules_json_error(self):
         """Test handling of JSON decode error."""
         with patch(
-            "complex_unzip_tool_v2.modules.cloaked_file_detector.print_error"
+            "deepunzip.modules.cloaked_file_detector.notice"
         ) as mock_print_error, patch(
             "builtins.open", mock_open(read_data='{"invalid": "json"}')
         ), patch(
@@ -364,9 +362,7 @@ class TestCloakedFileDetector:
         result = detector._generate_new_filename("", "", "1", rule)
         assert result is None
 
-    @patch(
-        "complex_unzip_tool_v2.modules.cloaked_file_detector.detect_archive_extension"
-    )
+    @patch("deepunzip.modules.cloaked_file_detector.detect_archive_extension")
     def test_generate_new_filename_auto_type(self, mock_detect, detector):
         """Test generating filename with auto type detection."""
         mock_detect.return_value = "rar"
@@ -388,9 +384,7 @@ class TestCloakedFileDetector:
         finally:
             os.unlink(temp_path)
 
-    @patch(
-        "complex_unzip_tool_v2.modules.cloaked_file_detector.detect_archive_extension"
-    )
+    @patch("deepunzip.modules.cloaked_file_detector.detect_archive_extension")
     def test_generate_new_filename_auto_type_fallback(self, mock_detect, detector):
         """Test auto type detection fallback to 7z."""
         mock_detect.return_value = None
@@ -411,18 +405,14 @@ class TestCloakedFileDetector:
         finally:
             os.unlink(temp_path)
 
-    @patch(
-        "complex_unzip_tool_v2.modules.cloaked_file_detector.detect_archive_extension"
-    )
+    @patch("deepunzip.modules.cloaked_file_detector.detect_archive_extension")
     def test_verify_with_signature_valid(self, mock_detect, detector):
         """Test signature verification with valid archive."""
         mock_detect.return_value = "7z"
         result = detector._verify_with_signature("test.file", "7z")
         assert result is True
 
-    @patch(
-        "complex_unzip_tool_v2.modules.cloaked_file_detector.detect_archive_extension"
-    )
+    @patch("deepunzip.modules.cloaked_file_detector.detect_archive_extension")
     def test_verify_with_signature_no_detection(self, mock_detect, detector):
         """No archive token in the name and no signature -> reject the guess.
 
@@ -435,10 +425,8 @@ class TestCloakedFileDetector:
         result = detector._verify_with_signature("test.file", "7z")
         assert result is False
 
-    @patch(
-        "complex_unzip_tool_v2.modules.cloaked_file_detector.detect_archive_extension"
-    )
-    @patch("complex_unzip_tool_v2.modules.cloaked_file_detector.print_warning")
+    @patch("deepunzip.modules.cloaked_file_detector.detect_archive_extension")
+    @patch("deepunzip.modules.cloaked_file_detector.notice")
     def test_verify_with_signature_exception(self, mock_warning, mock_detect, detector):
         """On verification error, be conservative and do not rename."""
         mock_detect.side_effect = Exception("Test error")
@@ -483,7 +471,7 @@ class TestCloakedFileDetector:
 
     @patch("os.path.exists")
     @patch("os.rename")
-    @patch("complex_unzip_tool_v2.modules.cloaked_file_detector.print_success")
+    @patch("deepunzip.modules.cloaked_file_detector.notice")
     def test_uncloak_file_success(
         self, mock_success, mock_rename, mock_exists, detector
     ):
@@ -496,11 +484,11 @@ class TestCloakedFileDetector:
             mock_rename.assert_called_once_with(
                 "/test/archive.7z", "/test/archive.7z.001"
             )
-            mock_success.assert_called_once()
+            mock_success.assert_not_called()  # a successful rename is silent
 
     @patch("os.path.exists")
     @patch("os.rename")
-    @patch("complex_unzip_tool_v2.modules.cloaked_file_detector.print_warning")
+    @patch("deepunzip.modules.cloaked_file_detector.notice")
     def test_uncloak_file_collision_uses_existing(
         self, mock_warning, mock_rename, mock_exists, detector
     ):
@@ -525,6 +513,23 @@ class TestCloakedFileDetector:
                 mock_warning.assert_called_once()
 
     @patch("os.path.exists")
+    @patch("os.rename", side_effect=PermissionError("locked"))
+    @patch("deepunzip.modules.cloaked_file_detector.notice")
+    def test_uncloak_file_failed_collision_rename_keeps_the_source_path(
+        self, mock_warning, mock_rename, mock_exists, detector
+    ):
+        """A failed duplicate rename must not hand back the other file's path."""
+        mock_exists.side_effect = lambda path: path in {
+            "/test/archive.7z(1).001",
+            "/test/archive.7z.001",
+        }
+        with patch.object(detector, "detect_cloaked_file") as mock_detect:
+            mock_detect.return_value = "/test/archive.7z.001"
+            result = detector.uncloak_file("/test/archive.7z(1).001")
+        assert result == "/test/archive.7z(1).001"
+        mock_warning.assert_called_once()
+
+    @patch("os.path.exists")
     def test_uncloak_file_not_exists(self, mock_exists, detector):
         """Test uncloaking non-existent file."""
         mock_exists.return_value = False
@@ -542,7 +547,7 @@ class TestCloakedFileDetector:
 
     @patch("os.path.exists")
     @patch("os.rename")
-    @patch("complex_unzip_tool_v2.modules.cloaked_file_detector.print_error")
+    @patch("deepunzip.modules.cloaked_file_detector.notice")
     def test_uncloak_file_rename_error(
         self, mock_error, mock_rename, mock_exists, detector
     ):
@@ -614,7 +619,7 @@ class TestCloakedFalsePositives:
         """Detector backed by the shipped production rules file."""
         config_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)),
-            "complex_unzip_tool_v2",
+            "deepunzip",
             "config",
             "cloaked_file_rules.json",
         )
@@ -697,7 +702,7 @@ class TestCloakedEmbeddedGarbage:
         """Detector backed by the shipped production rules file."""
         config_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)),
-            "complex_unzip_tool_v2",
+            "deepunzip",
             "config",
             "cloaked_file_rules.json",
         )
