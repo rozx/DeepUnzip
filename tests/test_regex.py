@@ -2,7 +2,7 @@
 
 import re
 
-from complex_unzip_tool_v2.modules.regex import multipart_regex, first_part_regex
+from deepunzip.modules.regex import multipart_regex, first_part_regex
 
 
 def _is_multipart(name: str) -> bool:

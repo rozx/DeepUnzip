@@ -4,15 +4,15 @@ import os
 
 import pytest
 
-import complex_unzip_tool_v2.modules.archive_utils as au
-from complex_unzip_tool_v2.classes.ArchiveTypes import (
+import deepunzip.modules.archive_utils as au
+from deepunzip.classes.ArchiveTypes import (
     ArchiveCorruptedError,
     ArchiveMissingVolumeError,
     ArchivePasswordError,
     ArchiveUnsupportedError,
     SevenZipNotFoundError,
 )
-from complex_unzip_tool_v2.modules.pool_engine import SevenZipEngine
+from deepunzip.modules.pool_engine import SevenZipEngine
 
 
 class Book:

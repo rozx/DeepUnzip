@@ -18,7 +18,7 @@ else:
 sys.path.insert(0, application_path)
 
 # Import and run the main application
-from complex_unzip_tool_v2.main import app
+from deepunzip.main import app
 
 if __name__ == "__main__":
     app()

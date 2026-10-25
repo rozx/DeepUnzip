@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from complex_unzip_tool_v2.modules.rename_history import (
+from deepunzip.modules.rename_history import (
     HISTORY_FILENAME,
     RelocationLog,
     RenameHistory,

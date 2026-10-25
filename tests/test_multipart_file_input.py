@@ -3,9 +3,9 @@ import os
 from pathlib import Path
 from typer.testing import CliRunner
 
-import complex_unzip_tool_v2.main as main
+import deepunzip.main as main
 
-from complex_unzip_tool_v2.modules.file_utils import read_dir
+from deepunzip.modules.file_utils import read_dir
 
 
 def test_single_primary_input_collects_only_its_numbered_volumes(tmp_path):

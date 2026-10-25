@@ -4,8 +4,8 @@ import os
 
 import pytest
 
-import complex_unzip_tool_v2.main as main
-from complex_unzip_tool_v2.classes.ArchiveTypes import ArchiveMissingVolumeError
+import deepunzip.main as main
+from deepunzip.classes.ArchiveTypes import ArchiveMissingVolumeError
 
 
 @pytest.fixture

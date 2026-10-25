@@ -1,7 +1,7 @@
 import os
 import re
 
-from complex_unzip_tool_v2.modules.regex import multipart_regex
+from deepunzip.modules.regex import multipart_regex
 
 
 def _entry_point_priority(file_path: str) -> int:

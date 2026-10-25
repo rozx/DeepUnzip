@@ -7,9 +7,9 @@ import os
 import pytest
 from rich.console import Console
 
-from complex_unzip_tool_v2.modules import events as ev
-from complex_unzip_tool_v2.modules import i18n, render
-from complex_unzip_tool_v2.modules import work_pool as wp
+from deepunzip.modules import events as ev
+from deepunzip.modules import i18n, render
+from deepunzip.modules import work_pool as wp
 
 from fake_archives import FakeEngine, archive, run_pool, uncloak_suffix, volume, write
 

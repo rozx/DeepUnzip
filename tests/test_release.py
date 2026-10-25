@@ -10,8 +10,8 @@ from scripts import release
 
 @pytest.fixture
 def project(tmp_path):
-    (tmp_path / "complex_unzip_tool_v2").mkdir()
-    (tmp_path / "complex_unzip_tool_v2" / "__init__.py").write_text(
+    (tmp_path / "deepunzip").mkdir()
+    (tmp_path / "deepunzip" / "__init__.py").write_text(
         '__version__ = "1.3.0"\n'
     )
     (tmp_path / "pyproject.toml").write_text('[tool.poetry]\nversion = "1.3.0"\n')

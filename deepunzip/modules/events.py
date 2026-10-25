@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Callable, Optional, Union
 
 if TYPE_CHECKING:
-    from complex_unzip_tool_v2.modules.work_pool import PoolResult, WorkItem
+    from deepunzip.modules.work_pool import PoolResult, WorkItem
 
 
 @dataclass(frozen=True)

@@ -10,7 +10,7 @@ import pytest
 
 os.environ["DEEPUNZIP_LANG"] = "en"
 
-from complex_unzip_tool_v2.modules import i18n  # noqa: E402
+from deepunzip.modules import i18n  # noqa: E402
 
 
 @pytest.fixture(autouse=True)

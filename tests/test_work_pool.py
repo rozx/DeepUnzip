@@ -4,8 +4,8 @@ import os
 
 import pytest
 
-from complex_unzip_tool_v2.modules import multipart_assembly as ma
-from complex_unzip_tool_v2.modules import work_pool as wp
+from deepunzip.modules import multipart_assembly as ma
+from deepunzip.modules import work_pool as wp
 
 from fake_archives import (
     FakeEngine,

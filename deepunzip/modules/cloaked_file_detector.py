@@ -10,12 +10,12 @@ import uuid
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 
-from complex_unzip_tool_v2.modules.events import notice
-from complex_unzip_tool_v2.modules.archive_extension_utils import (
+from deepunzip.modules.events import notice
+from deepunzip.modules.archive_extension_utils import (
     detect_archive_extension,
     uncloak_archive_filename,
 )
-from complex_unzip_tool_v2.modules.regex import multipart_regex
+from deepunzip.modules.regex import multipart_regex
 
 # An explicit archive-type token (.7z/.rar/.zip) embedded in a filename means the
 # user deliberately named the file as that archive type; the surrounding garbage

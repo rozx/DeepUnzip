@@ -5,11 +5,11 @@ from pathlib import Path
 
 import pytest
 
-from complex_unzip_tool_v2.classes.PasswordBook import PasswordBook
-from complex_unzip_tool_v2.modules.password_util import load_all_passwords
+from deepunzip.classes.PasswordBook import PasswordBook
+from deepunzip.modules.password_util import load_all_passwords
 from typer.testing import CliRunner
 
-import complex_unzip_tool_v2.main as main
+import deepunzip.main as main
 
 
 @pytest.mark.parametrize("frozen", [False, True])
@@ -32,9 +32,9 @@ def test_password_book_uses_tool_directory_across_working_directories(
     cwd_book.write_text("unrelated\n", encoding="utf-8")
     monkeypatch.setattr(sys, "frozen", frozen, raising=False)
     monkeypatch.setattr(sys, "executable", str(tool / "cuz.exe"))
-    module = importlib.import_module("complex_unzip_tool_v2.classes.PasswordBook")
+    module = importlib.import_module("deepunzip.classes.PasswordBook")
     monkeypatch.setattr(
-        module, "__file__", str(tool / "complex_unzip_tool_v2/classes/PasswordBook.py")
+        module, "__file__", str(tool / "deepunzip/classes/PasswordBook.py")
     )
     monkeypatch.chdir(working)
 
@@ -86,12 +86,12 @@ def test_cli_finishes_when_password_book_is_not_writable(monkeypatch, tmp_path):
 def test_password_book_reads_encoded_books_and_strips_bom(
     monkeypatch, tmp_path, encoding, bom
 ):
-    module = importlib.import_module("complex_unzip_tool_v2.classes.PasswordBook")
+    module = importlib.import_module("deepunzip.classes.PasswordBook")
     monkeypatch.setattr(sys, "frozen", False, raising=False)
     monkeypatch.setattr(
         module,
         "__file__",
-        str(tmp_path / "complex_unzip_tool_v2/classes/PasswordBook.py"),
+        str(tmp_path / "deepunzip/classes/PasswordBook.py"),
     )
     data = bom + "密码\n\n123456\n密码\n".encode(encoding)
     path = tmp_path / "passwords.txt"
@@ -104,12 +104,12 @@ def test_password_book_reads_encoded_books_and_strips_bom(
 
 
 def _book_in(monkeypatch, tmp_path):
-    module = importlib.import_module("complex_unzip_tool_v2.classes.PasswordBook")
+    module = importlib.import_module("deepunzip.classes.PasswordBook")
     monkeypatch.setattr(sys, "frozen", False, raising=False)
     monkeypatch.setattr(
         module,
         "__file__",
-        str(tmp_path / "complex_unzip_tool_v2/classes/PasswordBook.py"),
+        str(tmp_path / "deepunzip/classes/PasswordBook.py"),
     )
     return PasswordBook()
 

@@ -13,7 +13,7 @@ import os
 import shutil
 from typing import Callable, Optional, Protocol
 
-from complex_unzip_tool_v2.classes.ArchiveTypes import (
+from deepunzip.classes.ArchiveTypes import (
     ArchiveCorruptedError,
     ArchiveError,
     ArchiveMissingVolumeError,
@@ -23,11 +23,11 @@ from complex_unzip_tool_v2.classes.ArchiveTypes import (
     ArchiveUnsupportedError,
     SevenZipNotFoundError,
 )
-from complex_unzip_tool_v2.modules import archive_utils
-from complex_unzip_tool_v2.modules import multipart_assembly as ma
-from complex_unzip_tool_v2.modules.const import PATH_ERROR_KEYWORDS
-from complex_unzip_tool_v2.modules.events import Event, Progress
-from complex_unzip_tool_v2.modules.work_pool import Outcome, PasswordRef
+from deepunzip.modules import archive_utils
+from deepunzip.modules import multipart_assembly as ma
+from deepunzip.modules.const import PATH_ERROR_KEYWORDS
+from deepunzip.modules.events import Event, Progress
+from deepunzip.modules.work_pool import Outcome, PasswordRef
 
 
 class PasswordSource(Protocol):

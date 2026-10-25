@@ -10,8 +10,8 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-from complex_unzip_tool_v2 import __version__
-from complex_unzip_tool_v2.modules.archive_utils import (
+from deepunzip import __version__
+from deepunzip.modules.archive_utils import (
     ArchivePasswordError,
     readArchiveContentWith7z,
     resolve_seven_zip_path,
@@ -23,7 +23,7 @@ def smoke(executable: Path | None = None) -> None:
     command = (
         [str(executable.resolve())]
         if executable
-        else [sys.executable, "-m", "complex_unzip_tool_v2"]
+        else [sys.executable, "-m", "deepunzip"]
     )
     engine = resolve_seven_zip_path()
     with tempfile.TemporaryDirectory(prefix="cuz-smoke-") as temporary:

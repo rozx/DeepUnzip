@@ -9,7 +9,7 @@ import pytest
 from rich.text import Text
 from typer.testing import CliRunner
 
-import complex_unzip_tool_v2.main as main
+import deepunzip.main as main
 
 
 def test_cli_rejects_unsupported_platform_before_extraction(monkeypatch, tmp_path):
@@ -109,7 +109,7 @@ def test_windows_cli_redirects_legacy_encoded_output_as_utf8(tmp_path, destinati
     script = (
         "import platform, sys; platform.system = lambda: 'Windows'; "
         "platform.machine = lambda: 'AMD64'; "
-        "from complex_unzip_tool_v2.main import app; "
+        "from deepunzip.main import app; "
         "print('错误 🚀', file=sys.stderr); app()"
     )
     env = {

@@ -9,7 +9,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from complex_unzip_tool_v2.modules.seven_zip_runtime import (
+from deepunzip.modules.seven_zip_runtime import (
     SevenZipNotFoundError,
     bundled_engine_path,
     validate_engine,
@@ -38,11 +38,11 @@ def generate_spec_content(project_root: Path, scripts_dir: Path) -> str:
     data_files.append(f"    ({str(license_file)!r}, {destination!r}),")
 
     # Add config files
-    config_dir = project_root / "complex_unzip_tool_v2" / "config"
+    config_dir = project_root / "deepunzip" / "config"
     cloaked_rules_file = config_dir / "cloaked_file_rules.json"
     if cloaked_rules_file.exists():
         data_files.append(
-            f'    (r"{cloaked_rules_file}", "complex_unzip_tool_v2/config"),'
+            f'    (r"{cloaked_rules_file}", "deepunzip/config"),'
         )
 
     data_files_str = "\n".join(data_files)
@@ -76,24 +76,24 @@ a = Analysis(
     binaries={binaries!r},
     datas=datas,
     hiddenimports=[
-        'complex_unzip_tool_v2',
-        'complex_unzip_tool_v2.main',
-        'complex_unzip_tool_v2.modules.archive_utils',
-        'complex_unzip_tool_v2.modules.file_utils',
-        'complex_unzip_tool_v2.modules.password_util',
-        'complex_unzip_tool_v2.modules.events',
-        'complex_unzip_tool_v2.modules.i18n',
-        'complex_unzip_tool_v2.modules.render',
-        'complex_unzip_tool_v2.modules.seven_zip_progress',
-        'complex_unzip_tool_v2.modules.work_pool',
-        'complex_unzip_tool_v2.modules.pool_engine',
-        'complex_unzip_tool_v2.modules.const',
-        'complex_unzip_tool_v2.modules.utils',
-        'complex_unzip_tool_v2.modules.regex',
-        'complex_unzip_tool_v2.modules.archive_extension_utils',
-        'complex_unzip_tool_v2.modules.cloaked_file_detector',
-        'complex_unzip_tool_v2.classes.ArchiveGroup',
-        'complex_unzip_tool_v2.classes.PasswordBook',
+        'deepunzip',
+        'deepunzip.main',
+        'deepunzip.modules.archive_utils',
+        'deepunzip.modules.file_utils',
+        'deepunzip.modules.password_util',
+        'deepunzip.modules.events',
+        'deepunzip.modules.i18n',
+        'deepunzip.modules.render',
+        'deepunzip.modules.seven_zip_progress',
+        'deepunzip.modules.work_pool',
+        'deepunzip.modules.pool_engine',
+        'deepunzip.modules.const',
+        'deepunzip.modules.utils',
+        'deepunzip.modules.regex',
+        'deepunzip.modules.archive_extension_utils',
+        'deepunzip.modules.cloaked_file_detector',
+        'deepunzip.classes.ArchiveGroup',
+        'deepunzip.classes.PasswordBook',
     ],
     hookspath=[],
     hooksconfig={{}},

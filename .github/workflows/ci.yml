@@ -61,7 +61,7 @@ jobs:
       - name: Run tests
         run: |
           node --check scripts/publish_release.cjs
-          poetry run python -m compileall -q complex_unzip_tool_v2 scripts
+          poetry run python -m compileall -q deepunzip scripts
           poetry run pytest -q
 
   # Full native builds: for releases, or on demand (workflow_dispatch full_build).
@@ -118,7 +118,7 @@ jobs:
       - name: Run tests
         run: |
           node --check scripts/publish_release.cjs
-          poetry run python -m compileall -q complex_unzip_tool_v2 scripts
+          poetry run python -m compileall -q deepunzip scripts
           poetry run pytest -q
       - name: Smoke test source CLI
         run: poetry run python -m scripts.smoke_test

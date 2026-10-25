@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from complex_unzip_tool_v2.classes.ArchiveTypes import SevenZipNotFoundError
+from deepunzip.classes.ArchiveTypes import SevenZipNotFoundError
 
 
 def bundled_engine_path(root: Optional[Path] = None) -> Path:

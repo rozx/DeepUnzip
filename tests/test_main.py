@@ -3,13 +3,13 @@ import os
 
 import pytest
 
-import complex_unzip_tool_v2.main as main
-from complex_unzip_tool_v2.classes.ArchiveTypes import (
+import deepunzip.main as main
+from deepunzip.classes.ArchiveTypes import (
     ArchiveCorruptedError,
     ArchivePasswordError,
 )
-from complex_unzip_tool_v2.modules import const
-from complex_unzip_tool_v2.modules.rename_history import (
+from deepunzip.modules import const
+from deepunzip.modules.rename_history import (
     HISTORY_FILENAME,
     RenameHistory,
 )
@@ -555,7 +555,7 @@ def test_help_follows_the_language(language, text):
     import sys
 
     result = subprocess.run(
-        [sys.executable, "-m", "complex_unzip_tool_v2", "--help"],
+        [sys.executable, "-m", "deepunzip", "--help"],
         cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         env={**os.environ, "DEEPUNZIP_LANG": language, "PYTHONIOENCODING": "utf-8"},
         stdin=subprocess.DEVNULL,
@@ -575,7 +575,7 @@ def test_stdin_from_the_null_device_is_not_a_terminal():
         [
             sys.executable,
             "-c",
-            "from complex_unzip_tool_v2.main import _stdin_is_terminal;"
+            "from deepunzip.main import _stdin_is_terminal;"
             "print(_stdin_is_terminal())",
         ],
         cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),

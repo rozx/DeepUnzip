@@ -21,8 +21,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Callable, Optional, Protocol, Sequence, Union
 
-from complex_unzip_tool_v2.modules import multipart_assembly as ma
-from complex_unzip_tool_v2.modules.events import (  # re-exported for callers
+from deepunzip.modules import multipart_assembly as ma
+from deepunzip.modules.events import (  # re-exported for callers
     Event,
     ItemOpened,
     ItemStarted,
@@ -32,9 +32,9 @@ from complex_unzip_tool_v2.modules.events import (  # re-exported for callers
     RoundStarted,
     SetAssembled,
 )
-from complex_unzip_tool_v2.modules.const import OUTPUT_FOLDER, WORK_DIR_PREFIX
-from complex_unzip_tool_v2.modules.file_utils import normalize_output_relative_path
-from complex_unzip_tool_v2.modules.utils import sanitize_filename
+from deepunzip.modules.const import OUTPUT_FOLDER, WORK_DIR_PREFIX
+from deepunzip.modules.file_utils import normalize_output_relative_path
+from deepunzip.modules.utils import sanitize_filename
 
 ASSEMBLY_DIR_NAME = ".assemble"
 DEFAULT_MAX_DEPTH = 10

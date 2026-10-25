@@ -5,11 +5,11 @@ import sys
 
 import pytest
 
-from complex_unzip_tool_v2.classes.ArchiveTypes import ArchivePasswordError
-from complex_unzip_tool_v2.modules import archive_utils as au
-from complex_unzip_tool_v2.modules import events as ev
-from complex_unzip_tool_v2.modules import pool_engine
-from complex_unzip_tool_v2.modules import seven_zip_progress as szp
+from deepunzip.classes.ArchiveTypes import ArchivePasswordError
+from deepunzip.modules import archive_utils as au
+from deepunzip.modules import events as ev
+from deepunzip.modules import pool_engine
+from deepunzip.modules import seven_zip_progress as szp
 
 # Recorded from the bundled 7-Zip 26.03 on Windows: `7z x … -bsp2 big.7z.001`
 # with stderr redirected (only the scanned folder is shortened).

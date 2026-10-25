@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-import complex_unzip_tool_v2.main as main
+import deepunzip.main as main
 
 
 @pytest.fixture
@@ -15,12 +15,12 @@ def password_directories(monkeypatch, tmp_path):
     tool.mkdir()
     source.mkdir()
     book_path = tool / "passwords.txt"
-    book_module = importlib.import_module("complex_unzip_tool_v2.classes.PasswordBook")
+    book_module = importlib.import_module("deepunzip.classes.PasswordBook")
     monkeypatch.setattr(sys, "frozen", False, raising=False)
     monkeypatch.setattr(
         book_module,
         "__file__",
-        str(tool / "complex_unzip_tool_v2/classes/PasswordBook.py"),
+        str(tool / "deepunzip/classes/PasswordBook.py"),
     )
     monkeypatch.setattr(main.archive_utils, "resolve_seven_zip_path", lambda: "7z")
     monkeypatch.setattr(main.file_utils, "send2trash", lambda path: Path(path).unlink())

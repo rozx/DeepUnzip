@@ -2,7 +2,7 @@ import string
 
 import pytest
 
-from complex_unzip_tool_v2.modules import i18n
+from deepunzip.modules import i18n
 
 
 def _fields(text):

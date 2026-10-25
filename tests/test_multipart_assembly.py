@@ -4,7 +4,7 @@ import zlib
 
 import pytest
 
-from complex_unzip_tool_v2.modules import multipart_assembly as ma
+from deepunzip.modules import multipart_assembly as ma
 
 SEVEN_Z_SIGNATURE = b"7z\xbc\xaf\x27\x1c\x00\x04"
 

@@ -29,7 +29,7 @@ def read_version(root: Path = ROOT) -> str:
     if not re.fullmatch(r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)", version):
         raise ValueError("Releases require a stable X.Y.Z project version")
     module = ast.parse(
-        (root / "complex_unzip_tool_v2/__init__.py").read_text(encoding="utf-8")
+        (root / "deepunzip/__init__.py").read_text(encoding="utf-8")
     )
     package_versions = [
         ast.literal_eval(node.value)

@@ -7,8 +7,8 @@ import pytest
 from unittest.mock import Mock, patch, MagicMock
 from pathlib import Path
 
-import complex_unzip_tool_v2.modules.file_utils as fu
-from complex_unzip_tool_v2.classes.ArchiveGroup import ArchiveGroup
+import deepunzip.modules.file_utils as fu
+from deepunzip.classes.ArchiveGroup import ArchiveGroup
 
 
 class TestGetArchiveBaseName:
@@ -101,7 +101,7 @@ class TestArchiveGroupMainSelection:
     regardless of file insertion order (Bug B fix)."""
 
     def test_spanned_zip_keeps_zip_as_main(self):
-        from complex_unzip_tool_v2.classes.ArchiveGroup import ArchiveGroup
+        from deepunzip.classes.ArchiveGroup import ArchiveGroup
 
         for order in (
             ["set.zip", "set.z01", "set.z02"],
@@ -117,7 +117,7 @@ class TestArchiveGroupMainSelection:
             assert g.isMultiPart is True
 
     def test_volume_rar_keeps_rar_as_main(self):
-        from complex_unzip_tool_v2.classes.ArchiveGroup import ArchiveGroup
+        from deepunzip.classes.ArchiveGroup import ArchiveGroup
 
         for order in (
             ["arc.rar", "arc.r00", "arc.r01"],
@@ -133,7 +133,7 @@ class TestArchiveGroupMainSelection:
             assert g.isMultiPart is True
 
     def test_part1_rar_wins_over_partN(self):
-        from complex_unzip_tool_v2.classes.ArchiveGroup import ArchiveGroup
+        from deepunzip.classes.ArchiveGroup import ArchiveGroup
 
         g = ArchiveGroup("dir-data")
         g.add_file("data.part2.rar")
@@ -141,7 +141,7 @@ class TestArchiveGroupMainSelection:
         assert g.mainArchiveFile == "data.part1.rar"
 
     def test_7z_first_volume_wins(self):
-        from complex_unzip_tool_v2.classes.ArchiveGroup import ArchiveGroup
+        from deepunzip.classes.ArchiveGroup import ArchiveGroup
 
         g = ArchiveGroup("dir-x")
         g.add_file("x.7z.002")
@@ -151,7 +151,7 @@ class TestArchiveGroupMainSelection:
     def test_generic_numbered_first_volume_wins(self):
         """For a 7-Zip generic split of any extension, the `.001` is the entry
         point regardless of insertion order."""
-        from complex_unzip_tool_v2.classes.ArchiveGroup import ArchiveGroup
+        from deepunzip.classes.ArchiveGroup import ArchiveGroup
 
         for base, ext in (("x", "rar"), ("y", "iso"), ("z", "bin")):
             g = ArchiveGroup(f"dir-{base}")
@@ -161,7 +161,7 @@ class TestArchiveGroupMainSelection:
             assert g.isMultiPart is True
 
     def test_zipx_primary_wins_over_continuations(self):
-        from complex_unzip_tool_v2.classes.ArchiveGroup import ArchiveGroup
+        from deepunzip.classes.ArchiveGroup import ArchiveGroup
 
         for order in (
             ["a.zipx", "a.zx01", "a.zx02"],
@@ -175,7 +175,7 @@ class TestArchiveGroupMainSelection:
             assert g.isMultiPart is True
 
     def test_arj_primary_wins_over_continuations(self):
-        from complex_unzip_tool_v2.classes.ArchiveGroup import ArchiveGroup
+        from deepunzip.classes.ArchiveGroup import ArchiveGroup
 
         for order in (
             ["a.arj", "a.a01", "a.a02"],
@@ -189,7 +189,7 @@ class TestArchiveGroupMainSelection:
             assert g.isMultiPart is True
 
     def test_ace_primary_wins_over_continuations(self):
-        from complex_unzip_tool_v2.classes.ArchiveGroup import ArchiveGroup
+        from deepunzip.classes.ArchiveGroup import ArchiveGroup
 
         for order in (
             ["a.ace", "a.c00", "a.c01"],
@@ -419,7 +419,7 @@ class TestSafeRemove:
         """Clean up test files."""
         shutil.rmtree(self.test_dir, ignore_errors=True)
 
-    @patch("complex_unzip_tool_v2.modules.file_utils.send2trash")
+    @patch("deepunzip.modules.file_utils.send2trash")
     def test_remove_to_recycle_bin(self, mock_send2trash):
         """Test removing file to recycle bin."""
         result = fu.safe_remove(self.test_file, use_recycle_bin=True)
@@ -525,7 +525,7 @@ class TestShouldGroupFiles:
 class TestAreMultipartRelated:
     """Tests for _are_multipart_related function."""
 
-    @patch("complex_unzip_tool_v2.modules.file_utils.re.search")
+    @patch("deepunzip.modules.file_utils.re.search")
     def test_multipart_archives_same_base(self, mock_search):
         """Test multipart archives with same base name."""
         mock_search.return_value = True
@@ -537,7 +537,7 @@ class TestAreMultipartRelated:
             )
             assert result is True
 
-    @patch("complex_unzip_tool_v2.modules.file_utils.re.search")
+    @patch("deepunzip.modules.file_utils.re.search")
     def test_multipart_archives_different_base(self, mock_search):
         """Test multipart archives with different base names."""
         mock_search.return_value = True
@@ -554,7 +554,7 @@ class TestAreMultipartRelated:
         result = fu._are_multipart_related("/path/archive.7z.001", "")
         assert result is False
 
-    @patch("complex_unzip_tool_v2.modules.file_utils.re.search")
+    @patch("deepunzip.modules.file_utils.re.search")
     def test_non_multipart_archives(self, mock_search):
         """Test non-multipart archives."""
         mock_search.return_value = False

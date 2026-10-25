@@ -4,22 +4,22 @@ import shutil
 import tempfile
 from typing import Callable, List, Dict, Optional, Tuple
 import re
-from complex_unzip_tool_v2.modules.events import notice
+from deepunzip.modules.events import notice
 
 # Re-exported: SevenZipEngine.classify calls archive_utils.detect_archive_extension,
 # so tests can replace every 7-Zip-facing helper on this one module.
-from complex_unzip_tool_v2.modules.archive_extension_utils import (  # noqa: F401
+from deepunzip.modules.archive_extension_utils import (  # noqa: F401
     detect_archive_extension,
 )
-from complex_unzip_tool_v2.modules.utils import sanitize_path, sanitize_filename
-from complex_unzip_tool_v2.modules.const import PATH_ERROR_KEYWORDS
-from complex_unzip_tool_v2.modules import seven_zip_progress
-from complex_unzip_tool_v2.modules.seven_zip_runtime import (
+from deepunzip.modules.utils import sanitize_path, sanitize_filename
+from deepunzip.modules.const import PATH_ERROR_KEYWORDS
+from deepunzip.modules import seven_zip_progress
+from deepunzip.modules.seven_zip_runtime import (
     bundled_engine_path,
     resolve_seven_zip_path,
 )
 
-from complex_unzip_tool_v2.classes.ArchiveTypes import (
+from deepunzip.classes.ArchiveTypes import (
     ArchiveError,
     ArchiveNotFoundError,
     SevenZipNotFoundError,

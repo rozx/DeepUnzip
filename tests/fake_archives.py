@@ -8,8 +8,8 @@ volumes by name in the primary's folder, so assembly isolation is exercised.
 import json
 import os
 
-from complex_unzip_tool_v2.modules import multipart_assembly as ma
-from complex_unzip_tool_v2.modules import work_pool as wp
+from deepunzip.modules import multipart_assembly as ma
+from deepunzip.modules import work_pool as wp
 
 VOLUME_SIZE = 4096
 

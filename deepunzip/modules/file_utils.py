@@ -3,17 +3,17 @@ import re
 import shutil
 from send2trash import send2trash
 
-from complex_unzip_tool_v2.modules.const import (
+from deepunzip.modules.const import (
     MULTI_PART_PATTERNS,
     IGNORED_FILES,
     OUTPUT_FOLDER,
     WORK_DIR_PREFIX,
 )
-from complex_unzip_tool_v2.classes.ArchiveGroup import ArchiveGroup
-from complex_unzip_tool_v2.modules.utils import get_string_similarity
-from complex_unzip_tool_v2.modules.cloaked_file_detector import CloakedFileDetector
-from complex_unzip_tool_v2.modules.regex import multipart_regex
-from complex_unzip_tool_v2.modules.i18n import t
+from deepunzip.classes.ArchiveGroup import ArchiveGroup
+from deepunzip.modules.utils import get_string_similarity
+from deepunzip.modules.cloaked_file_detector import CloakedFileDetector
+from deepunzip.modules.regex import multipart_regex
+from deepunzip.modules.i18n import t
 
 
 _MEANINGLESS_OUTPUT_FOLDER_ALLOWED_CHARS_RE = re.compile(

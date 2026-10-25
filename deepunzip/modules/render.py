@@ -30,10 +30,10 @@ from rich.progress_bar import ProgressBar
 from rich.table import Table
 from rich.text import Text
 
-from complex_unzip_tool_v2.modules import events as ev
-from complex_unzip_tool_v2.modules.const import OUTPUT_FOLDER
-from complex_unzip_tool_v2.modules.i18n import CATALOG, t
-from complex_unzip_tool_v2.modules.work_pool import (
+from deepunzip.modules import events as ev
+from deepunzip.modules.const import OUTPUT_FOLDER
+from deepunzip.modules.i18n import CATALOG, t
+from deepunzip.modules.work_pool import (
     PasswordRef,
     PoolResult,
     State,
