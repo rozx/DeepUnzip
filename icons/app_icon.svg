@@ -1,55 +1,69 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
-  <!-- Background with gradient -->
-  <defs>
-    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#2D7DD2;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#1E5F99;stop-opacity:1" />
-    </linearGradient>
-    <linearGradient id="folderGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#4696EB;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#2D7DD2;stop-opacity:1" />
-    </linearGradient>
-  </defs>
-  
-  <!-- Main background -->
-  <rect x="8" y="8" width="240" height="240" rx="24" ry="24" fill="url(#bgGradient)" stroke="#FFD700" stroke-width="3"/>
-  
-  <!-- Folder icon -->
-  <g transform="translate(64, 80)">
-    <!-- Folder tab -->
-    <path d="M 0 16 L 48 16 L 56 8 L 64 16 L 128 16 L 128 32 L 0 32 Z" fill="url(#folderGradient)" stroke="#FFD700" stroke-width="2"/>
-    
-    <!-- Folder body -->
-    <rect x="0" y="24" width="128" height="80" rx="8" ry="8" fill="url(#folderGradient)" stroke="#FFD700" stroke-width="2"/>
-    
-    <!-- Zipper effect -->
-    <line x1="24" y1="64" x2="104" y2="64" stroke="#FFD700" stroke-width="3"/>
-    
-    <!-- Zipper teeth -->
-    <g stroke="#FFD700" stroke-width="2" fill="#FFD700">
-      <rect x="32" y="60" width="3" height="8"/>
-      <rect x="44" y="60" width="3" height="8"/>
-      <rect x="56" y="60" width="3" height="8"/>
-      <rect x="68" y="60" width="3" height="8"/>
-      <rect x="80" y="60" width="3" height="8"/>
-      <rect x="92" y="60" width="3" height="8"/>
-    </g>
-    
-    <!-- Archive files inside -->
-    <g fill="#FFFFFF" opacity="0.8">
-      <rect x="16" y="40" width="24" height="16" rx="2"/>
-      <rect x="48" y="40" width="24" height="16" rx="2"/>
-      <rect x="80" y="40" width="24" height="16" rx="2"/>
-    </g>
-  </g>
-  
-  <!-- "7z" text -->
-  <text x="128" y="200" font-family="Arial, sans-serif" font-size="32" font-weight="bold" text-anchor="middle" fill="#FFFFFF">7z</text>
-  
-  <!-- Extraction arrow -->
-  <g transform="translate(200, 120)" fill="#FFD700" stroke="#FFD700" stroke-width="2">
-    <path d="M 0 0 L 16 8 L 0 16 L 4 8 Z"/>
-    <line x1="4" y1="8" x2="24" y2="8" stroke-width="3"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 16 16" shape-rendering="crispEdges">
+<title>DeepUnzip</title>
+<rect x="3" y="1" width="1" height="1" fill="#4A3B5C"/>
+<rect x="12" y="1" width="1" height="1" fill="#4A3B5C"/>
+<rect x="2" y="2" width="1" height="1" fill="#4A3B5C"/>
+<rect x="3" y="2" width="1" height="1" fill="#FFF1D6"/>
+<rect x="4" y="2" width="1" height="1" fill="#4A3B5C"/>
+<rect x="11" y="2" width="1" height="1" fill="#4A3B5C"/>
+<rect x="12" y="2" width="1" height="1" fill="#FFF1D6"/>
+<rect x="13" y="2" width="1" height="1" fill="#4A3B5C"/>
+<rect x="2" y="3" width="1" height="1" fill="#4A3B5C"/>
+<rect x="3" y="3" width="2" height="1" fill="#FFF1D6"/>
+<rect x="5" y="3" width="6" height="1" fill="#4A3B5C"/>
+<rect x="11" y="3" width="2" height="1" fill="#FFF1D6"/>
+<rect x="13" y="3" width="1" height="1" fill="#4A3B5C"/>
+<rect x="2" y="4" width="1" height="1" fill="#4A3B5C"/>
+<rect x="3" y="4" width="10" height="1" fill="#FFF1D6"/>
+<rect x="13" y="4" width="1" height="1" fill="#4A3B5C"/>
+<rect x="2" y="5" width="1" height="1" fill="#4A3B5C"/>
+<rect x="3" y="5" width="2" height="1" fill="#FFF1D6"/>
+<rect x="5" y="5" width="1" height="1" fill="#3A2C4A"/>
+<rect x="6" y="5" width="4" height="1" fill="#FFF1D6"/>
+<rect x="10" y="5" width="1" height="1" fill="#3A2C4A"/>
+<rect x="11" y="5" width="2" height="1" fill="#FFF1D6"/>
+<rect x="13" y="5" width="1" height="1" fill="#4A3B5C"/>
+<rect x="2" y="6" width="1" height="1" fill="#4A3B5C"/>
+<rect x="3" y="6" width="1" height="1" fill="#FF9EB5"/>
+<rect x="4" y="6" width="1" height="1" fill="#FFF1D6"/>
+<rect x="5" y="6" width="1" height="1" fill="#3A2C4A"/>
+<rect x="6" y="6" width="4" height="1" fill="#FFF1D6"/>
+<rect x="10" y="6" width="1" height="1" fill="#3A2C4A"/>
+<rect x="11" y="6" width="1" height="1" fill="#FFF1D6"/>
+<rect x="12" y="6" width="1" height="1" fill="#FF9EB5"/>
+<rect x="13" y="6" width="1" height="1" fill="#4A3B5C"/>
+<rect x="2" y="7" width="1" height="1" fill="#4A3B5C"/>
+<rect x="3" y="7" width="4" height="1" fill="#FFF1D6"/>
+<rect x="7" y="7" width="2" height="1" fill="#3A2C4A"/>
+<rect x="9" y="7" width="4" height="1" fill="#FFF1D6"/>
+<rect x="13" y="7" width="1" height="1" fill="#4A3B5C"/>
+<rect x="1" y="8" width="3" height="1" fill="#4A3B5C"/>
+<rect x="4" y="8" width="2" height="1" fill="#FFF1D6"/>
+<rect x="6" y="8" width="4" height="1" fill="#4A3B5C"/>
+<rect x="10" y="8" width="2" height="1" fill="#FFF1D6"/>
+<rect x="12" y="8" width="3" height="1" fill="#4A3B5C"/>
+<rect x="1" y="9" width="1" height="1" fill="#4A3B5C"/>
+<rect x="2" y="9" width="5" height="1" fill="#F2C38B"/>
+<rect x="7" y="9" width="2" height="1" fill="#D9985B"/>
+<rect x="9" y="9" width="5" height="1" fill="#F2C38B"/>
+<rect x="14" y="9" width="1" height="1" fill="#4A3B5C"/>
+<rect x="1" y="10" width="1" height="1" fill="#4A3B5C"/>
+<rect x="2" y="10" width="5" height="1" fill="#F2C38B"/>
+<rect x="7" y="10" width="2" height="1" fill="#D9985B"/>
+<rect x="9" y="10" width="5" height="1" fill="#F2C38B"/>
+<rect x="14" y="10" width="1" height="1" fill="#4A3B5C"/>
+<rect x="1" y="11" width="1" height="1" fill="#4A3B5C"/>
+<rect x="2" y="11" width="5" height="1" fill="#F2C38B"/>
+<rect x="7" y="11" width="2" height="1" fill="#D9985B"/>
+<rect x="9" y="11" width="5" height="1" fill="#F2C38B"/>
+<rect x="14" y="11" width="1" height="1" fill="#4A3B5C"/>
+<rect x="1" y="12" width="1" height="1" fill="#4A3B5C"/>
+<rect x="2" y="12" width="5" height="1" fill="#F2C38B"/>
+<rect x="7" y="12" width="2" height="1" fill="#D9985B"/>
+<rect x="9" y="12" width="5" height="1" fill="#F2C38B"/>
+<rect x="14" y="12" width="1" height="1" fill="#4A3B5C"/>
+<rect x="1" y="13" width="1" height="1" fill="#4A3B5C"/>
+<rect x="2" y="13" width="12" height="1" fill="#D9985B"/>
+<rect x="14" y="13" width="1" height="1" fill="#4A3B5C"/>
+<rect x="2" y="14" width="12" height="1" fill="#4A3B5C"/>
 </svg>

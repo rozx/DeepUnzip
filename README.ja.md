@@ -1,13 +1,19 @@
-# DeepUnzip
+<p align="center">
+  <img src="icons/app_icon.svg" width="128" height="128" alt="DeepUnzip">
+</p>
 
-[![Release](https://img.shields.io/github/v/release/rozx/DeepUnzip)](https://github.com/rozx/DeepUnzip/releases/latest)
-[![Release date](https://img.shields.io/github/release-date/rozx/DeepUnzip)](https://github.com/rozx/DeepUnzip/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/rozx/DeepUnzip/total)](https://github.com/rozx/DeepUnzip/releases)
-[![Latest downloads](https://img.shields.io/github/downloads/rozx/DeepUnzip/latest/total)](https://github.com/rozx/DeepUnzip/releases/latest)
-[![CI](https://img.shields.io/github/actions/workflow/status/rozx/DeepUnzip/ci.yml?branch=main&label=CI)](https://github.com/rozx/DeepUnzip/actions/workflows/ci.yml)
-[![Stars](https://img.shields.io/github/stars/rozx/DeepUnzip)](https://github.com/rozx/DeepUnzip/stargazers)
-[![License](https://img.shields.io/github/license/rozx/DeepUnzip)](LICENSE)
-![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
+<h1 align="center">DeepUnzip</h1>
+
+<p align="center">
+  <a href="https://github.com/rozx/DeepUnzip/releases/latest"><img src="https://img.shields.io/github/v/release/rozx/DeepUnzip" alt="Release"></a>
+  <a href="https://github.com/rozx/DeepUnzip/releases/latest"><img src="https://img.shields.io/github/release-date/rozx/DeepUnzip" alt="Release date"></a>
+  <a href="https://github.com/rozx/DeepUnzip/releases"><img src="https://img.shields.io/github/downloads/rozx/DeepUnzip/total" alt="Downloads"></a>
+  <a href="https://github.com/rozx/DeepUnzip/releases/latest"><img src="https://img.shields.io/github/downloads/rozx/DeepUnzip/latest/total" alt="Latest downloads"></a>
+  <a href="https://github.com/rozx/DeepUnzip/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/rozx/DeepUnzip/ci.yml?branch=main&amp;label=CI" alt="CI"></a>
+  <a href="https://github.com/rozx/DeepUnzip/stargazers"><img src="https://img.shields.io/github/stars/rozx/DeepUnzip" alt="Stars"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/rozx/DeepUnzip" alt="License"></a>
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey" alt="Platform">
+</p>
 
 [简体中文](README.md) | [English](README.en.md) | [繁體中文](README.zh-TW.md) | **日本語** | [한국어](README.ko.md)
 

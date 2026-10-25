@@ -1,145 +1,135 @@
-#!/usr/bin/env python3
 """
-Icon generator for DeepUnzip
-Creates a professional-looking icon for the application
+Generate the DeepUnzip icon: a cat peeking out of a cardboard box.
+生成 DeepUnzip 图标：从纸箱里探出头的猫。
+
+The icon is the 16x16 pixel art in PIXELS. It is written as:
+
+- icons/app_icon.svg: one rect per run of same-colored pixels (READMEs);
+- icons/app_icon.png: 256x256;
+- icons/app_icon.ico: 16 to 256 px, the Windows executable's icon.
+
+Every size is an integer multiple of 16, so the pixels stay sharp. Only the
+standard library is needed.
+
+Usage: poetry run python -m scripts.generate_icon
 """
 
-from PIL import Image, ImageDraw, ImageFont
-import os
+import struct
+import zlib
 from pathlib import Path
 
-def create_icon():
-    """Create the application icon."""
-    
-    # Icon size (Windows ICO format supports multiple sizes)
-    sizes = [16, 24, 32, 48, 64, 128, 256]
-    
-    # Get the project root and create icons directory
-    project_root = Path(__file__).parent.parent.absolute()
-    icons_dir = project_root / "icons"
-    icons_dir.mkdir(exist_ok=True)
-    
-    images = []
-    
-    for size in sizes:
-        # Create a new image with RGBA mode (supports transparency)
-        img = Image.new('RGBA', (size, size), (0, 0, 0, 0))
-        draw = ImageDraw.Draw(img)
-        
-        # Define colors
-        bg_color = (45, 125, 210)  # Blue background
-        accent_color = (255, 215, 0)  # Gold accent
-        text_color = (255, 255, 255)  # White text
-        
-        # Calculate dimensions based on size
-        margin = max(2, size // 16)
-        border_width = max(1, size // 32)
-        
-        # Draw background with rounded rectangle effect
-        draw.rounded_rectangle(
-            [margin, margin, size - margin, size - margin],
-            radius=max(2, size // 8),
-            fill=bg_color,
-            outline=accent_color,
-            width=border_width
+ROOT = Path(__file__).resolve().parents[1]
+ICONS = ROOT / "icons"
+ICO_SIZES = (16, 32, 48, 64, 128, 256)
+
+PALETTE = {
+    "o": "4A3B5C",  # outline
+    "e": "3A2C4A",  # eyes and mouth
+    "c": "FFF1D6",  # cat
+    "p": "FF9EB5",  # blush
+    "t": "F2C38B",  # cardboard
+    "T": "D9985B",  # cardboard shade and tape
+}
+PIXELS = (
+    "................",
+    "...o........o...",
+    "..oco......oco..",
+    "..occoooooocco..",
+    "..occcccccccco..",
+    "..occeccccecco..",
+    "..opceccccecpo..",
+    "..occcceecccco..",
+    ".oooccooooccooo.",
+    ".otttttTTttttto.",
+    ".otttttTTttttto.",
+    ".otttttTTttttto.",
+    ".otttttTTttttto.",
+    ".oTTTTTTTTTTTTo.",
+    "..oooooooooooo..",
+    "................",
+)
+
+
+def _rgba(char: str) -> bytes:
+    if char == ".":
+        return b"\x00\x00\x00\x00"
+    return bytes.fromhex(PALETTE[char]) + b"\xff"
+
+
+def png_bytes(scale: int) -> bytes:
+    """The icon as an RGBA PNG, each pixel drawn as scale x scale."""
+    rows = []
+    for line in PIXELS:
+        row = b"".join(_rgba(char) * scale for char in line)
+        rows.extend([b"\x00" + row] * scale)  # filter type 0 per row
+
+    def chunk(kind: bytes, data: bytes) -> bytes:
+        body = kind + data
+        return struct.pack(">I", len(data)) + body + struct.pack(">I", zlib.crc32(body))
+
+    size = 16 * scale
+    header = struct.pack(">IIBBBBB", size, size, 8, 6, 0, 0, 0)
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", header)
+        + chunk(b"IDAT", zlib.compress(b"".join(rows), 9))
+        + chunk(b"IEND", b"")
+    )
+
+
+def ico_bytes() -> bytes:
+    """A Windows ICO with one PNG-compressed image per size in ICO_SIZES."""
+    images = [png_bytes(size // 16) for size in ICO_SIZES]
+    offset = 6 + 16 * len(images)
+    entries = []
+    for size, image in zip(ICO_SIZES, images):
+        side = size % 256  # 0 means 256
+        entries.append(
+            struct.pack("<BBBBHHII", side, side, 0, 0, 1, 32, len(image), offset)
         )
-        
-        # Draw folder icon elements
-        folder_width = size - 4 * margin
-        folder_height = folder_width * 0.7
-        folder_x = (size - folder_width) // 2
-        folder_y = (size - folder_height) // 2 - margin
-        
-        # Main folder body
-        draw.rounded_rectangle(
-            [folder_x, folder_y + folder_height * 0.2, 
-             folder_x + folder_width, folder_y + folder_height],
-            radius=max(1, size // 16),
-            fill=(70, 150, 235),
-            outline=accent_color,
-            width=max(1, border_width // 2)
-        )
-        
-        # Folder tab
-        tab_width = folder_width * 0.4
-        draw.rounded_rectangle(
-            [folder_x, folder_y, 
-             folder_x + tab_width, folder_y + folder_height * 0.3],
-            radius=max(1, size // 20),
-            fill=(70, 150, 235),
-            outline=accent_color,
-            width=max(1, border_width // 2)
-        )
-        
-        # Add zipper/extraction effect
-        zipper_y = folder_y + folder_height * 0.4
-        zipper_width = folder_width * 0.6
-        zipper_x = folder_x + (folder_width - zipper_width) // 2
-        
-        # Draw zipper line
-        draw.line(
-            [zipper_x, zipper_y, zipper_x + zipper_width, zipper_y],
-            fill=accent_color,
-            width=max(1, size // 32)
-        )
-        
-        # Draw zipper teeth
-        teeth_count = max(3, size // 16)
-        for i in range(teeth_count):
-            x = zipper_x + (zipper_width * i // (teeth_count - 1))
-            draw.rectangle(
-                [x - 1, zipper_y - 2, x + 1, zipper_y + 2],
-                fill=accent_color
-            )
-        
-        # Add text for larger sizes
-        if size >= 32:
-            try:
-                # Try to use a system font, fallback to default
-                font_size = max(8, size // 8)
-                try:
-                    font = ImageFont.truetype("arial.ttf", font_size)
-                except:
-                    font = ImageFont.load_default()
-                
-                # Draw "7z" text
-                text = "7z"
-                bbox = draw.textbbox((0, 0), text, font=font)
-                text_width = bbox[2] - bbox[0]
-                text_height = bbox[3] - bbox[1]
-                text_x = (size - text_width) // 2
-                text_y = folder_y + folder_height + margin
-                
-                if text_y + text_height <= size - margin:
-                    draw.text((text_x, text_y), text, fill=text_color, font=font)
-            except:
-                pass  # Skip text if font operations fail
-        
-        images.append(img)
-        
-        # Save individual PNG files for reference
-        img.save(icons_dir / f"icon_{size}x{size}.png")
-    
-    # Create ICO file with multiple sizes
-    ico_path = icons_dir / "app_icon.ico"
-    images[0].save(ico_path, format='ICO', sizes=[(img.width, img.height) for img in images])
-    
-    print(f"✅ Icon created successfully!")
-    print(f"📁 Icons directory: {icons_dir}")
-    print(f"🎨 Main icon file: {ico_path}")
-    print(f"📏 Generated sizes: {', '.join(f'{s}x{s}' for s in sizes)}")
-    
-    return ico_path
+        offset += len(image)
+    return struct.pack("<HHH", 0, 1, len(images)) + b"".join(entries) + b"".join(images)
+
+
+def svg_text() -> str:
+    """The icon as SVG: one rect per horizontal run of one color."""
+    rects = []
+    for y, line in enumerate(PIXELS):
+        x = 0
+        while x < len(line):
+            char = line[x]
+            run = 1
+            while x + run < len(line) and line[x + run] == char:
+                run += 1
+            if char != ".":
+                rects.append(
+                    f'<rect x="{x}" y="{y}" width="{run}" height="1" '
+                    f'fill="#{PALETTE[char]}"/>'
+                )
+            x += run
+    return (
+        '<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" '
+        'viewBox="0 0 16 16" shape-rendering="crispEdges">\n'
+        "<title>DeepUnzip</title>\n" + "\n".join(rects) + "\n</svg>\n"
+    )
+
+
+def write_icons(directory: Path = ICONS) -> list[Path]:
+    directory.mkdir(exist_ok=True)
+    outputs = {
+        "app_icon.svg": svg_text().encode("utf-8"),
+        "app_icon.png": png_bytes(16),
+        "app_icon.ico": ico_bytes(),
+    }
+    for name, data in outputs.items():
+        (directory / name).write_bytes(data)
+    return [directory / name for name in outputs]
+
+
+def main() -> None:
+    for path in write_icons():
+        print(path.relative_to(ROOT))
+
 
 if __name__ == "__main__":
-    from deepunzip.modules.render import configure_redirected_output
-
-    configure_redirected_output()  # emoji must survive a GBK pipe on Windows
-    try:
-        icon_path = create_icon()
-        print(f"\n🎯 Icon ready for use: {icon_path}")
-    except ImportError:
-        print("❌ PIL (Pillow) is required to generate icons.")
-        print("📦 Install it with: poetry add pillow")
-    except Exception as e:
-        print(f"❌ Error creating icon: {e}")
+    main()

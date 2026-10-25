@@ -48,9 +48,11 @@ def test_readme_sections_match_the_chinese_master(name):
 
 @pytest.mark.parametrize("name", READMES)
 def test_readme_images_exist(name):
-    images = re.findall(r"!\[[^\]]*\]\(([^)\s]+)\)", _text(name))
+    text = _text(name)
+    images = re.findall(r"!\[[^\]]*\]\(([^)\s]+)\)", text)
+    images += re.findall(r'<img src="([^"]+)"', text)
     local = [image for image in images if not image.startswith("http")]
-    assert local, name
+    assert "icons/app_icon.svg" in local, name
     assert all((ROOT / image).is_file() for image in local), local
 
 
