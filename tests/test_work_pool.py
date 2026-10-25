@@ -661,3 +661,13 @@ def test_leftover_work_dirs_are_listed(tmp_path):
     assert wp.leftover_work_dirs(str(tmp_path)) == [
         str(tmp_path / "temp.deepunzip-old1")
     ]
+
+
+@pytest.mark.parametrize("name", ["X.rar", "X.zip", "X.zipx", "X.arj", "X.ace"])
+def test_parity_p14_standalone_ambiguous_primary_is_a_container(tmp_path, name):
+    write(tmp_path / name, archive({"inside.txt": "i"}))
+    result, _ = run_pool(tmp_path)
+    assert output_files(tmp_path) == ["inside.txt"]
+    assert deleted(result) == [name]
+    item = next(i for i in result.items if i.name == name)
+    assert item.kind is wp.Kind.CONTAINER

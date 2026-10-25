@@ -41,29 +41,34 @@ Supported platforms: **Windows x64, macOS Intel/Apple Silicon, Linux x64/ARM64**
 
 A CLI that extracts complex archives: password-protected, multipart, nested, and **cloaked** (disguised filenames). Built on Typer + Rich, driving the bundled 7-Zip binary via subprocess.
 
-### Extraction pipeline (the big picture)
+### Extraction flow: the work pool (the big picture)
 
-[main.py](complex_unzip_tool_v2/main.py) `extract_files()` is a fixed 9-step pipeline. Understanding the *ordering* is essential because later steps depend on earlier ones:
+[main.py](complex_unzip_tool_v2/main.py) `extract_files()` loads the password book once ([password_util.py](complex_unzip_tool_v2/modules/password_util.py) → [PasswordBook](complex_unzip_tool_v2/classes/PasswordBook.py), which keeps file order so "password #N" is stable). Then, for each **input root** (a folder passed on the command line, or a file's folder; nested roots merge: `work_pool.group_input_roots`), it:
 
-1. Set up `unzipped/` output folder (name from `const.OUTPUT_FOLDER`).
-2. Load passwords ([password_util.py](complex_unzip_tool_v2/modules/password_util.py) → [PasswordBook](complex_unzip_tool_v2/classes/PasswordBook.py)).
-3. Scan input paths into a flat file list ([file_utils.py](complex_unzip_tool_v2/modules/file_utils.py) `read_dir`).
-4. **Uncloak** disguised filenames in place ([cloaked_file_detector.py](complex_unzip_tool_v2/modules/cloaked_file_detector.py)) — every rename is recorded in a [RenameHistory](complex_unzip_tool_v2/modules/rename_history.py).
-5. Group files into `ArchiveGroup`s by name+directory ([file_utils.py](complex_unzip_tool_v2/modules/file_utils.py) `create_groups_by_name`); bind rename-history entries to their group.
-6. Print group summary.
-7. **Single archives first** — extracting them may surface *contained* multipart sets, which get registered as new groups (`ensure_contained_multipart_groups`) for step 8.
-8. **Multipart archives** — extracted after singles so all volumes (including ones found inside containers and relocated in step 7's reconciliation pass) are present.
-9. Final summary; save newly learned passwords; revert/finalize rename history.
+1. recovers what an interrupted run left behind (`_maybe_recover_pending_renames`): it reports `temp.deepunzip-*` work directories, restores `relocation` history entries automatically, and prompts (default "no") for `uncloak` entries;
+2. scans the root with [file_utils.py](complex_unzip_tool_v2/modules/file_utils.py) `read_dir`, which skips `unzipped/` and work directories and adds the sibling volumes of a selected file;
+3. runs a [WorkPool](complex_unzip_tool_v2/modules/work_pool.py) over the scanned sources with a [SevenZipEngine](complex_unzip_tool_v2/modules/pool_engine.py);
+4. reconciles rename history from the result (clears the entries of deleted sources, reverts the rest) and prints the root summary.
 
-The recursive engine is [archive_utils.py](complex_unzip_tool_v2/modules/archive_utils.py) `extract_nested_archives()`. It validates each file with 7-Zip, tries every password (empty password first), recurses into nested archives into per-archive subfolders, and returns a result dict (`success`, `final_files`, `password_failed_archives`, `candidate_multipart_parts`, …). `main.py` then moves `final_files` into the output folder preserving structure.
+Finally it saves newly learned passwords and prints the final summary.
+
+The pool runs in **rounds until a round changes nothing**. Every file, scanned or extracted at any depth, becomes a `WorkItem` with a lineage (the set of sources it descends from), and goes through the same cycle:
+
+- **Uncloak** ([cloaked_file_detector.py](complex_unzip_tool_v2/modules/cloaked_file_detector.py)). Only renames of sources are recorded in [RenameHistory](complex_unzip_tool_v2/modules/rename_history.py).
+- **Classify**: first by multipart name ([multipart_assembly.py](complex_unzip_tool_v2/modules/multipart_assembly.py) `parse_volume_name`), then with `engine.classify` (container / regular / broken).
+- **Containers** are opened **one level per round** into `<root>/temp.deepunzip-<run>/…`, and their contents re-enter the pool. A consumed derived archive is cleaned up at once.
+- **Multipart sets** are assembled only when no container is pending, and only from pool items. The search widens scope (`iter_combinations`): the primary's folder, then its subtree, then each ancestor's subtree, never above the input root. Each combination goes through size and 7z-header prefilters, then a header-only probe, then extraction in an isolated `.assemble/<n>/` folder. Source volumes moved there are recorded as `relocation` entries and always moved back. A failed set waits for new volumes with its key, or for a newly learned password. At quiescence it prompts at most once, then fails.
+- **Finalization**: final and unresolved derived items move to `<root>/unzipped/`, and the work directory is removed. A source is deleted only if it was consumed, has descendants, and none of them is unresolved.
+
+Design and requirements: `openspec/changes/redesign-work-pool-extraction/` (moved to `openspec/specs/` when archived).
 
 ### Multipart: primary vs. continuation (cross-cutting invariant)
 
-7-Zip must be invoked on the **primary** volume, never a continuation part. This distinction is duplicated across several files and must stay consistent:
+7-Zip must be invoked on the **primary** volume, never a continuation part. This distinction exists in a few places and must stay consistent:
 
-- [regex.py](complex_unzip_tool_v2/modules/regex.py) — `multipart_regex` (is this any part of a set?) and `first_part_regex` (is this an unambiguous entry point?).
-- [ArchiveGroup.py](complex_unzip_tool_v2/classes/ArchiveGroup.py) — `_entry_point_priority()` ranks files so `mainArchiveFile` is always the right entry point (e.g. spanned ZIP keeps `.zip`, not `.z01`; volume RAR keeps `.rar`, not `.r00`), regardless of insertion order. `try_set_alternative_main_archive()` is the fallback when the chosen main fails.
-- `archive_utils.py` / `file_utils.py` — relocate continuation parts (`.7z.002+`, `.<ext>.002+`, `.r00+`, `.z01+`, `.zx01+`, `.a01+`, `.c00+`, `.part2+.rar`) next to their primary instead of treating them as nested archives or final files.
+- [multipart_assembly.py](complex_unzip_tool_v2/modules/multipart_assembly.py) `parse_volume_name`: the work pool's single source of truth. It returns base, family, index (1 is the entry point; continuations count up), primary, and *ambiguous*. `.rar`/`.zip`/`.zipx`/`.arj`/`.ace` are ambiguous: they are set primaries only while a matching continuation is in the pool, and otherwise single containers. A continuation is never opened as a container. It waits in the pool, joins a set, or is preserved to the output.
+- [regex.py](complex_unzip_tool_v2/modules/regex.py) `multipart_regex` / `first_part_regex`: used by `read_dir`'s sibling-volume discovery and by `ArchiveGroup`.
+- [ArchiveGroup.py](complex_unzip_tool_v2/classes/ArchiveGroup.py) and `file_utils.create_groups_by_name`: name-based grouping, kept for the `multipart-format-detection` spec. `_entry_point_priority()` picks the right entry point (spanned ZIP keeps `.zip`, volume RAR keeps `.rar`).
 
 Primary/continuation rules per format: `.7z.001` primary / `.7z.002+` cont; `.tar.{gz,bz2,xz}.001` primary / `.002+` cont; **generic 7-Zip split `name.<ext>.001` primary / `name.<ext>.002+` cont** (any `<ext>` — covers `.zip.001`, `.rar.001`, `.iso.001`, …; 3+ zero-padded digits); `.rar` or `.part1.rar` primary / `.r00+`,`.part2+.rar` cont; `.zip` primary / `.z01+` cont; `.zipx` primary / `.zx01+` cont; `.arj` primary / `.a01+` cont; `.ace` primary / `.c00+` cont (ACE is grouped/classified only — the bundled 7-Zip cannot extract ACE, so such sets fail extraction and parts are retained).
 
@@ -73,12 +78,17 @@ Primary/continuation rules per format: `.7z.001` primary / `.7z.002+` cont; `.ta
 
 ### Rename-history revert-on-failure
 
-[RenameHistory](complex_unzip_tool_v2/modules/rename_history.py) persists every uncloak rename eagerly (atomic temp+replace) to `<input_root>/.unzip-rename-history.tmp.json`. Per group: on extraction **success** the entries are cleared; on **failure** they are reverted so the user can recover the original (still-cloaked) files manually (`_reconcile_rename_history` in main.py mirrors `_should_delete_original_archives`). Leftover history from a crashed run is offered for recovery at startup (`_maybe_recover_pending_renames`).
+[RenameHistory](complex_unzip_tool_v2/modules/rename_history.py) keeps one file per input root, `<input_root>/.unzip-rename-history.tmp.json`, persisted eagerly (atomic temp+replace). It records renames of **source** files only, in two kinds:
+
+- `uncloak`: a cloaked-name normalization;
+- `relocation`: a source volume moved into an assembly folder (via `RelocationLog`). These are cleared as soon as the volume is moved back.
+
+After a root finishes, `main._reconcile_history` clears the entries of deleted sources and reverts the rest, so kept originals get their recognizable names back. At startup, leftover `relocation` entries are restored without asking; leftover `uncloak` entries are offered for revert (`_maybe_recover_pending_renames`).
 
 ### Other invariants
 
-- **Never delete originals on password failure.** `_should_delete_original_archives()` gates all source deletion on an empty `password_failed_archives`. Deletion defaults to Recycle Bin (`send2trash`); `--permanent-delete` overrides.
-- **Multipart retention on failure.** When a multipart set fails to extract, source parts are kept; only tool-created temp folders are removed.
+- **Sources are deleted by lineage, at the end of the run only.** `WorkPool._cleanup_sources` deletes a source only if it was consumed, has at least one descendant, and no descendant is unresolved (password failure, missing volume, error, empty archive, failed move). Regular files in the input root are `kept` and never touched. Deletion defaults to the Recycle Bin (`send2trash`); `--permanent-delete` overrides.
+- **Nothing is lost.** Before the work directory is removed, every unresolved derived item (orphan volume, failed set, password-failed archive, …) is moved to the output, with a failed set's volumes kept together. If a move fails, the work directory is kept.
 - Domain errors live in [ArchiveExceptions.py](complex_unzip_tool_v2/classes/ArchiveExceptions.py) / [ArchiveTypes.py](complex_unzip_tool_v2/classes/ArchiveTypes.py); `_raise_for_7z_error()` maps 7-Zip output to them (notably "not an archive" → `ArchiveUnsupportedError`, **not** corruption, so regular files like `.mp4` aren't flagged as corrupt during nested scans).
 - All user-facing strings are **bilingual (English 中文)**; output goes through [rich_utils.py](complex_unzip_tool_v2/modules/rich_utils.py) helpers — match that style, don't `print()` directly.
 

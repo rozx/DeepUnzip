@@ -163,8 +163,8 @@ This repo uses **OpenSpec**. Active specs live in `openspec/specs/`, proposed ch
 
 ## Single-file multipart inputs
 - `file_utils.read_dir` includes matching sibling volumes when a file is selected, using the same directory, exact archive name, and split convention. It must not pull in unrelated archives, subdirectories, or another split convention with the same base name.
-- Discovery previews the configured uncloaking rules without renaming files. Step 4 still owns all renames and recovery history. If sibling scanning raises `OSError`, retain explicitly selected inputs.
-- Reuse the existing group extraction and cleanup paths: clean all discovered parts on success; retain them all on extraction/password failure.
+- Discovery previews the configured uncloaking rules without renaming files. The work pool's intake still owns all renames and recovery history. If sibling scanning raises `OSError`, retain explicitly selected inputs.
+- The work pool deletes all discovered parts after the set extracts successfully, and retains them all on extraction or password failure.
 - Regression coverage: `tests/test_multipart_file_input.py`; real source/frozen coverage: `scripts/smoke_test.py`.
 
 ## Redirected Windows output
@@ -173,7 +173,7 @@ This repo uses **OpenSpec**. Active specs live in `openspec/specs/`, proposed ch
 - Smoke tests deliberately use legacy GBK Python stream settings on Windows and validate UTF-8 output bytes.
 
 ## Renaming/Uncloaking rules
-The tool normalizes “cloaked” filenames before grouping/extracting. This is Step 4 in the CLI (“Uncloaking file extensions”).
+The tool normalizes “cloaked” filenames before classifying and grouping them. The work pool's intake uncloaks every new item, both scanned sources and files extracted at any depth. Only renames of sources are recorded in rename history.
 
 - Engine: `CloakedFileDetector` using rules from `complex_unzip_tool_v2/config/cloaked_file_rules.json`.
 - Goal: Convert disguised names (with trailing junk/suffixes) into proper archive names, including multipart suffixes.
@@ -227,50 +227,61 @@ Testing:
 - Run tests with `poetry run pytest -q`.
 
 ## Rename history (revert-on-failure)
-Because uncloaking renames source files *in place* before extraction, a failed extraction would otherwise leave the user with renamed files they can no longer recognize. `RenameHistory` (`complex_unzip_tool_v2/modules/rename_history.py`) makes uncloaking reversible.
+Uncloaking renames source files *in place*. If a file is kept, the user must still be able to recognize it. `RenameHistory` (`complex_unzip_tool_v2/modules/rename_history.py`) makes those renames reversible.
 
-- Every successful uncloak rename is recorded (Step 4) and persisted eagerly via atomic temp+replace to `<input_root>/.unzip-rename-history.tmp.json`, so a crash mid-run still leaves a recoverable record.
-- Entries are bound to their owning `ArchiveGroup` after grouping (Step 5).
-- Per group, after extraction: on **success** the entries are cleared; on **failure** they are reverted (files renamed back to their original cloaked names). This is wired through `_reconcile_rename_history()` in `main.py`, which mirrors `_should_delete_original_archives()` — if originals are being kept, names are put back; if they are being deleted, history is cleared.
-- On startup, a leftover history file from a previous crashed run is detected and the user is prompted to revert it (`_maybe_recover_pending_renames`).
-- Unbound entries (renamed file vanished before grouping) are reverted defensively at the end; the on-disk file is deleted on a clean run (`finalize`).
-- Tests: `tests/test_rename_history.py`.
+- There is one history file per input root: `<input_root>/.unzip-rename-history.tmp.json`. It is persisted eagerly via atomic temp+replace, so a crash mid-run still leaves a recoverable record.
+- It records renames of **source** files only, in two kinds:
+  - `uncloak`: a cloaked-name normalization;
+  - `relocation`: a source volume moved into an assembly folder for a multipart attempt (through `RelocationLog`). This entry is cleared as soon as the volume is moved back.
+
+  Renames of tool-extracted files are not recorded; their source is the recovery point. Files written by 1.3.x have no `kind` and load as `uncloak`.
+- After each root, `_reconcile_history()` in `main.py`:
+  - clears the entries of deleted sources (`clear_for`);
+  - reverts every remaining entry, so kept originals get their cloaked names back;
+  - deletes the file on a clean run (`finalize`).
+- On startup (`_maybe_recover_pending_renames`), leftover `relocation` entries are restored automatically, without a prompt, because they would otherwise strand a source volume in a work directory. Leftover `uncloak` entries are offered for revert (default "no"). Leftover `temp.deepunzip-*` work directories are reported.
+- Tests: `tests/test_rename_history.py`, `tests/test_main.py`.
 
 ## Cleanup safety guards (do not break these)
-- **Never delete originals on password failure.** All source deletion is gated by `_should_delete_original_archives()`, which returns `False` whenever `password_failed_archives` is non-empty. Deletion defaults to the Recycle Bin (`send2trash`); `--permanent-delete` overrides.
-- **Multipart retention on failure.** When a multipart set fails to extract, the source parts are retained; only tool-created temp folders are cleaned (logs say "Retained source multipart parts due to extraction failure").
+- **Sources are deleted by lineage, only at the end of a root's run.** `WorkPool._cleanup_sources` deletes a source only if:
+  - it was consumed;
+  - it has at least one descendant;
+  - no descendant is unresolved (password failure, missing volume, error, empty archive, failed move).
 
-## Nested multipart handling (inside containers)
-When extracting an archive that itself contains multipart archives (e.g., a .7z containing another multi-part set), the tool now relocates continuation parts into their corresponding multipart group directory so that top‑level multipart extraction has all required volumes. Primary parts are still the only ones considered for recursive nested extraction.
+  Regular files in the input root are `kept` and never touched. Deletion defaults to the Recycle Bin (`send2trash`); `--permanent-delete` overrides.
+- **Nothing is lost.** Before the work directory is removed, every unresolved derived item is moved to `<root>/unzipped/`, and a failed set's volumes are kept together. A failed move keeps the work directory and its sources.
+- **Multipart retention on failure.** A failed set never deletes or moves away source volumes. Volumes moved for an attempt always return home.
 
-- Primary vs continuation identification:
+## Multipart sets across containers
+Multipart volumes may come from the input root or from any container, at any depth. The work pool (`complex_unzip_tool_v2/modules/work_pool.py`, with pure helpers in `multipart_assembly.py`) treats them uniformly.
+
+- Primary vs continuation identification (`multipart_assembly.parse_volume_name`):
   - 7z volumes: primary is `.7z.001`; continuations are `.7z.002+`.
   - TAR multipart: primary is `.tar.gz/.tar.bz2/.tar.xz.001`; continuations are `.002+`.
-  - Generic 7-Zip split (any extension): primary is `name.<ext>.001`; continuations are `name.<ext>.002+` (3+ zero-padded digits; covers `.zip.001`, `.rar.001`, `.iso.001`, …).
-  - RAR volumes: primary is `.rar` or `.part1.rar`; continuations are `.r00`, `.r01`, … and `.part2+.rar`.
-  - ZIP spanned: primary is `.zip`; continuations are `.z01`, `.z02`, …
-  - ZIPX spanned: primary is `.zipx`; continuations are `.zx01`, `.zx02`, …
-  - ARJ volumes: primary is `.arj`; continuations are `.a01`, `.a02`, …
-  - ACE volumes: primary is `.ace`; continuations are `.c00`, `.c01`, … (classification only — the bundled 7-Zip cannot extract ACE, so such sets fail extraction and their parts are retained).
+  - Generic 7-Zip split (any extension): primary is `name.<ext>.001`; continuations are `name.<ext>.002+` (3+ zero-padded digits; covers `.zip.001`, `.rar.001`, `.iso.001`, ...).
+  - RAR volumes: primary is `.rar` or `.part1.rar`; continuations are `.r00`, `.r01`, ... and `.part2+.rar`.
+  - ZIP spanned: primary is `.zip`; continuations are `.z01`, `.z02`, ...
+  - ZIPX spanned: primary is `.zipx`; continuations are `.zx01`, `.zx02`, ...
+  - ARJ volumes: primary is `.arj`; continuations are `.a01`, `.a02`, ...
+  - ACE volumes: primary is `.ace`; continuations are `.c00`, `.c01`, ... (classification only: the bundled 7-Zip cannot extract ACE, so such sets fail and their parts are retained).
 
 - Behavior:
-  - Continuation parts detected during nested extraction are NOT treated as nested archives and are NOT added to `final_files`.
-  - Instead, the extractor attempts to relocate those continuation files next to the multipart set’s main archive, updating the in‑memory group via `ArchiveGroup.add_file`.
-  - If relocation isn’t possible, the continuation is simply skipped (not an error) and will be cleaned up with the temporary folder; a later reconciliation pass may still catch it (see below).
-  - Only the primary part is extracted recursively.
-
-- Reconciliation pass (safety net):
-  - After single archives finish, we scan the output folder and relocate any multipart parts that were extracted there into their matching multipart group directory.
-
-- Implementation:
-  - `complex_unzip_tool_v2/modules/archive_utils.py` → `extract_nested_archives()` accepts an optional `group_relocator` callback and invokes it when a continuation file is encountered.
-  - `complex_unzip_tool_v2/main.py` wires `group_relocator` to reuse `file_utils.add_file_to_groups` during the single and multipart phases, and also runs a reconciliation step after single‑archive extraction.
-  - `complex_unzip_tool_v2/modules/file_utils.py` provides `relocate_multipart_parts_from_directory(source_root, groups)` to scan the output folder and move parts into their group directories.
+  - Continuations are never opened as containers. They wait in the pool until a set uses them, or they are preserved to the output.
+  - `.rar`/`.zip`/`.zipx`/`.arj`/`.ace` are set primaries only while a matching continuation exists. One that already failed as a single container becomes a primary when a continuation appears later. One whose set fails, and that was never opened as a container, falls back to being opened as a container.
+  - Assembly runs only when no container is pending. It uses pool items only, and widens scope: the primary's folder, then its subtree, then each ancestor's subtree, never above the input root.
+  - Each combination goes through, in order:
+    - prefilters: equal sizes for 7z / numbered splits, and the 7z start-header total;
+    - a header-only probe;
+    - extraction in an isolated `<work>/.assemble/<n>/` folder.
+  - When 7-Zip reports using fewer volumes than chosen, the unused ones are not consumed.
+  - A failed set retries when new volumes with its key arrive, or after a password is learned. At quiescence it prompts at most once, then fails.
+  - The search is capped at `MAX_ASSEMBLY_ATTEMPTS` (64) probes per set.
+  - Byte-identical duplicate volumes count as used.
 
 - Validation:
-  - CLI smoke: `poetry run main --help`.
-  - End-to-end: run against a directory where an outer archive contains a multipart set; continuation parts should be moved beside the multipart set before the multipart extraction begins and the set should extract successfully.
-  - Tests: `tests/test_archive_utils.py` includes unit tests that assert continuation parts found during nested extraction are either relocated via the callback or skipped without leaking into `final_files`.
+  - Unit tests: `tests/test_multipart_assembly.py`, `tests/test_work_pool.py` (fake engine), `tests/test_pool_engine.py`.
+  - CLI-level tests with mocked 7-Zip: `tests/test_main.py`, `tests/test_multipart_file_input.py`, `tests/test_multipart_retention.py`.
+  - Real engine: `poetry run python -m scripts.smoke_test`. The end-to-end reproduction is recorded in `openspec/changes/redesign-work-pool-extraction/validation.md`.
 
 ## Non-archive handling during nested scan
 The tool treats every file as a potential archive by default. During nested extraction, we probe files with 7‑Zip but avoid flagging regular files (e.g., .mp4) as corrupted by mapping 7‑Zip output appropriately and parsing list output robustly.

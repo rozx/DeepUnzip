@@ -40,7 +40,7 @@ Inspired by: https://github.com/TR-Supowe/Complex-Unzip-Tool
 **Naming Conventions**:
 - **Files**: snake_case (e.g., `archive_utils.py`, `cloaked_file_detector.py`)
 - **Classes**: PascalCase (e.g., `ArchiveGroup`, `PasswordBook`, `CloakedFileDetector`)
-- **Functions/Variables**: snake_case (e.g., `extract_nested_archives`, `is_valid_archive`)
+- **Functions/Variables**: snake_case (e.g., `parse_volume_name`, `is_valid_archive`)
 - **Constants**: UPPER_SNAKE_CASE (e.g., in `modules/const.py`)
 
 **Type Hints**:
@@ -85,7 +85,7 @@ complex_unzip_tool_v2/
 - **Error Handling**: Raise domain exceptions from `classes/ArchiveExceptions.py`
 - **Path Handling**: Prefer `pathlib.Path` over string paths
 - **Configuration-Driven**: Cloaked file rules in JSON config file
-- **Dependency Injection**: Pass dependencies (like group_relocator) as callbacks
+- **Dependency Injection**: Pass dependencies as callables (e.g. the work pool's engine, prompt, uncloaker and remover)
 
 **Key Patterns**:
 - **Archive Operations**: Centralized in `archive_utils.py` and `archive_extension_utils.py`
@@ -219,15 +219,16 @@ poetry run pytest -v
 
 ### Nested Archive Handling
 
-**Behavior**:
-- Primary parts extracted recursively
-- Continuation parts relocated to multipart group directory
-- Reconciliation pass after single-archive extraction to catch missed parts
-- Non-archive files (e.g., .mp4) not flagged as corrupted
+**Behavior** (work pool, one per input root):
+- Every file, scanned or extracted at any depth, is uncloaked, classified and grouped the same way
+- Containers are opened one level per round; multipart sets are assembled across containers by widening scope up to the input root
+- Unresolved items are always preserved to the output; sources are deleted by lineage at the end
+- Non-archive files (e.g., .mp4) are not flagged as corrupted
 
 **Key Functions**:
-- `extract_nested_archives()` - Main nested extraction logic
-- `relocate_multipart_parts_from_directory()` - Reconciliation pass
+- `work_pool.WorkPool.run()` - Round-based extraction of one input root
+- `multipart_assembly.iter_combinations()` / `prefilter()` - Multipart combination search
+- `pool_engine.SevenZipEngine` - 7-Zip classify / extract / probe with the password book
 - `is_valid_archive()` - Archive validation with 7-Zip
 
 ## Important Constraints

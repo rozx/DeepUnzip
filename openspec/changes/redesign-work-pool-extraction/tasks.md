@@ -105,9 +105,9 @@ The tasks follow TDD (`CLAUDE.md`): write the failing test first, with 7-Zip moc
 
 ## 7. Remove superseded code (stage 3)
 
-- [ ] 7.1 Remove `extract_nested_archives`, `add_file_to_groups`, `relocate_multipart_parts_from_directory`, `ensure_contained_multipart_groups` and their tests.
-- [ ] 7.2 Update the pipeline description in `CLAUDE.md`, `AGENTS.md` and `openspec/project.md`.
-- [ ] 7.3 Quality gates: `pytest -q`, `flake8`, `mypy` (no new diagnostics against the 1.1 baseline), `black`, and `--help`.
+- [x] 7.1 Remove `extract_nested_archives`, `add_file_to_groups`, `relocate_multipart_parts_from_directory`, `ensure_contained_multipart_groups` and their tests. Also removed: the now-unused `_cleanupEmptyDirectories` and `uncloak_file_extensions`. Their classification tests were re-expressed against `SevenZipEngine.classify`, and the retention tests against the new flow.
+- [x] 7.2 Update the pipeline description in `CLAUDE.md`, `AGENTS.md` and `openspec/project.md`.
+- [x] 7.3 Quality gates: `pytest -q`, `flake8`, `mypy` (no new diagnostics against the 1.1 baseline), `black`, and `--help`.
 
 ## 8. Release v2.0.0 (after `redesign-terminal-output`, `rename-to-deepunzip` and `adopt-release-ready-workflow`)
 
