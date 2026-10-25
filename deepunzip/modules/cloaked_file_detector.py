@@ -538,7 +538,9 @@ class CloakedFileDetector:
                         name=os.path.basename(file_path),
                         error=e,
                     )
-                    return new_path
+                    # The file is still at its cloaked path; new_path is
+                    # another, pre-existing file.
+                    return file_path
             try:
                 # Rename the actual file
                 os.rename(file_path, new_path)

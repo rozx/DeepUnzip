@@ -513,6 +513,23 @@ class TestCloakedFileDetector:
                 mock_warning.assert_called_once()
 
     @patch("os.path.exists")
+    @patch("os.rename", side_effect=PermissionError("locked"))
+    @patch("deepunzip.modules.cloaked_file_detector.notice")
+    def test_uncloak_file_failed_collision_rename_keeps_the_source_path(
+        self, mock_warning, mock_rename, mock_exists, detector
+    ):
+        """A failed duplicate rename must not hand back the other file's path."""
+        mock_exists.side_effect = lambda path: path in {
+            "/test/archive.7z(1).001",
+            "/test/archive.7z.001",
+        }
+        with patch.object(detector, "detect_cloaked_file") as mock_detect:
+            mock_detect.return_value = "/test/archive.7z.001"
+            result = detector.uncloak_file("/test/archive.7z(1).001")
+        assert result == "/test/archive.7z(1).001"
+        mock_warning.assert_called_once()
+
+    @patch("os.path.exists")
     def test_uncloak_file_not_exists(self, mock_exists, detector):
         """Test uncloaking non-existent file."""
         mock_exists.return_value = False
