@@ -72,7 +72,8 @@ def _build_7z_extract_cmd(
     if progress:
         cmd.append("-bsp2")  # percentages on stderr; see seven_zip_progress
 
-    cmd.append(archive_path)
+    # Stop switch parsing: an archive or entry name may start with "-".
+    cmd.extend(["--", archive_path])
 
     if specific_files:
         cmd.extend(specific_files)

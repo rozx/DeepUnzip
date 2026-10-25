@@ -178,6 +178,7 @@ def test_build_7z_extract_cmd():
         "-psecret",
         "-o/out",
         "-y",
+        "--",
         "archive.zip",
         "file1.txt",
         "file2.txt",
@@ -194,8 +195,19 @@ def test_build_7z_extract_cmd_no_overwrite():
         overwrite=False,
     )
 
-    expected = ["7z.exe", "x", "-p", "-o/out", "-aos", "archive.zip"]
+    expected = ["7z.exe", "x", "-p", "-o/out", "-aos", "--", "archive.zip"]
     assert cmd == expected
+
+
+def test_build_7z_extract_cmd_never_reads_names_as_switches():
+    cmd = au._build_7z_extract_cmd(
+        seven_zip_path="7z.exe",
+        password="",
+        output_path="/out",
+        archive_path="-x.zip",
+        specific_files=["-oC:\\Users\\Public"],
+    )
+    assert cmd[cmd.index("--") + 1 :] == ["-x.zip", "-oC:\\Users\\Public"]
 
 
 # ---------------------------------------------------------------------------
