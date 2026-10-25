@@ -617,3 +617,41 @@ def test_set_password_prompt_is_not_repeated_by_the_container_fallback(tmp_path)
     result, _ = run_pool(tmp_path, prompt=prompt)
     assert asked == ["X.rar"]
     assert deleted(result) == []
+
+
+class NoVolumeCountEngine(FakeEngine):
+    """Like 7-Zip: listing a plain (non-spanned) archive reports no volume count."""
+
+    def probe(self, archive_path, password=None):
+        outcome = super().probe(archive_path, password)
+        data = self._load(archive_path)
+        if outcome.ok and isinstance(data, dict) and data["kind"] == "archive":
+            return wp.Outcome("ok", outcome.password, outcome.password_ref)
+        return outcome
+
+
+def test_unrelated_continuation_is_kept_when_the_probe_reports_no_volumes(tmp_path):
+    write(tmp_path / "X.zip", archive({"inside.txt": "i"}))
+    write(tmp_path / "other" / "X.z01", volume("Z", 2, 2))
+    result, _ = run_pool(tmp_path, engine=NoVolumeCountEngine())
+    assert output_files(tmp_path) == ["inside.txt"]
+    assert deleted(result) == ["X.zip"]
+    assert (tmp_path / "other" / "X.z01").exists()
+
+
+def test_combination_enumeration_is_bounded_without_probes(tmp_path, monkeypatch):
+    write(tmp_path / "X.7z.001", volume("S", 1, 18, {"f": "f"}))
+    for index in range(2, 18):
+        for copy in ("a", "b"):
+            write(tmp_path / copy / f"X.7z.{index:03d}", volume(copy, index, 18))
+    examined = []
+
+    def reject(combo):
+        examined.append(len(combo))
+        return "volume sizes do not add up to the 7z header size"
+
+    monkeypatch.setattr(ma, "prefilter", reject)
+    result, _ = run_pool(tmp_path)
+    assert len(examined) <= ma.MAX_COMBINATIONS_PER_ATTEMPT
+    reasons = {os.path.basename(i.path): i.reason for i in result.unresolved}
+    assert reasons["X.7z.001"] == "too many combinations"

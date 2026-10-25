@@ -9,6 +9,7 @@ from deepunzip.classes.ArchiveTypes import (
     ArchivePasswordError,
 )
 from deepunzip.modules import const
+from deepunzip.modules import multipart_assembly as ma
 from deepunzip.modules.rename_history import (
     HISTORY_FILENAME,
     RenameHistory,
@@ -52,7 +53,17 @@ def fake_7z(monkeypatch):
         name = os.path.basename(archive_path)
         if name in state["failures"]:
             raise state["failures"][name]
-        return "7z", [{"name": "entry"}], None
+        # Like 7-Zip: a spanned set reports its volume count, a plain archive none.
+        parsed = ma.parse_volume_name(archive_path)
+        folder = os.path.dirname(archive_path)
+        count = sum(
+            1
+            for other in os.listdir(folder)
+            if parsed is not None
+            and (sibling := ma.parse_volume_name(other)) is not None
+            and sibling.key == parsed.key
+        )
+        return "7z", [{"name": "entry"}], count if count > 1 else None
 
     def remove(path, use_recycle_bin=True, error_callback=None):
         state["removed"][os.path.basename(path)] = use_recycle_bin

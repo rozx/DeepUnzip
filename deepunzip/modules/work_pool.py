@@ -249,6 +249,20 @@ def _unique_dir(base: str) -> str:
     return candidate
 
 
+def _volumes_used(primary: WorkItem, reported: Optional[int], chosen: int) -> int:
+    """Return how many of the chosen volumes 7-Zip actually used.
+
+    7-Zip reports no volume count for a plain archive, so an ambiguous primary
+    (.zip, .rar, ...) without one used only itself: a continuation found
+    elsewhere was not read and must not be consumed.
+    """
+    if reported is not None:
+        return reported
+    if primary.volume is not None and primary.volume.ambiguous:
+        return 1
+    return chosen
+
+
 def _list_files(folder: str) -> list[str]:
     found = []
     for current, _dirs, names in os.walk(folder):
@@ -654,9 +668,11 @@ class WorkPool:
         primary_candidate = ma.Candidate.from_path(primary.path, primary.volume)
         if primary_candidate is None:
             return False
-        for _scope, combo in ma.iter_combinations(
-            primary_candidate, candidates, self.root
-        ):
+        combinations = ma.iter_combinations(primary_candidate, candidates, self.root)
+        for examined, (_scope, combo) in enumerate(combinations):
+            if examined >= ma.MAX_COMBINATIONS_PER_ATTEMPT:
+                self._unresolve(primary, "too many combinations")
+                return False
             if ma.prefilter(combo) is not None:
                 continue
             volumes = [members[c.path] for c in combo]
@@ -710,13 +726,14 @@ class WorkPool:
                 return False
             probe = self.engine.probe(primary.path, password)
             state.last_status = probe.status
+            used_count = _volumes_used(primary, probe.volumes, len(volumes))
             if not probe.ok:
                 if probe.status == "password":
                     state.password_failures += 1
                 elif probe.status != "missing_volume":
                     state.other_failures += 1
-            elif probe.volumes is not None and probe.volumes < len(volumes):
-                used = volumes[: probe.volumes]
+            elif used_count < len(volumes):
+                used = volumes[:used_count]
                 if len(used) == 1 and primary.volume and primary.volume.ambiguous:
                     state.other_failures += 1
                 else:

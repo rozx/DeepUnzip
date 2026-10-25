@@ -18,6 +18,9 @@ from typing import Iterator, Optional, Sequence
 
 # Probes allowed per multipart set over a whole run (fixed, not a CLI option).
 MAX_ASSEMBLY_ATTEMPTS = 64
+# Combinations examined per set attempt, probed or not: prefilters reject
+# without spending a probe, so they need their own bound.
+MAX_COMBINATIONS_PER_ATTEMPT = 4096
 
 _SEVEN_Z_SIGNATURE = b"7z\xbc\xaf\x27\x1c"
 _SEVEN_Z_START_HEADER_SIZE = 32
