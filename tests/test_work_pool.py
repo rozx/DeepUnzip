@@ -655,3 +655,29 @@ def test_combination_enumeration_is_bounded_without_probes(tmp_path, monkeypatch
     assert len(examined) <= ma.MAX_COMBINATIONS_PER_ATTEMPT
     reasons = {os.path.basename(i.path): i.reason for i in result.unresolved}
     assert reasons["X.7z.001"] == "too many combinations"
+
+
+def test_source_of_a_duplicate_set_is_kept_when_its_payload_fails(tmp_path):
+    first = volume("S", 1, 2, {"secret.7z": archive({"x": "x"}, "unknown")})
+    second = volume("S", 2, 2)
+    write(tmp_path / "A.7z", archive({"X.7z.001": first, "X.7z.002": second}))
+    write(tmp_path / "B.7z", archive({"X.7z.001": first, "X.7z.002": second}))
+    result, _ = run_pool(tmp_path)
+    assert deleted(result) == []
+    assert "secret.7z" in [i.name for i in result.unresolved]
+
+
+def test_complete_prefix_is_tried_when_an_unrelated_later_volume_is_in_scope(
+    tmp_path, monkeypatch
+):
+    from fake_archives import VOLUME_SIZE
+
+    write(tmp_path / "s1" / "X.7z.001", volume("S", 1, 2, {"f": "f"}))
+    write(tmp_path / "s2" / "X.7z.002", volume("S", 2, 2))
+    write(tmp_path / "s3" / "X.7z.003", volume("U", 3, 3))
+    # The 7z start header records the joined size of the real two-volume set.
+    monkeypatch.setattr(ma, "read_7z_total_size", lambda path: 2 * VOLUME_SIZE)
+    result, _ = run_pool(tmp_path)
+    assert output_files(tmp_path) == ["f"]
+    assert (tmp_path / "s3" / "X.7z.003").exists()
+    assert "X.7z.003" in [i.name for i in result.unresolved]

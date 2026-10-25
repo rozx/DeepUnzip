@@ -269,10 +269,15 @@ def iter_combinations(
     """Yield volume combinations for `primary`, narrowest scope first.
 
     Only `candidates` (pool items) are considered. A combination already
-    yielded by a narrower scope is not repeated. A scope whose volume indices
-    have a gap cannot succeed and is skipped.
+    yielded by a narrower scope is not repeated. Within a scope, the full run
+    of indices comes first; shorter prefixes follow only for a 7z split whose
+    header records the total size. A scope whose volume indices have a gap
+    cannot succeed and is skipped.
     """
     seen: set[tuple[str, ...]] = set()
+    prefixes_checkable = (
+        primary.volume.family == "7z" and read_7z_total_size(primary.path) is not None
+    )
     for scope in scopes_for(primary.path, root):
         by_index: dict[int, list[Candidate]] = {}
         for candidate in candidates:
@@ -289,13 +294,18 @@ def iter_combinations(
             continue
         if last == 1 and primary.volume.ambiguous:
             continue
-        per_index = [by_index[index] for index in range(2, last + 1)]
-        for combo in _ordered_products(primary, per_index):
-            identity = tuple(c.path for c in combo)
-            if identity in seen:
-                continue
-            seen.add(identity)
-            yield scope, combo
+        # Longest first. A later index may belong to another set that shares
+        # the name, so a shorter prefix can still be the whole set; only a 7z
+        # start header (its recorded total size) can tell, via the prefilter.
+        shortest = 2 if last > 1 and prefixes_checkable else last
+        for end in range(last, shortest - 1, -1):
+            per_index = [by_index[index] for index in range(2, end + 1)]
+            for combo in _ordered_products(primary, per_index):
+                identity = tuple(c.path for c in combo)
+                if identity in seen:
+                    continue
+                seen.add(identity)
+                yield scope, combo
 
 
 def prefilter(combo: Sequence[Candidate]) -> Optional[str]:

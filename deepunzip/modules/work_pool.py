@@ -768,13 +768,15 @@ class WorkPool:
             volume.state = State.CONSUMED
             volume.password_ref = ref
         # Compare leftovers against the used volumes before those are removed.
-        self._mark_duplicates(volumes)
+        duplicates = self._mark_duplicates(volumes)
         for volume in volumes:
             if not volume.is_source:
                 self._discard_derived(volume)
         rel_base = dest if primary.is_source else primary.rel_base
         depth = max(v.depth for v in volumes) + 1
-        parents = tuple(v.id for v in volumes)
+        # Duplicates stand in for the used volumes: their sources must outlive
+        # an unresolved output just the same.
+        parents = tuple(v.id for v in volumes + duplicates)
         for path in files:
             self._add(path, Origin.DERIVED, parents, depth, rel_base)
         assert primary.volume is not None
@@ -853,7 +855,7 @@ class WorkPool:
                 return False
         return True
 
-    def _mark_duplicates(self, consumed: list[WorkItem]) -> None:
+    def _mark_duplicates(self, consumed: list[WorkItem]) -> list[WorkItem]:
         key = consumed[0].volume.key if consumed[0].volume else None
         leftovers = {
             os.path.abspath(i.path): i
@@ -870,12 +872,13 @@ class WorkPool:
             for c in (ma.Candidate.from_path(p, i.volume) for p, i in leftovers.items())
             if c is not None
         ]
-        for duplicate in ma.find_duplicates(used, rest):
-            item = leftovers[duplicate.path]
+        duplicates = [leftovers[d.path] for d in ma.find_duplicates(used, rest)]
+        for item in duplicates:
             item.state = State.CONSUMED
             item.reason = "duplicate"
             if not item.is_source:
                 self._discard_derived(item)
+        return duplicates
 
     # ---------- quiescence ----------
 
