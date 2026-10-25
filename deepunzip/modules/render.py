@@ -585,6 +585,8 @@ class JsonRenderer(_Dispatcher):
         )
 
     def _on_SetAssembled(self, event: ev.SetAssembled) -> None:
+        # Files extracted from a set name its primary as their source.
+        self._paths[event.primary.id] = event.primary.path
         volumes = []
         for volume in event.volumes:
             parent = self._paths.get(volume.parents[0]) if volume.parents else None

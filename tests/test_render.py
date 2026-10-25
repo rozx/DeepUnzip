@@ -213,6 +213,24 @@ def test_json_reports_unresolved_items_with_their_location(tmp_path):
     assert lines[-1]["status"] == "partial" and lines[-1]["exit"] == 1
 
 
+def test_json_names_the_set_a_volume_was_extracted_from(tmp_path):
+    write(tmp_path / "Y.7z.001", volume("Y", 1, 2, {"X.7z.002": volume("X", 2, 2)}))
+    write(tmp_path / "Y.7z.002", volume("Y", 2, 2))
+    write(tmp_path / "X.7z.001", volume("X", 1, 2, {"f": "f"}))
+    stream = io.StringIO()
+    drive(render.create_renderer(json_mode=True, stream=stream), tmp_path)
+    sets = {
+        line["key"]: line["volumes"]
+        for line in json_lines(stream)
+        if line["event"] == "set"
+    }
+    (x_key,) = [key for key in sets if key.startswith("X")]
+    assert [(v["index"], v["source"]) for v in sets[x_key]] == [
+        (1, None),
+        (2, "Y.7z.001"),
+    ]
+
+
 def test_json_progress_is_throttled():
     clock = iter([0.0, 0.05, 0.1, 0.15, 0.16, 0.5])
     stream = io.StringIO()
