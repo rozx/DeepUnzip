@@ -31,11 +31,11 @@ v2.0.0 already changes the extraction flow and the terminal output, so it is the
   - `README.ja.md` (日本語);
   - `README.ko.md` (한국어).
 
-  The content is rewritten for 2.0.0: what it solves, a screenshot and demo, features, quick start, usage (`--json`, exit codes, `DEEPUNZIP_LANG`), how it works, the release package table, FAQ, license and acknowledgment.
+  The content is rewritten for 2.0.0: what it solves, a screenshot, features, quick start, usage (`--json`, exit codes, `DEEPUNZIP_LANG`), how it works, the release package table, FAQ, license and acknowledgment.
 - **Screenshots generated, not hand-made:**
   - `scripts/generate_screenshots.py` renders SVG screenshots of the real terminal renderer, one per output language, from a recorded demo event sequence.
-  - A VHS tape (`docs/demo.tape`) records an animated GIF of a real run against synthetic demo archives created by `scripts/make_demo_archives.py`.
-  - Assets live in `docs/images/`, one screenshot and one GIF per language; each README uses its own language's assets. The terminal output itself supports the same five languages (`redesign-terminal-output`).
+  - The recorded sequence comes from a real run against synthetic demo archives created by `scripts/make_demo_archives.py`.
+  - Screenshots live in `docs/images/`, one per language; each README uses its own language's screenshot. The terminal output itself supports the same five languages (`redesign-terminal-output`).
 - Repository docs and tooling follow the new name:
   - `CLAUDE.md`, `AGENTS.md`, `openspec/project.md`;
   - the build, release and smoke scripts, and the CI and release workflows;
@@ -47,7 +47,7 @@ v2.0.0 already changes the extraction flow and the terminal output, so it is the
 
 ### New Capabilities
 - `project-identity`: product, distribution, package, command, executable, asset and environment-variable names; the deprecated aliases; and continuity of the rename-history file name.
-- `readme-docs`: the five README languages, language switcher, shared section structure, required content, and generated screenshot/GIF assets with their regeneration commands.
+- `readme-docs`: the five README languages, language switcher, shared section structure, required content, and generated screenshots with their regeneration command.
 
 ### Modified Capabilities
 - `cross-platform-runtime`: the standalone build produces `dist/deepunzip(.exe)`.
@@ -58,7 +58,7 @@ v2.0.0 already changes the extraction flow and the terminal output, so it is the
 - **Code**:
   - `git mv complex_unzip_tool_v2 deepunzip` plus import updates: 275 occurrences in 55 files today, minus historical docs.
   - `pyproject.toml` (name, description, packages, scripts), `.bumpversion.cfg`, `scripts/build.py`, `scripts/release.py`, `scripts/smoke_test.py`, `scripts/standalone_main.py`, `scripts/generate_icon.py`, `.github/workflows/ci.yml`.
-- **New files**: three README translations, `docs/images/*`, `docs/demo.tape`, `scripts/generate_screenshots.py`, `scripts/make_demo_archives.py`.
+- **New files**: four README translations, `docs/images/*`, `scripts/generate_screenshots.py`, `scripts/make_demo_archives.py`.
 - **External, done by the maintainer**: rename the GitHub repository and update its About text. Badges and links in the README point at `rozx/DeepUnzip`.
 - **Users**: the downloaded executable and archive names change. The v2.0.0 release notes explain the rename and the old→new mapping.
 - **Depends on** `redesign-terminal-output` for the screenshots and the README usage section. Ships in **v2.0.0**.

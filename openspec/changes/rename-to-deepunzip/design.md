@@ -10,7 +10,7 @@ The current name appears 275 times in 55 files:
 - README, `CLAUDE.md`, `AGENTS.md`, `openspec/project.md`;
 - historical release notes and archived OpenSpec changes.
 
-The README has a Chinese default (`README.md`) and an English version (`README.en.md`), with no screenshots. The user chose the name DeepUnzip (深度解压), a five-language README, and screenshots as SVG plus an animated GIF.
+The README has a Chinese default (`README.md`) and an English version (`README.en.md`), with no screenshots. The user chose the name DeepUnzip (深度解压), a five-language README, and screenshots as SVG plus an animated GIF; the GIF was later dropped in favor of the screenshots alone.
 
 ## Goals / Non-Goals
 
@@ -62,7 +62,7 @@ The default stays Chinese, as today; the core audience is Chinese-speaking.
 Every file starts with the same language switcher line and follows the same section order:
 
 1. Title, tagline and badges.
-2. Screenshot and demo GIF.
+2. Screenshot.
 3. What it solves.
 4. Features.
 5. Quick start.
@@ -82,17 +82,13 @@ Translations are written from the Chinese and English masters. Japanese and Kore
 - **SVG**: `scripts/generate_screenshots.py` replays a recorded event sequence (the demo run) through the human renderer with a recording `Console(width=100)`, once per output language, and writes `docs/images/terminal-<lang>.svg` for `zh`, `en`, `zh-TW`, `ja` and `ko`. It shows the screen a terminal run leaves behind; the live progress lines are transient. Rich sizes SVG text by character count, so the script widens each span to its terminal cells (CJK characters take two).
 
   No 7-Zip and no real archives are needed, so the output is deterministic.
-- **GIF**: `docs/demo.tape` (a [VHS](https://github.com/charmbracelet/vhs) script) runs the real `deepunzip` on demo archives:
-  - `scripts/make_demo_archives.py` builds the demo archives with the bundled 7-Zip: synthetic content, demo passwords in a demo `passwords.txt`, cloaked names, and a cross-container volume set, mirroring the real-world case;
-  - the tape records the English run into `docs/images/demo-en.gif`; `scripts/record_demo.py` derives one tape per output language from it and runs VHS for each, writing `docs/images/demo-<lang>.gif`.
-
-  VHS is a developer-only external tool, not a Python dependency. It runs on macOS, Linux or WSL. The development section of `README` documents how to install and run it.
-- **Which README uses which assets**: each README uses the assets of its own language.
+- **Demo run**: `scripts/make_demo_archives.py` builds the demo archives with the bundled 7-Zip: synthetic content, demo passwords in a demo `passwords.txt`, cloaked names, and a cross-container volume set, mirroring the real-world case. `generate_screenshots.py record` runs the real pool on them once and stores the events in `tests/fixtures/demo_events.json`.
+- **Which README uses which assets**: each README uses the screenshot of its own language.
 - **Badges**: latest release, total downloads, latest-release downloads, release date, CI status, stars, license and platforms (shields.io, linked to the repository).
-- **Size**: the GIFs target under 2 MB each (short tape, 100×28 terminal).
 
 *Alternatives considered:*
 - Hand-made PNG screenshots. Rejected: they go stale with every output change.
+- An animated demo GIF recorded with VHS. Dropped: the screenshot shows enough, and VHS needs extra tools (ttyd, ffmpeg, Chromium) outside Windows.
 - asciinema plus agg. Rejected: no native Windows support.
 
 ### D5. Description and About text
@@ -105,7 +101,6 @@ Translations are written from the Chinese and English masters. Japanese and Kore
 - [Contributors with open branches get large conflicts] → Commit the rename after the work-pool and terminal-output commits, as the last code change on `release/v2.0.0`, and announce it in the release PR.
 - [Users looking for `complex-unzip-tool-v2.exe`] → The release notes start with the rename and the old→new mapping. README badges and links use the new repository. GitHub redirects old links.
 - [Translation quality in ja/ko] → Request a native review. The structure test keeps sections aligned, even if a wording is later improved.
-- [VHS availability on Windows] → Record the GIFs in WSL, on macOS or on Linux; the SVGs can be generated anywhere.
 
 ## Migration Plan
 
@@ -114,7 +109,7 @@ This change is committed directly on `release/v2.0.0`, after the terminal-output
 1. **Rename (mechanical)**: package move, imports, `pyproject.toml`, scripts, CI, aliases with deprecation notice, the `release-ready` skill's names, and developer docs.
 2. **Docs**:
    - the five READMEs;
-   - `scripts/generate_screenshots.py`, `scripts/make_demo_archives.py`, `docs/demo.tape`;
+   - `scripts/generate_screenshots.py`, `scripts/make_demo_archives.py`;
    - the generated `docs/images/*`;
    - the README structure test.
 3. **Release preparation**, as in `redesign-work-pool-extraction`'s migration plan: version bump to 2.0.0, and release notes that open with the rename.

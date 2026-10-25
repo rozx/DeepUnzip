@@ -29,13 +29,13 @@ These tasks are committed directly on `release/v2.0.0` (single release PR) as th
   - a volume set split across two containers.
 - [x] 2.2 Record the demo run's event sequence as a fixture (from the real pool on the demo set).
 - [x] 2.3 `scripts/generate_screenshots.py`: render the fixture through `TreeRenderer` with `Console(record=True, width=100)` for `zh` and `en`, and write `docs/images/terminal-zh.svg` and `terminal-en.svg`. Add a test that two consecutive runs produce identical files.
-- [ ] 2.4 `docs/demo.tape` (VHS) and `scripts/record_demo.py`: record `docs/images/demo-<lang>.gif` for the five output languages in WSL (or on macOS/Linux), each under 2 MB. Document the VHS install and run steps.
+- [x] 2.4 ~~Record demo GIFs with VHS.~~ Dropped: the README shows the generated screenshots only.
 - [x] 2.5 Render `terminal-<lang>.svg` for all five output languages.
 
 ## 3. Five-language README (docs stage)
 
 - [x] 3.1 Rewrite `README.md` (简体中文) in the shared section order:
-  1. Screenshot and demo
+  1. Screenshot
   2. What it solves
   3. Features
   4. Quick start

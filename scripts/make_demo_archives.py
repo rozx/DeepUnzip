@@ -1,4 +1,4 @@
-"""Build the demo archive set used for the README screenshots and demo GIF.
+"""Build the demo archive set used for the README screenshots.
 
 Everything is generated: placeholder files with seeded random bytes, demo
 passwords, and archives made with the bundled 7-Zip. The set mirrors the
@@ -12,7 +12,6 @@ cases DeepUnzip is built for:
 - `passwords.txt`: the demo password book.
 
 Usage: poetry run python -m scripts.make_demo_archives <empty-or-new-folder>
-       [--concert-mb N]   (a larger concert makes the demo GIF's progress visible)
 """
 
 import argparse
@@ -43,7 +42,7 @@ def _seven_zip(engine: str, cwd: Path, *args: str) -> None:
     )
 
 
-def build(target: Path, concert_size: int = CONCERT_SIZE) -> list[Path]:
+def build(target: Path) -> list[Path]:
     """Write the demo set into `target`; return the files created there."""
     if target.exists() and any(target.iterdir()):
         raise FileExistsError(f"{target} is not empty")
@@ -66,12 +65,12 @@ def build(target: Path, concert_size: int = CONCERT_SIZE) -> list[Path]:
         with zipfile.ZipFile(target / "docs.zip", "w") as archive:
             archive.write(work / "manual.7z", "manual.7z")
 
-        _placeholder(work / "Concert.mkv", concert_size, seed=20)
+        _placeholder(work / "Concert.mkv", CONCERT_SIZE, seed=20)
         _seven_zip(
             engine,
             work,
             "-mx0",
-            f"-v{concert_size // 3 + 4096}b",  # three volumes
+            f"-v{CONCERT_SIZE // 3 + 4096}b",  # three volumes
             f"-p{second}",
             "Concert.7z",
             "Concert.mkv",
@@ -95,10 +94,7 @@ def build(target: Path, concert_size: int = CONCERT_SIZE) -> list[Path]:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("target", type=Path, help="an empty or new folder")
-    parser.add_argument("--concert-mb", type=int, help="size of Concert.mkv in MB")
-    arguments = parser.parse_args()
-    size = arguments.concert_mb * 1_000_000 if arguments.concert_mb else CONCERT_SIZE
-    for path in build(arguments.target, size):
+    for path in build(parser.parse_args().target):
         print(path.name)
 
 
