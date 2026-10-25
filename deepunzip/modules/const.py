@@ -1,3 +1,5 @@
+from deepunzip.modules.rename_history import HISTORY_FILENAME
+
 OUTPUT_FOLDER = "unzipped"
 
 # Run work directory created inside each input root by the work pool
@@ -6,7 +8,13 @@ WORK_DIR_PREFIX = "temp.deepunzip-"
 
 # Files to ignore when scanning directories
 # 扫描目录时忽略的文件
-IGNORED_FILES = {".DS_Store", "thumbs.db", "desktop.ini", "passwords.txt"}
+IGNORED_FILES = {
+    ".DS_Store",
+    "thumbs.db",
+    "desktop.ini",
+    "passwords.txt",
+    HISTORY_FILENAME,
+}
 
 
 # Multi-part archive patterns for detecting split archives

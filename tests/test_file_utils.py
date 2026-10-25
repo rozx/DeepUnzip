@@ -328,6 +328,16 @@ class TestReadDir:
         assert not any(os.sep + "unzipped" + os.sep in path for path in result)
         assert any("nested.7z" in path for path in result)
 
+    def test_read_directory_skips_the_rename_history_file(self):
+        """A leftover rename-history file is the tool's own state, not input."""
+        from deepunzip.modules.rename_history import HISTORY_FILENAME
+
+        with open(os.path.join(self.test_dir, HISTORY_FILENAME), "w") as f:
+            f.write("{}")
+        result = fu.read_dir([self.test_dir])
+        assert not any(HISTORY_FILENAME in path for path in result)
+        assert any("file1.txt" in path for path in result)
+
     def test_read_individual_files(self):
         """Test reading individual file paths."""
         result = fu.read_dir(self.test_files)
