@@ -83,7 +83,7 @@ Rich measures CJK width correctly (`cell_len`), so columns align in real termina
 
 ### D3. Progress from 7-Zip
 
-Extraction runs `7z x … -bsp1 -bso0 -bse1`: the percentage stream goes to stdout, and normal output is suppressed. The process is read line by line with `Popen` instead of `subprocess.run`. Percent lines (`NN%` plus an optional byte count) become `Progress` events, throttled to one per 200 ms or per 1% change. stderr is still captured for `_raise_for_7z_error`.
+Extraction runs `7z x … -bsp2`: the percentage line goes to stderr together with 7-Zip's `ERROR:` lines, and stdout keeps the normal output that `_raise_for_7z_error` also reads. The process runs under `Popen` (`modules/seven_zip_progress.py`): stderr is parsed as it arrives and stdout is drained in a thread. Percent segments (`NN%`, optionally followed by a file count and name) become percentages; every other non-blank segment is kept as the error text. 7-Zip prints no byte counts, so the engine estimates bytes done from the percentage and the size of the archive's volumes. The engine emits a `Progress` event whenever the percentage changes; `JsonRenderer` throttles further (one per 200 ms or per 1% change).
 
 Listing and probing (`7z l`) stay with `subprocess.run`.
 
@@ -147,7 +147,7 @@ A run is non-interactive when `--json` is set or stdin is not a TTY. In non-inte
 
 - [Scripts that relied on exit 0 / 1] → Documented as **BREAKING** in the v2.0.0 upgrade notes, which explain the mapping. Code 2 for a missing engine makes it distinguishable from a partial run.
 - [Single-language output surprises users who liked bilingual output] → `DEEPUNZIP_LANG` forces either language, and the README documents it.
-- [Reading 7-Zip progress line by line on Windows] → `-bsp1` writes `\b`-separated updates without newlines. The reader therefore splits on `\b`, `\r` and `\n`. It is covered by a unit test with a recorded byte stream.
+- [Reading 7-Zip progress line by line on Windows] → 7-Zip redraws its progress line in place without newlines: with `\r` when the stream is redirected (recorded from 7-Zip 26.03 on Windows), with `\b` on a console. The reader therefore splits on `\b`, `\r` and `\n`. It is covered by unit tests with the recorded byte stream.
 - [Lineage tree too large for big runs] → Containers with no notable children (single level, everything extracted) collapse to one line, and each tree level shows the first 50 children plus "… and N more".
 - [Catalog drift] → The completeness test runs in CI. `CLAUDE.md` forbids inline user-facing strings.
 
@@ -156,7 +156,7 @@ A run is non-interactive when `--json` is set or stdin is not a TTY. In non-inte
 This change ships in **v2.0.0** with `redesign-work-pool-extraction`. It is committed directly on `release/v2.0.0` after that change's stage 2, and released through the single release PR. The commit stages are:
 
 1. Event types, `i18n.py` with the catalog and its tests, and the three renderers with recorded-event tests.
-2. Wire the renderers into the pool driver and `main.py`. Add `--json`, exit codes, prompt gating, and `-bsp1` progress. Remove `rich_utils.py`.
+2. Wire the renderers into the pool driver and `main.py`. Add `--json`, exit codes, prompt gating, and `-bsp2` progress. Remove `rich_utils.py`.
 3. Docs: the `CLAUDE.md` / `AGENTS.md` conventions, the README `--json` and exit-code section, and the upgrade notes in `docs/releaseNotes/v2.0.0.md`.
 
 ## Open Questions

@@ -14,7 +14,7 @@ The work-pool redesign (`redesign-work-pool-extraction`) replaces the step-by-st
 
 - **New human output: progress plus a lineage tree.**
   - A header line, then one line per finished item (container opened, set assembled, item unresolved).
-  - In an interactive terminal, two live progress lines: overall progress (items resolved / items known) and the current item. The current item's percentage, size and speed come from 7-Zip's `-bsp1` progress stream.
+  - In an interactive terminal, two live progress lines: overall progress (items resolved / items known) and the current item. The current item's percentage, size and speed come from 7-Zip's `-bsp2` progress stream.
   - At the end, the live lines are replaced by a **lineage tree**: each multipart set lists its volumes and the source container each came from, including the original cloaked name. It is followed by a summary of output files, deleted or kept sources, and unresolved items with reasons.
 - **Plain output when not a terminal.** Live rendering is used only when stdout is a TTY. Otherwise the same item lines and summary are printed without animation or progress frames. `NO_COLOR` is honored.
 - **Single-language output that follows the system language.**
@@ -48,7 +48,7 @@ The work-pool redesign (`redesign-work-pool-extraction`) replaces the step-by-st
 - **Code**:
   - `modules/rich_utils.py` is replaced by renderers (tree/live, plain, JSON) that consume typed events emitted by the work pool. Today's ~40 `print_*` helpers go away.
   - New `modules/i18n.py`: a catalog plus language detection.
-  - `archive_utils`: run 7-Zip with `-bsp1` and stream its progress.
+  - `archive_utils`: run 7-Zip with `-bsp2` and stream its progress.
   - `main.py`: the `--json` flag, exit codes, and prompt gating.
 - **Depends on** `redesign-work-pool-extraction`, whose rounds, sets and lineage these events describe. Ships with it in **v2.0.0**.
 - **Tests**: a catalog completeness test (every key has zh and en); renderer tests that feed recorded event sequences; JSON schema tests; exit-code tests; non-TTY tests (no ANSI or progress frames). 7-Zip stays mocked.

@@ -2,7 +2,7 @@ import subprocess
 import os
 import shutil
 import tempfile
-from typing import List, Dict, Optional, Tuple
+from typing import Callable, List, Dict, Optional, Tuple
 import re
 from complex_unzip_tool_v2.modules.rich_utils import (
     print_warning,
@@ -17,6 +17,7 @@ from complex_unzip_tool_v2.modules.archive_extension_utils import (  # noqa: F40
 )
 from complex_unzip_tool_v2.modules.utils import sanitize_path, sanitize_filename
 from complex_unzip_tool_v2.modules.const import PATH_ERROR_KEYWORDS
+from complex_unzip_tool_v2.modules import seven_zip_progress
 from complex_unzip_tool_v2.modules.seven_zip_runtime import (
     bundled_engine_path,
     resolve_seven_zip_path,
@@ -62,6 +63,7 @@ def _build_7z_extract_cmd(
     archive_path: str,
     overwrite: bool = True,
     specific_files: Optional[List[str]] = None,
+    progress: bool = False,
 ) -> List[str]:
     """Build a standardized 7z extract command with consistent argument order."""
     cmd = [seven_zip_path, "x", _build_password_arg(password), f"-o{output_path}"]
@@ -70,6 +72,9 @@ def _build_7z_extract_cmd(
         cmd.append("-y")
     else:
         cmd.append("-aos")
+
+    if progress:
+        cmd.append("-bsp2")  # percentages on stderr; see seven_zip_progress
 
     cmd.append(archive_path)
 
@@ -89,6 +94,23 @@ def _run_7z_cmd(cmd: List[str]) -> Tuple[str, str, int]:
     )
     stdout, stderr = _decode_subprocess_output(result.stdout, result.stderr)
     return stdout, stderr, result.returncode
+
+
+def _stream_7z_cmd(
+    cmd: List[str], on_progress: Callable[[int], None]
+) -> Tuple[str, str, int]:
+    """Like _run_7z_cmd, reporting 7-Zip's percentages while it runs."""
+    out, err, code = seven_zip_progress.run_with_progress(cmd, on_progress)
+    stdout, stderr = _decode_subprocess_output(out, err)
+    return stdout, stderr, code
+
+
+def _run_extract_cmd(
+    cmd: List[str], on_progress: Optional[Callable[[int], None]]
+) -> Tuple[str, str, int]:
+    if on_progress is None:
+        return _run_7z_cmd(cmd)
+    return _stream_7z_cmd(cmd, on_progress)
 
 
 def _raise_for_7z_error(
@@ -624,6 +646,7 @@ def extractArchiveWith7z(
     seven_zip_path: Optional[str] = None,
     overwrite: bool = True,
     specific_files: Optional[List[str]] = None,
+    on_progress: Optional[Callable[[int], None]] = None,
 ) -> bool:
     """
     Extract archive using 7z.exe with optional password support.
@@ -635,6 +658,7 @@ def extractArchiveWith7z(
         seven_zip_path (str): Path to 7z.exe executable (default: auto-detect)
         overwrite (bool): Whether to overwrite existing files (default: True)
         specific_files (List[str], optional): List of specific files to extract
+        on_progress (callable, optional): Called with 7-Zip's percentage
 
     Returns:
         bool: True if extraction successful
@@ -666,10 +690,11 @@ def extractArchiveWith7z(
         archive_path=archive_path,
         overwrite=overwrite,
         specific_files=specific_files,
+        progress=on_progress is not None,
     )
 
     try:
-        stdout, stderr, code = _run_7z_cmd(cmd)
+        stdout, stderr, code = _run_extract_cmd(cmd, on_progress)
         try:
             _raise_for_7z_error(code, stderr, archive_path, stdout=stdout)
         except ArchivePasswordError:
@@ -690,6 +715,7 @@ def extractArchiveWith7z(
                     seven_zip_path,
                     overwrite,
                     specific_files,
+                    on_progress,
                 )
             raise
         return True
@@ -704,6 +730,7 @@ def _extractWithSanitizedPaths(
     seven_zip_path: Optional[str] = None,
     overwrite: bool = True,
     specific_files: Optional[List[str]] = None,
+    on_progress: Optional[Callable[[int], None]] = None,
 ) -> bool:
     """
     Extract archive using a temporary directory with sanitized paths.
@@ -726,10 +753,11 @@ def _extractWithSanitizedPaths(
             archive_path=archive_path,
             overwrite=overwrite,
             specific_files=specific_files,
+            progress=on_progress is not None,
         )
 
         # Execute extraction to temp directory
-        stdout, stderr, code = _run_7z_cmd(temp_cmd)
+        stdout, stderr, code = _run_extract_cmd(temp_cmd, on_progress)
         if code != 0:
             _raise_for_7z_error(code, stderr, archive_path, stdout=stdout)
 

@@ -2,45 +2,45 @@ The tasks follow TDD with mocked 7-Zip. They are committed directly on `release/
 
 ## 1. Events and localization
 
-- [ ] 1.1 Finalize the typed event dataclasses that the work pool emits (`RunStarted`, `RootStarted`, `RoundStarted`, `ItemOpened`, `SetAssembled`, `ItemUnresolved`, `Progress`, `PromptNeeded`, `RootFinished` with lineage snapshot, `RunFinished`). Record event sequences from the work-pool regression tests as fixtures.
-- [ ] 1.2 `modules/i18n.py`:
+- [x] 1.1 Finalize the typed event dataclasses that the work pool emits (`RunStarted`, `RootStarted`, `RoundStarted`, `ItemOpened`, `SetAssembled`, `ItemUnresolved`, `Progress`, `PromptNeeded`, `RootFinished` with lineage snapshot, `RunFinished`). Record event sequences from the work-pool regression tests as fixtures.
+- [x] 1.2 `modules/i18n.py`:
   - a catalog `{key: {"en", "zh"}}` with a `t(key, **kw)` accessor;
   - language resolution in this order: `DEEPUNZIP_LANG`, then the Windows `GetUserDefaultUILanguage` (via `ctypes`), then POSIX `LC_ALL` / `LC_MESSAGES` / `LANG`, then English;
   - unsupported override values are ignored;
   - tests with a monkeypatched environment and `ctypes`.
-- [ ] 1.3 Catalog completeness test: fail when any key lacks `en` or `zh`. At runtime, a missing `zh` falls back to `en`.
+- [x] 1.3 Catalog completeness test: fail when any key lacks `en` or `zh`. At runtime, a missing `zh` falls back to `en`.
 - [ ] 1.4 Move every user-facing string into the catalog, including Typer help and option text. That covers `main.py`, `archive_utils.py`, `file_utils.py`, `cloaked_file_detector.py`, `rename_history.py` and `password_util.py`. No inline bilingual strings remain.
 
 ## 2. Renderers
 
-- [ ] 2.1 Renderer selection at startup:
+- [x] 2.1 Renderer selection at startup:
   - `--json` → `JsonRenderer`;
   - stdout is a TTY → `TreeRenderer`;
   - otherwise → `PlainRenderer`.
 
   Create the `Console` with `force_terminal=None`, keep the Windows UTF-8 reconfiguration, and honor `NO_COLOR`.
-- [ ] 2.2 `PlainRenderer`:
+- [x] 2.2 `PlainRenderer`:
   - item lines, capped at 200 per root with a "… and N more" line;
   - the lineage tree and summary;
   - test that redirected output has no cursor-movement sequences and no repeated lines.
-- [ ] 2.3 `TreeRenderer`: Rich `Live`, with the overall and current-item lines below the item lines. The final lineage tree shows:
+- [x] 2.3 `TreeRenderer`: Rich `Live`, with the overall and current-item lines below the item lines. The final lineage tree shows:
   - for each set, its volumes with their source containers and uncloaked original names;
   - unresolved items with reason and location;
   - collapsed single-level containers, at most 50 children per level, and middle truncation of long names.
-- [ ] 2.4 `JsonRenderer`:
+- [x] 2.4 `JsonRenderer`:
   - one object per line, each with `event` and `schema_version: 1`;
   - event types `start` / `root` / `round` / `item` / `set` / `progress` / `unresolved` / `error` / `summary`;
   - `summary` is always last;
   - `progress` is throttled to one per 200 ms or per 1% change;
   - nothing else is written to stdout;
   - the event stream is identical under `zh` and `en`.
-- [ ] 2.5 Password masking test: feed events from a run with a known password book through all three renderers. Assert that no password text appears, and that `password #N` / `password_index` is used instead.
+- [x] 2.5 Password masking test: feed events from a run with a known password book through all three renderers. Assert that no password text appears, and that `password #N` / `password_index` is used instead.
 
 ## 3. 7-Zip progress
 
-- [ ] 3.1 Run extraction as `7z x … -bsp1 -bso0 -bse1` through `Popen`, still capturing stderr for `_raise_for_7z_error`.
-- [ ] 3.2 Progress stream parser: split on `\b`, `\r` and `\n`, and extract the percentage and byte counts. Test it with a recorded Windows byte stream.
-- [ ] 3.3 Turn the parsed values into `Progress` events (percent, bytes done and total, speed), throttled as in 2.4.
+- [x] 3.1 Run extraction as `7z x … -bsp2` through `Popen`: progress and `ERROR:` lines arrive on stderr, stdout keeps the normal output, and both still reach `_raise_for_7z_error`.
+- [x] 3.2 Progress stream parser: split on `\b`, `\r` and `\n`, and extract the percentage (7-Zip prints no byte counts). Test it with a recorded Windows byte stream.
+- [x] 3.3 Turn the parsed values into `Progress` events (percent, bytes done and total; the terminal view derives the speed), emitted when the percentage changes and throttled as in 2.4.
 
 ## 4. CLI wiring
 

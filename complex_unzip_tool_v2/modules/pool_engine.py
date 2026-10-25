@@ -6,11 +6,12 @@ Implements `work_pool.Engine` on top of the existing 7-Zip helpers: archive
 classification, one-level extraction and header-only probes, each trying the
 empty password first and then the password book in order. Outcomes carry the
 password's position in the book (password #N) so output never shows it.
+With an event sink, extraction reports 7-Zip's percentage as Progress events.
 """
 
 import os
 import shutil
-from typing import Optional, Protocol
+from typing import Callable, Optional, Protocol
 
 from complex_unzip_tool_v2.classes.ArchiveTypes import (
     ArchiveCorruptedError,
@@ -23,7 +24,9 @@ from complex_unzip_tool_v2.classes.ArchiveTypes import (
     SevenZipNotFoundError,
 )
 from complex_unzip_tool_v2.modules import archive_utils
+from complex_unzip_tool_v2.modules import multipart_assembly as ma
 from complex_unzip_tool_v2.modules.const import PATH_ERROR_KEYWORDS
+from complex_unzip_tool_v2.modules.events import Event, Progress
 from complex_unzip_tool_v2.modules.work_pool import Outcome, PasswordRef
 
 
@@ -40,16 +43,54 @@ def _reset_dir(path: str) -> None:
     os.makedirs(path, exist_ok=True)
 
 
+def _archive_bytes(archive: str) -> Optional[int]:
+    """Size of the archive plus its sibling volumes (an assembly folder is one set)."""
+    try:
+        volume = ma.parse_volume_name(archive)
+        if volume is None:
+            return os.path.getsize(archive)
+        folder = os.path.dirname(archive)
+        total = 0
+        for name in os.listdir(folder):
+            sibling = ma.parse_volume_name(name)
+            if sibling is not None and sibling.key == volume.key:
+                total += os.path.getsize(os.path.join(folder, name))
+        return total
+    except OSError:
+        return None
+
+
 class SevenZipEngine:
     """Work-pool engine backed by the bundled 7-Zip."""
 
     def __init__(
-        self, book: PasswordSource, seven_zip_path: Optional[str] = None
+        self,
+        book: PasswordSource,
+        seven_zip_path: Optional[str] = None,
+        emit: Optional[Callable[[Event], None]] = None,
     ) -> None:
         self.book = book
         self.seven_zip_path = seven_zip_path
+        self.emit = emit
 
     # ---------- helpers ----------
+
+    def _progress(self, archive: str) -> Optional[Callable[[int], None]]:
+        """A callback turning 7-Zip percentages into Progress events, or None."""
+        emit = self.emit
+        if emit is None:
+            return None
+        total = _archive_bytes(archive)
+        last: list[int] = []
+
+        def report(percent: int) -> None:
+            if last and last[0] == percent:
+                return
+            last[:] = [percent]
+            done = total * percent // 100 if total is not None else None
+            emit(Progress(archive, percent, done, total))
+
+        return report
 
     def _candidates(self, password: Optional[str]) -> list[str]:
         if password is not None:
@@ -94,6 +135,7 @@ class SevenZipEngine:
                     password=candidate,
                     seven_zip_path=self.seven_zip_path,
                     overwrite=True,
+                    on_progress=self._progress(archive),
                 )
             except ArchivePasswordError:
                 saw_password = True
