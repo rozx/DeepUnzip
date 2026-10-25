@@ -114,7 +114,7 @@ description: 准备一次发布：核对 release/x.y.z 分支与项目版本（�
    poetry run python -m scripts.release verify-notes
    poetry run python -m scripts.release verify-engines
    poetry run python -m scripts.release verify-branch "$(git branch --show-current)"
-   poetry run main --help
+   poetry run deepunzip --help
    openspec validate --specs --strict
    git diff --check
    ```

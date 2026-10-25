@@ -131,6 +131,8 @@ deepunzip [選項] <檔案或資料夾>...
 
 每個套件包含程式、內附的 7-Zip 和授權檔案，Release 頁面另有 `SHA256SUMS`。Linux 版在 Ubuntu 24.04 上建置。程式沒有程式碼簽章，macOS 版也沒有經過公證。7-Zip 的來源和校驗值見 [7z/README.md](7z/README.md)。
 
+這一版的變更見[發布說明](docs/releaseNotes/v2.0.0.md)。
+
 ## 常見問題
 
 ### 為什麼有些原始檔沒被刪除？

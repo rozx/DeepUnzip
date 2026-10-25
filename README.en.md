@@ -131,6 +131,8 @@ If a run is interrupted, the next run puts moved volumes back where they were an
 
 Each package contains the program, the bundled 7-Zip and the license files; the release page also has `SHA256SUMS`. The Linux builds are made on Ubuntu 24.04. The program is not code-signed, and the macOS builds are not notarized. See [7z/README.md](7z/README.md) for where 7-Zip comes from and its checksums.
 
+See the [release notes](docs/releaseNotes/v2.0.0.md) for what changed in this version.
+
 ## FAQ
 
 ### Why were some originals not deleted?

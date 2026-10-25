@@ -112,14 +112,14 @@ The tasks follow TDD (`CLAUDE.md`): write the failing test first, with 7-Zip moc
 ## 8. Release v2.0.0 (after `redesign-terminal-output`, `rename-to-deepunzip` and `adopt-release-ready-workflow`)
 
 - [x] 8.1 Archive the four v2.0.0 OpenSpec changes once their tasks are complete, then run `openspec validate --specs --strict`.
-- [ ] 8.2 After the maintainer approves, run the `release-ready` skill on `release/v2.0.0`. It:
+- [x] 8.2 After the maintainer approves, run the `release-ready` skill on `release/v2.0.0`. It:
   - bumps the version (`poetry run bump-major`) in its own commit;
   - writes `docs/releaseNotes/v2.0.0.md`, which opens with the rename and the old→new mapping;
   - updates the version summary, package table and release-notes link in all five READMEs;
   - runs the checks;
   - pushes;
   - opens the single release PR `release: v2.0.0`.
-- [ ] 8.3 The upgrade notes of `docs/releaseNotes/v2.0.0.md` cover:
+- [x] 8.3 The upgrade notes of `docs/releaseNotes/v2.0.0.md` cover:
   - the new executable and asset names;
   - one `unzipped/` per root;
   - end-of-run source deletion;

@@ -132,6 +132,8 @@ deepunzip [选项] <文件或文件夹>...
 
 每个包含有程序、自带的 7-Zip 和许可证文件，Release 页面另有 `SHA256SUMS`。Linux 版在 Ubuntu 24.04 上构建。程序没有做代码签名，macOS 也没有公证。7-Zip 的来源和校验值见 [7z/README.md](7z/README.md)。
 
+这一版的变化见[发布说明](docs/releaseNotes/v2.0.0.md)。
+
 ## 常见问题
 
 ### 为什么有些原文件没被删除？
