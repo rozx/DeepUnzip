@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Icon generator for Complex Unzip Tool v2
+Icon generator for DeepUnzip
 Creates a professional-looking icon for the application
 """
 

@@ -77,23 +77,23 @@ jobs:
           - target: windows-x64
             runner: windows-2025
             architecture: x64
-            executable: dist/complex-unzip-tool-v2.exe
+            executable: dist/deepunzip.exe
           - target: macos-x64
             runner: macos-15-intel
             architecture: x64
-            executable: dist/complex-unzip-tool-v2
+            executable: dist/deepunzip
           - target: macos-arm64
             runner: macos-15
             architecture: arm64
-            executable: dist/complex-unzip-tool-v2
+            executable: dist/deepunzip
           - target: linux-x64
             runner: ubuntu-24.04
             architecture: x64
-            executable: dist/complex-unzip-tool-v2
+            executable: dist/deepunzip
           - target: linux-arm64
             runner: ubuntu-24.04-arm
             architecture: arm64
-            executable: dist/complex-unzip-tool-v2
+            executable: dist/deepunzip
     env:
       PYTHONUTF8: '1'
       POETRY_NO_INTERACTION: '1'

@@ -135,5 +135,5 @@ def test_windows_cli_redirects_legacy_encoded_output_as_utf8(tmp_path, destinati
         result = subprocess.run(command, stdout=subprocess.PIPE, **kwargs)
         output = result.stdout
     assert result.returncode == 0, result.stderr
-    assert "复杂解压工具" in output.decode("utf-8")
+    assert "深度解压" in output.decode("utf-8")
     assert "错误 🚀" in result.stderr.decode("utf-8")

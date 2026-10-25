@@ -17,7 +17,7 @@ _LANG_CHINESE = 0x04  # primary language id of every Chinese LANGID
 
 CATALOG: dict[str, dict[str, str]] = {
     # ---------- product and CLI ----------
-    "product": {"en": "Complex Unzip Tool v2", "zh": "复杂解压工具 v2"},
+    "product": {"en": "DeepUnzip", "zh": "深度解压"},
     "version": {"en": "{product} {version}", "zh": "{product} {version}"},
     "cli.help": {
         "en": "Extract nested, password-protected, multipart and disguised archives.",
@@ -41,6 +41,11 @@ CATALOG: dict[str, dict[str, str]] = {
         "zh": "忽略未知选项：{token}",
     },
     "cli.pause": {"en": "Press Enter to exit...", "zh": "按回车键退出..."},
+    "cli.deprecated_alias": {
+        "en": "`{alias}` is deprecated and will be removed in 3.0.0; "
+        "use `deepunzip` (or `dz`).",
+        "zh": "`{alias}` 已弃用，将在 3.0.0 移除；请使用 `deepunzip`（或 `dz`）。",
+    },
     # ---------- errors ----------
     "error.no_input": {
         "en": "None of the given paths exists: {paths}",

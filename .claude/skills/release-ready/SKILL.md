@@ -14,7 +14,7 @@ description: 准备一次发布：核对 release/x.y.z 分支与项目版本（�
 ## 1. 确定版本与分支
 
 1. 确认工作区干净（`git status --porcelain` 为空），否则停止，请用户先提交或丢弃改动。
-2. 读取当前版本：`poetry run python -m scripts.release version`。它同时核对 `pyproject.toml`、`complex_unzip_tool_v2/__init__.py`（改名后为 `deepunzip/__init__.py`）的 `__version__` 与 `.bumpversion.cfg`，三者不一致时报错。
+2. 读取当前版本：`poetry run python -m scripts.release version`。它同时核对 `pyproject.toml`、`deepunzip/__init__.py` 的 `__version__` 与 `.bumpversion.cfg`，三者不一致时报错。
 3. 找到上一次发布：先 `git fetch --tags origin`，再 `git tag --list 'v*' --sort=-v:refname | head -1`。没有标签时视为首次发布。
 4. 读取当前分支名 `git branch --show-current`：
    - **在 `release/<版本>` 分支上**（允许 `release/v<版本>`）：分支中的版本即目标版本。
@@ -44,7 +44,7 @@ description: 准备一次发布：核对 release/x.y.z 分支与项目版本（�
 
 文件：`docs/releaseNotes/v<目标版本>.md`。发布工作流按这个路径取文件原文作为 GitHub Release 的正文，文件缺失或为空时发布失败。
 
-中英双语：每个小节先写中文，再写英文，与 `docs/releaseNotes/` 中已有说明的双语格式一致。产品名取自 `README.md` 标题。
+中英双语：每个小节先写中文，再写英文，与 `docs/releaseNotes/` 中已有说明的双语格式一致。产品名是 DeepUnzip / 深度解压（与 `README.md` 标题一致），发布包名是 `deepunzip`。
 
 ```markdown
 # <产品名> v<版本>
@@ -68,11 +68,11 @@ description: 准备一次发布：核对 release/x.y.z 分支与项目版本（�
 
 | 平台 / Platform | 文件 / File |
 | --- | --- |
-| Windows x64 | `<包名>-v<版本>-windows-x64.zip` |
-| macOS Intel | `<包名>-v<版本>-macos-x64.tar.gz` |
-| macOS Apple Silicon | `<包名>-v<版本>-macos-arm64.tar.gz` |
-| Linux x64 | `<包名>-v<版本>-linux-x64.tar.gz` |
-| Linux ARM64 | `<包名>-v<版本>-linux-arm64.tar.gz` |
+| Windows x64 | `deepunzip-v<版本>-windows-x64.zip` |
+| macOS Intel | `deepunzip-v<版本>-macos-x64.tar.gz` |
+| macOS Apple Silicon | `deepunzip-v<版本>-macos-arm64.tar.gz` |
+| Linux x64 | `deepunzip-v<版本>-linux-x64.tar.gz` |
+| Linux ARM64 | `deepunzip-v<版本>-linux-arm64.tar.gz` |
 
 `SHA256SUMS` 列出各文件的校验和。 / `SHA256SUMS` lists the checksum of every file.
 

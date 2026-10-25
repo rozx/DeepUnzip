@@ -243,9 +243,7 @@ class TestCloakedFileDetector:
 
     def test_init_with_invalid_rules_file(self):
         """Test initialization with invalid rules file."""
-        with patch(
-            "deepunzip.modules.cloaked_file_detector.notice"
-        ) as mock_error:
+        with patch("deepunzip.modules.cloaked_file_detector.notice") as mock_error:
             detector = CloakedFileDetector("nonexistent_file.json")
             assert len(detector.rules) == 0
             mock_error.assert_called_once()
@@ -364,9 +362,7 @@ class TestCloakedFileDetector:
         result = detector._generate_new_filename("", "", "1", rule)
         assert result is None
 
-    @patch(
-        "deepunzip.modules.cloaked_file_detector.detect_archive_extension"
-    )
+    @patch("deepunzip.modules.cloaked_file_detector.detect_archive_extension")
     def test_generate_new_filename_auto_type(self, mock_detect, detector):
         """Test generating filename with auto type detection."""
         mock_detect.return_value = "rar"
@@ -388,9 +384,7 @@ class TestCloakedFileDetector:
         finally:
             os.unlink(temp_path)
 
-    @patch(
-        "deepunzip.modules.cloaked_file_detector.detect_archive_extension"
-    )
+    @patch("deepunzip.modules.cloaked_file_detector.detect_archive_extension")
     def test_generate_new_filename_auto_type_fallback(self, mock_detect, detector):
         """Test auto type detection fallback to 7z."""
         mock_detect.return_value = None
@@ -411,18 +405,14 @@ class TestCloakedFileDetector:
         finally:
             os.unlink(temp_path)
 
-    @patch(
-        "deepunzip.modules.cloaked_file_detector.detect_archive_extension"
-    )
+    @patch("deepunzip.modules.cloaked_file_detector.detect_archive_extension")
     def test_verify_with_signature_valid(self, mock_detect, detector):
         """Test signature verification with valid archive."""
         mock_detect.return_value = "7z"
         result = detector._verify_with_signature("test.file", "7z")
         assert result is True
 
-    @patch(
-        "deepunzip.modules.cloaked_file_detector.detect_archive_extension"
-    )
+    @patch("deepunzip.modules.cloaked_file_detector.detect_archive_extension")
     def test_verify_with_signature_no_detection(self, mock_detect, detector):
         """No archive token in the name and no signature -> reject the guess.
 
@@ -435,9 +425,7 @@ class TestCloakedFileDetector:
         result = detector._verify_with_signature("test.file", "7z")
         assert result is False
 
-    @patch(
-        "deepunzip.modules.cloaked_file_detector.detect_archive_extension"
-    )
+    @patch("deepunzip.modules.cloaked_file_detector.detect_archive_extension")
     @patch("deepunzip.modules.cloaked_file_detector.notice")
     def test_verify_with_signature_exception(self, mock_warning, mock_detect, detector):
         """On verification error, be conservative and do not rename."""

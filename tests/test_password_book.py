@@ -31,7 +31,7 @@ def test_password_book_uses_tool_directory_across_working_directories(
     cwd_book = working / "passwords.txt"
     cwd_book.write_text("unrelated\n", encoding="utf-8")
     monkeypatch.setattr(sys, "frozen", frozen, raising=False)
-    monkeypatch.setattr(sys, "executable", str(tool / "cuz.exe"))
+    monkeypatch.setattr(sys, "executable", str(tool / "deepunzip.exe"))
     module = importlib.import_module("deepunzip.classes.PasswordBook")
     monkeypatch.setattr(
         module, "__file__", str(tool / "deepunzip/classes/PasswordBook.py")

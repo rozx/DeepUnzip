@@ -358,6 +358,22 @@ def cli() -> None:
     app()
 
 
+def _deprecated_alias(alias: str) -> None:
+    if "--json" not in sys.argv[1:]:
+        typer.echo(t("cli.deprecated_alias", alias=alias), err=True)
+    app()
+
+
+def main_alias() -> None:
+    """`main`: deprecated alias of `deepunzip` (removed in 3.0.0)."""
+    _deprecated_alias("main")
+
+
+def cuz_alias() -> None:
+    """`cuz`: deprecated alias of `deepunzip` (removed in 3.0.0)."""
+    _deprecated_alias("cuz")
+
+
 def main() -> None:
     """Application entry point."""
     try:

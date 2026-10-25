@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Build script for creating standalone executable of Complex Unzip Tool v2
+Build script for creating standalone executable of DeepUnzip
 """
 
 import platform
@@ -111,7 +111,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [('X utf8', None, 'OPTION')],  # Preserve Chinese output in redirected CI logs.
-    name='complex-unzip-tool-v2',
+    name='deepunzip',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -181,7 +181,7 @@ def main() -> int:
 
         # Check if executable was created
         suffix = ".exe" if platform.system() == "Windows" else ""
-        exe_path = dist_dir / f"complex-unzip-tool-v2{suffix}"
+        exe_path = dist_dir / f"deepunzip{suffix}"
         if exe_path.exists():
             size_mb = exe_path.stat().st_size / (1024 * 1024)
             print(f"📦 Executable created: {exe_path}")

@@ -2,22 +2,22 @@ These tasks are committed directly on `release/v2.0.0` (single release PR) as th
 
 ## 1. Mechanical rename (rename stage)
 
-- [ ] 1.1 Run `git mv complex_unzip_tool_v2 deepunzip` and rewrite every import in the package, `tests/` and `scripts/`. The commit contains no behavior changes.
-- [ ] 1.2 `pyproject.toml`:
+- [x] 1.1 Run `git mv complex_unzip_tool_v2 deepunzip` and rewrite every import in the package, `tests/` and `scripts/`. The commit contains no behavior changes.
+- [x] 1.2 `pyproject.toml`:
   - name `deepunzip`, the new description, and `packages = [{include = "deepunzip"}]`;
   - scripts `deepunzip` and `dz`, plus `main` and `cuz` as deprecated aliases.
 
   Each alias prints a one-line stderr notice that names `deepunzip`, suppressed under `--json`. Test both aliases.
-- [ ] 1.3 Point the tooling at the new names:
+- [x] 1.3 Point the tooling at the new names:
   - `.bumpversion.cfg` file path;
   - `scripts/build.py` (spec name, hidden imports, data path, `dist/deepunzip(.exe)`);
   - `scripts/release.py` (executable and `deepunzip-vX.Y.Z-<target>` asset names);
   - `scripts/smoke_test.py`, `scripts/standalone_main.py` and `scripts/generate_icon.py`.
-- [ ] 1.4 Update the executable paths and the `compileall` package path in `.github/workflows/ci.yml`. Check that `release.yml` uses no hardcoded repository name.
-- [ ] 1.5 Set the product name in the catalog (version output, help header) to DeepUnzip / 深度解压. Test `deepunzip --version` in both languages.
-- [ ] 1.6 Update the `release-ready` skill for the new names: the package path `deepunzip/__init__.py`, the product name, and the `deepunzip-v…` asset names in its download table.
+- [x] 1.4 Update the executable paths and the `compileall` package path in `.github/workflows/ci.yml`. Check that `release.yml` uses no hardcoded repository name.
+- [x] 1.5 Set the product name in the catalog (version output, help header) to DeepUnzip / 深度解压. Test `deepunzip --version` in both languages.
+- [x] 1.6 Update the `release-ready` skill for the new names: the package path `deepunzip/__init__.py`, the product name, and the `deepunzip-v…` asset names in its download table.
 - [ ] 1.7 Update `CLAUDE.md`, `AGENTS.md`, `openspec/project.md` and current specs to the new names. Add a test that fails if the old name appears outside the allowlist (historical release notes, archived OpenSpec changes, the v2.0.0 rename notice).
-- [ ] 1.8 Add a test that a `.unzip-rename-history.tmp.json` written by 1.3.2 is still detected and recovered.
+- [x] 1.8 Add a test that a `.unzip-rename-history.tmp.json` written by 1.3.2 is still detected and recovered.
 - [ ] 1.9 Quality gates: `pytest -q`, `flake8`, `mypy`, `black`. Build `dist/deepunzip.exe` locally on Windows and run it with `--version` / `--help`.
 
 ## 2. Demo archives and screenshots (docs stage)

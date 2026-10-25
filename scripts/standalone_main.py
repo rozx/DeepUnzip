@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Standalone entry point for Complex Unzip Tool v2
+Standalone entry point for DeepUnzip
 This script is designed to work with PyInstaller builds.
 """
 

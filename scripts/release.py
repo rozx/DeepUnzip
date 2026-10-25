@@ -86,7 +86,7 @@ def package(root: Path, target: str, output: Path) -> Path:
     """Archive a tested standalone executable with its redistribution notices."""
     suffix, engine_dir, extension = TARGETS[target]
     version = read_version(root)
-    executable = f"complex-unzip-tool-v2{suffix}"
+    executable = f"deepunzip{suffix}"
     files = {
         executable: root / "dist" / executable,
         "LICENSE": root / "LICENSE",
@@ -99,7 +99,7 @@ def package(root: Path, target: str, output: Path) -> Path:
         if not path.is_file():
             raise FileNotFoundError(path)
     output.mkdir(parents=True, exist_ok=True)
-    archive = output / f"complex-unzip-tool-v2-v{version}-{target}{extension}"
+    archive = output / f"deepunzip-v{version}-{target}{extension}"
     if extension == ".zip":
         with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as zipped:
             for name, path in files.items():
@@ -118,7 +118,7 @@ def package(root: Path, target: str, output: Path) -> Path:
 def verify_assets(directory: Path, version: str) -> Path:
     """Reject incomplete or mixed releases before producing the public index."""
     names = [
-        f"complex-unzip-tool-v2-v{version}-{target}{values[2]}"
+        f"deepunzip-v{version}-{target}{values[2]}"
         for target, values in TARGETS.items()
     ]
     expected = set(names) | {name + ".sha256" for name in names}

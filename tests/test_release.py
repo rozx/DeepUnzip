@@ -11,9 +11,7 @@ from scripts import release
 @pytest.fixture
 def project(tmp_path):
     (tmp_path / "deepunzip").mkdir()
-    (tmp_path / "deepunzip" / "__init__.py").write_text(
-        '__version__ = "1.3.0"\n'
-    )
+    (tmp_path / "deepunzip" / "__init__.py").write_text('__version__ = "1.3.0"\n')
     (tmp_path / "pyproject.toml").write_text('[tool.poetry]\nversion = "1.3.0"\n')
     (tmp_path / ".bumpversion.cfg").write_text(
         "[bumpversion]\ncurrent_version = 1.3.0\n"
@@ -78,11 +76,11 @@ def test_release_version_rejects_inconsistent_or_nonstable_versions(
     [
         (
             "windows-x64",
-            "complex-unzip-tool-v2.exe",
+            "deepunzip.exe",
             "7z/windows-x64/License.txt",
             ".zip",
         ),
-        ("macos-arm64", "complex-unzip-tool-v2", "7z/macos/License.txt", ".tar.gz"),
+        ("macos-arm64", "deepunzip", "7z/macos/License.txt", ".tar.gz"),
     ],
 )
 def test_package_contains_executable_notices_and_checksum(
@@ -100,7 +98,7 @@ def test_package_contains_executable_notices_and_checksum(
     for name in ("LICENSE", "README.md", "README.en.md", "7z/manifest.json"):
         (project / name).write_text("documentation")
     archive = release.package(project, target, project / "artifacts")
-    assert archive.name == f"complex-unzip-tool-v2-v1.3.0-{target}{suffix}"
+    assert archive.name == f"deepunzip-v1.3.0-{target}{suffix}"
     expected_names = {
         executable,
         "LICENSE",
@@ -133,7 +131,7 @@ def release_assets(directory):
         "linux-arm64",
     ):
         extension = "zip" if target == "windows-x64" else "tar.gz"
-        archive = directory / f"complex-unzip-tool-v2-v1.3.0-{target}.{extension}"
+        archive = directory / f"deepunzip-v1.3.0-{target}.{extension}"
         archive.write_bytes(target.encode())
         digest = hashlib.sha256(archive.read_bytes()).hexdigest()
         expected[archive.name] = f"{digest}  {archive.name}\n"
@@ -153,7 +151,7 @@ def test_verify_complete_release_writes_checksum_index(tmp_path):
 @pytest.mark.parametrize("problem", ["missing", "tampered", "unexpected"])
 def test_incomplete_or_tampered_release_is_rejected(tmp_path, problem):
     release_assets(tmp_path)
-    archive = tmp_path / "complex-unzip-tool-v2-v1.3.0-linux-x64.tar.gz"
+    archive = tmp_path / "deepunzip-v1.3.0-linux-x64.tar.gz"
     if problem == "missing":
         archive.unlink()
     elif problem == "tampered":

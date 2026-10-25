@@ -739,7 +739,7 @@ def _extractWithSanitizedPaths(
 
     try:
         # Create a temporary directory for extraction
-        temp_dir = tempfile.mkdtemp(prefix="complex_unzip_temp_")
+        temp_dir = tempfile.mkdtemp(prefix="deepunzip-temp-")
 
         # Try extracting to temp directory first
         temp_cmd = _build_7z_extract_cmd(

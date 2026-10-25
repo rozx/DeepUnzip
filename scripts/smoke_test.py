@@ -26,7 +26,7 @@ def smoke(executable: Path | None = None) -> None:
         else [sys.executable, "-m", "deepunzip"]
     )
     engine = resolve_seven_zip_path()
-    with tempfile.TemporaryDirectory(prefix="cuz-smoke-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="deepunzip-smoke-") as temporary:
         root = Path(temporary)
         if executable:
             portable = root / "portable tool"

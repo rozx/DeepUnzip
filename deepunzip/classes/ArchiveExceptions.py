@@ -1,5 +1,5 @@
 """
-Archive-related exception classes and types for the complex unzip tool.
+Archive-related exception classes and types for DeepUnzip.
 
 This module defines custom exception classes and structured types used
 throughout the archive processing functionality.
