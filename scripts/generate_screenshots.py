@@ -3,8 +3,8 @@
 `record` runs the real work pool and 7-Zip on a copy of the demo set (see
 scripts/make_demo_archives.py) and stores its events in
 tests/fixtures/demo_events.json. `render` (the default) replays those events
-through the human renderer and writes docs/images/terminal-zh.svg and
-terminal-en.svg. Rendering needs neither 7-Zip nor archives, so it is
+through the human renderer and writes docs/images/terminal-<lang>.svg for each
+output language. Rendering needs neither 7-Zip nor archives, so it is
 deterministic; it shows the screen a terminal run leaves behind (the live
 progress lines are transient).
 
@@ -296,7 +296,7 @@ def render_svg(language: str, fixture: Path = FIXTURE) -> str:
 def render(images: Path = IMAGES, fixture: Path = FIXTURE) -> list[Path]:
     images.mkdir(parents=True, exist_ok=True)
     written = []
-    for language in ("zh", "en"):
+    for language in i18n.LANGUAGES:
         path = images / f"terminal-{language}.svg"
         path.write_text(render_svg(language, fixture), encoding="utf-8")
         written.append(path)

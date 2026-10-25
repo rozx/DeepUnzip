@@ -33,9 +33,9 @@ v2.0.0 already changes the extraction flow and the terminal output, so it is the
 
   The content is rewritten for 2.0.0: what it solves, a screenshot and demo, features, quick start, usage (`--json`, exit codes, `DEEPUNZIP_LANG`), how it works, the release package table, FAQ, license and acknowledgment.
 - **Screenshots generated, not hand-made:**
-  - `scripts/generate_screenshots.py` renders SVG screenshots of the real terminal renderer (Chinese and English) from a recorded demo event sequence.
+  - `scripts/generate_screenshots.py` renders SVG screenshots of the real terminal renderer, one per output language, from a recorded demo event sequence.
   - A VHS tape (`docs/demo.tape`) records an animated GIF of a real run against synthetic demo archives created by `scripts/make_demo_archives.py`.
-  - Assets live in `docs/images/`. The Traditional Chinese README uses the Chinese assets; the Japanese and Korean READMEs use the English ones.
+  - Assets live in `docs/images/`, one screenshot and one GIF per language; each README uses its own language's assets. The terminal output itself supports the same five languages (`redesign-terminal-output`).
 - Repository docs and tooling follow the new name:
   - `CLAUDE.md`, `AGENTS.md`, `openspec/project.md`;
   - the build, release and smoke scripts, and the CI and release workflows;

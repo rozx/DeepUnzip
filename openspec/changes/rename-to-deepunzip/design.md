@@ -22,7 +22,6 @@ The README has a Chinese default (`README.md`) and an English version (`README.e
 
 **Non-Goals:**
 - Publishing to PyPI. The distribution name is chosen so that it would be possible later.
-- Translating the terminal output beyond zh/en (see `redesign-terminal-output`).
 - Rewriting historical release notes or archived specs.
 
 ## Decisions
@@ -80,17 +79,16 @@ Translations are written from the Chinese and English masters. Japanese and Kore
 
 ### D4. Screenshot pipeline
 
-- **SVG**: `scripts/generate_screenshots.py` feeds a recorded event sequence (the demo run) into `TreeRenderer` with `Console(record=True, width=100)`, once per language (`DEEPUNZIP_LANG=zh` and `en`), and writes them with `console.save_svg(...)`:
-  - `docs/images/terminal-zh.svg`;
-  - `docs/images/terminal-en.svg`.
+- **SVG**: `scripts/generate_screenshots.py` replays a recorded event sequence (the demo run) through the human renderer with a recording `Console(width=100)`, once per output language, and writes `docs/images/terminal-<lang>.svg` for `zh`, `en`, `zh-TW`, `ja` and `ko`. It shows the screen a terminal run leaves behind; the live progress lines are transient. Rich sizes SVG text by character count, so the script widens each span to its terminal cells (CJK characters take two).
 
   No 7-Zip and no real archives are needed, so the output is deterministic.
 - **GIF**: `docs/demo.tape` (a [VHS](https://github.com/charmbracelet/vhs) script) runs the real `deepunzip` on demo archives:
   - `scripts/make_demo_archives.py` builds the demo archives with the bundled 7-Zip: synthetic content, demo passwords in a demo `passwords.txt`, cloaked names, and a cross-container volume set, mirroring the real-world case;
-  - the tape writes `docs/images/demo-zh.gif` and `docs/images/demo-en.gif`.
+  - the tape records the English run into `docs/images/demo-en.gif`; `scripts/record_demo.py` derives one tape per output language from it and runs VHS for each, writing `docs/images/demo-<lang>.gif`.
 
-  VHS is a developer-only external tool, not a Python dependency. The development section of `README` documents how to install and run it.
-- **Which README uses which assets**: the Traditional Chinese README uses the `-zh` assets; the Japanese and Korean READMEs use the `-en` assets.
+  VHS is a developer-only external tool, not a Python dependency. It runs on macOS, Linux or WSL. The development section of `README` documents how to install and run it.
+- **Which README uses which assets**: each README uses the assets of its own language.
+- **Badges**: latest release, total downloads, latest-release downloads, release date, CI status, stars, license and platforms (shields.io, linked to the repository).
 - **Size**: the GIFs target under 2 MB each (short tape, 100×28 terminal).
 
 *Alternatives considered:*
@@ -107,7 +105,7 @@ Translations are written from the Chinese and English masters. Japanese and Kore
 - [Contributors with open branches get large conflicts] → Commit the rename after the work-pool and terminal-output commits, as the last code change on `release/v2.0.0`, and announce it in the release PR.
 - [Users looking for `complex-unzip-tool-v2.exe`] → The release notes start with the rename and the old→new mapping. README badges and links use the new repository. GitHub redirects old links.
 - [Translation quality in ja/ko] → Request a native review. The structure test keeps sections aligned, even if a wording is later improved.
-- [VHS availability on Windows] → Record the GIF on macOS/Linux, or in the CI job; the SVGs can be generated anywhere.
+- [VHS availability on Windows] → Record the GIFs in WSL, on macOS or on Linux; the SVGs can be generated anywhere.
 
 ## Migration Plan
 

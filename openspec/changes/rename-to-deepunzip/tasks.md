@@ -29,7 +29,8 @@ These tasks are committed directly on `release/v2.0.0` (single release PR) as th
   - a volume set split across two containers.
 - [x] 2.2 Record the demo run's event sequence as a fixture (from the real pool on the demo set).
 - [x] 2.3 `scripts/generate_screenshots.py`: render the fixture through `TreeRenderer` with `Console(record=True, width=100)` for `zh` and `en`, and write `docs/images/terminal-zh.svg` and `terminal-en.svg`. Add a test that two consecutive runs produce identical files.
-- [ ] 2.4 `docs/demo.tape` (VHS): record `docs/images/demo-zh.gif` and `demo-en.gif` on macOS or Linux, each under 2 MB. Document the VHS install and run steps.
+- [ ] 2.4 `docs/demo.tape` (VHS) and `scripts/record_demo.py`: record `docs/images/demo-<lang>.gif` for the five output languages in WSL (or on macOS/Linux), each under 2 MB. Document the VHS install and run steps.
+- [x] 2.5 Render `terminal-<lang>.svg` for all five output languages.
 
 ## 3. Five-language README (docs stage)
 
@@ -47,13 +48,13 @@ These tasks are committed directly on `release/v2.0.0` (single release PR) as th
 
   Start with the language switcher and the new tagline.
 - [ ] 3.2 Write `README.en.md` with the same structure.
-- [ ] 3.3 Write `README.zh-TW.md` (using the `-zh` assets), plus `README.ja.md` and `README.ko.md` (using the `-en` assets). Ask for a native-speaker review of ja/ko in the PR description.
+- [ ] 3.3 Write `README.zh-TW.md`, `README.ja.md` and `README.ko.md`, each using its own language's assets. Ask for a native-speaker review of ja/ko in the PR description.
 - [ ] 3.4 README structure test:
   - all five files exist;
   - each has the switcher with the current language marked;
   - each has the same number of `##` sections as `README.md`;
   - every referenced image exists.
-- [ ] 3.5 Update badges and links to `rozx/DeepUnzip`.
+- [ ] 3.5 Update badges and links to `rozx/DeepUnzip`. Badges: latest release, total downloads, latest-release downloads, release date, CI status, stars, license, platforms.
 
 ## 4. Repository identity (with the release)
 
