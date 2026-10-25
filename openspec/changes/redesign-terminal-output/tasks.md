@@ -1,4 +1,4 @@
-The tasks follow TDD with mocked 7-Zip. They land on `release/v2.0.0` after PR 2 of `redesign-work-pool-extraction`, and before `rename-to-deepunzip`.
+The tasks follow TDD with mocked 7-Zip. They are committed directly on `release/v2.0.0` (single release PR), after stage 2 of `redesign-work-pool-extraction` and before `rename-to-deepunzip`.
 
 ## 1. Events and localization
 

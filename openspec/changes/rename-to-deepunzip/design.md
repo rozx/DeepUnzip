@@ -104,22 +104,22 @@ Translations are written from the Chinese and English masters. Japanese and Kore
 
 ## Risks / Trade-offs
 
-- [Contributors with open branches get large conflicts] → Land the rename PR right after the work-pool and terminal-output code PRs, as the last code change on `release/v2.0.0`, and announce it in the PR.
+- [Contributors with open branches get large conflicts] → Commit the rename after the work-pool and terminal-output commits, as the last code change on `release/v2.0.0`, and announce it in the release PR.
 - [Users looking for `complex-unzip-tool-v2.exe`] → The release notes start with the rename and the old→new mapping. README badges and links use the new repository. GitHub redirects old links.
 - [Translation quality in ja/ko] → Request a native review. The structure test keeps sections aligned, even if a wording is later improved.
 - [VHS availability on Windows] → Record the GIF on macOS/Linux, or in the CI job; the SVGs can be generated anywhere.
 
 ## Migration Plan
 
-Three PRs on `release/v2.0.0`, after the terminal-output change has landed:
+This change is committed directly on `release/v2.0.0`, after the terminal-output commits. It ships through the single release PR (`release/v2.0.0` → `main`). The commit stages are:
 
-1. **Rename PR (mechanical)**: package move, imports, `pyproject.toml`, scripts, CI, aliases with deprecation notice, release-prep skill, and developer docs.
-2. **Docs PR**:
+1. **Rename (mechanical)**: package move, imports, `pyproject.toml`, scripts, CI, aliases with deprecation notice, release-prep skill, and developer docs.
+2. **Docs**:
    - the five READMEs;
    - `scripts/generate_screenshots.py`, `scripts/make_demo_archives.py`, `docs/demo.tape`;
    - the generated `docs/images/*`;
    - the README structure test.
-3. **Release PR**, as in `redesign-work-pool-extraction`'s migration plan: version bump to 2.0.0, and release notes that open with the rename.
+3. **Release preparation**, as in `redesign-work-pool-extraction`'s migration plan: version bump to 2.0.0, and release notes that open with the rename.
 
 After merge, the maintainer renames the GitHub repository and updates its About text.
 

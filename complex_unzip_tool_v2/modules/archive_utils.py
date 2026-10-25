@@ -41,6 +41,7 @@ from complex_unzip_tool_v2.classes.ArchiveTypes import (
     SevenZipNotFoundError,
     ArchivePasswordError,
     ArchiveCorruptedError,
+    ArchiveMissingVolumeError,
     ArchiveUnsupportedError,
     ArchiveParsingError,
     ArchiveFileInfo,
@@ -114,6 +115,12 @@ def _raise_for_7z_error(
     if returncode == 0:
         return
     combined = f"{stderr or ''}\n{stdout or ''}".lower()
+    # A missing volume also triggers "cannot open" and "CRC failed" lines, so it
+    # is checked first; the set may still be completed by volumes found later.
+    if "missing volume" in combined or "unexpected end of archive" in combined:
+        raise ArchiveMissingVolumeError(
+            f"Archive is missing a volume: {archive_path}"
+        )
     # Treat "not an archive" style errors as unsupported/non-archive, not corruption
     if (
         "can not open file as archive" in combined
@@ -1310,6 +1317,7 @@ def extract_nested_archives(
 
             except (
                 ArchiveCorruptedError,
+                ArchiveMissingVolumeError,
                 ArchiveUnsupportedError,
                 ArchiveNotFoundError,
             ) as e:
@@ -1440,6 +1448,7 @@ def extract_nested_archives(
 
                 except (
                     ArchiveCorruptedError,
+                    ArchiveMissingVolumeError,
                     ArchiveUnsupportedError,
                     ArchiveNotFoundError,
                 ) as e:

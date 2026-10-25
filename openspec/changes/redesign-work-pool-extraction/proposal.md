@@ -62,9 +62,9 @@ Patching each symptom adds another special-case pass. The flow itself has to sto
   - With several input roots, each root gets its own `unzipped/`.
   - Console structure changes; README step descriptions need updating.
 - **Release**: ships as **v2.0.0**, a major bump from 1.3.2 (the three changes together break names, exit codes and output conventions), together with `redesign-terminal-output` (new output, `--json`, exit codes) and `rename-to-deepunzip` (DeepUnzip identity, five-language README). This change brings the new extraction behavior and a user-visible output-folder change for multi-root invocations. The release includes bilingual release notes with upgrade notes.
-- **Delivery**: the change exceeds the ~300-line PR guideline, so it lands in stages on the integration branch `release/v2.0.0`:
+- **Delivery**: all work is committed directly on `release/v2.0.0`, in stages:
   1. pool core + tests, behind an internal entry point;
   2. switch `extract_files()` to it;
-  3. remove the superseded helpers, update the developer docs, and archive this change.
+  3. remove the superseded helpers and update the developer docs.
 
-  A final release PR (`release/v2.0.0` → `main`, with the `release` label) then performs the version bump, adds the release notes and README updates, and triggers the automated release.
+  The release ships as **one PR**, `release/v2.0.0` → `main` with the `release` label, together with the other two changes. Its last commits do the version bump, release notes, README updates and archiving of the OpenSpec changes.

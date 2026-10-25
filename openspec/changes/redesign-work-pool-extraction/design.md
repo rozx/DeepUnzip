@@ -146,7 +146,11 @@ Each combination goes through, in order:
    - For 7z splits and generic numbered splits (`.7z.NNN`, `.<ext>.NNN`), split-size consistency is a **hard filter**: all volumes except the last have the same size, and the last is not larger.
    - For a `.7z.001` primary, the sum of the volume sizes must equal `32 + NextHeaderOffset + NextHeaderSize` from the 7z start header. This header is never encrypted. It was verified against the reproduction files.
    - RAR, ZIP, ZIPX and ARJ volumes can legitimately differ in size (e.g. volume-size autodetect), so for them size only affects ordering.
-2. **Probe**: `7z l` with the password list. This only reads the headers and is cheap.
+2. **Probe**: `7z l` with the password list. This only reads the headers and is cheap. When 7-Zip reports fewer volumes than the combination holds (`Volumes = N`), the extra volumes were not used:
+   - with more than one volume used, the combination is retried with only the used volumes;
+   - with only an ambiguous primary used, the combination is rejected.
+
+   Otherwise a standalone `X.zip` would "consume" an unrelated `X.z01` and get its source deleted. An ambiguous primary whose set fails, and that was never opened as a single container, then falls back to container opening.
 3. **Full extraction**, with the password that passed the probe, into a fresh attempt folder. A data or CRC error is treated as a wrong combination: the attempt folder is discarded, and the search moves to the next combination.
 
 At most `MAX_ASSEMBLY_ATTEMPTS` probes are made per set across the whole run. This is a fixed internal constant of 64 and is not exposed as a CLI option (decided with the user). After that the set is unresolved, with reason "too many combinations".
@@ -155,7 +159,7 @@ At most `MAX_ASSEMBLY_ATTEMPTS` probes are made per set across the whole run. Th
 
 - the loop has reached quiescence;
 - the set has a complete combination, with no gap;
-- every probe failed with a password-type error.
+- at least one probe failed with a password-type error, and every other probe failed only for a missing volume. Narrow scopes are probed first and often fail for a missing volume, which says nothing about the password.
 
 The entered password is retried across the combinations in the same order, and joins the password book as today.
 
@@ -274,18 +278,20 @@ It also coincides with dropping the `v2` suffix from the old name. Together the 
 - the new terminal output, `--json` and exit codes;
 - the rename to DeepUnzip.
 
-The integration branch is `release/v2.0.0`, cut from `main`. All staged PRs target it, so `main` never holds a half-switched flow. The order is: this change's PRs 1–3, then the terminal-output PRs, then the rename PRs, and finally the release PR. This change's PRs are:
+All work is committed directly on `release/v2.0.0`, cut from `main`, and the whole release ships as **one PR**, `release/v2.0.0` → `main` (decided with the user). There are no staged or per-change PRs. The ~300-line PR guideline in `CLAUDE.md` is therefore waived for this release; each commit stays small and keeps the test suite green.
 
-1. **PR 1**: `multipart_assembly.py`, `work_pool.py` and `ArchiveMissingVolumeError` with unit tests, including the reproduction case and the parity scenarios. Nothing calls them yet.
-2. **PR 2**:
+Commits land in this order: this change's stages 1–3, then the terminal-output stages, then the rename stages, and finally the release preparation. This change's stages are:
+
+1. **Stage 1**: `multipart_assembly.py`, `work_pool.py` and `ArchiveMissingVolumeError` with unit tests, including the reproduction case and the parity scenarios. Nothing calls them yet.
+2. **Stage 2**:
    - switch `extract_files()` to per-root pools;
    - extract `extract_one_level()`;
    - add the history entry `kind` and relocation auto-restore;
    - rewrite the affected `test_main.py` tests.
-3. **PR 3**:
+3. **Stage 3**:
    - remove `extract_nested_archives`, `add_file_to_groups`, `relocate_multipart_parts_from_directory` and `ensure_contained_multipart_groups`;
    - update `CLAUDE.md` / `AGENTS.md` and `openspec/project.md` for the new flow.
-4. **Release PR** `release/v2.0.0` → `main`, after the terminal-output and rename PRs, following the project's release-prep process (`.agents/skills/deepunzip-release` after the rename):
+4. **Release preparation**, the last commits on the branch. They follow the project's release-prep process (`.agents/skills/deepunzip-release` after the rename). Then open the single release PR:
    - `poetry run bump-major`. The version in `pyproject.toml`, `__init__.py` and `.bumpversion.cfg` must read 2.0.0 in all three.
    - `ReleaseNotes/RELEASE_NOTES_v2.0.0.md`, bilingual, in the v1.3.x format. It opens with the rename to DeepUnzip and the old→new mapping. Its upgrade notes cover:
      - the new executable and asset names;
@@ -304,9 +310,9 @@ The integration branch is `release/v2.0.0`, cut from `main`. All staged PRs targ
      - `scripts.smoke_test`;
      - `git diff --check`.
      Then run a manual end-to-end run against a copy of the reproduction set.
-   - Add the `release` label. The release workflow builds all platforms from the merge commit.
+   - Open the release PR and add the `release` label. The release workflow builds all platforms from the merge commit.
 
-Rollback: before the release PR merges, revert PR 2 on `release/v2.0.0`, since PR 1 is inert on its own. After release, ship a 2.0.x fix.
+Rollback: before the release PR merges, revert the stage-2 commits on `release/v2.0.0`, since stage 1 is inert on its own. After release, ship a 2.0.x fix.
 
 ## Open Questions
 

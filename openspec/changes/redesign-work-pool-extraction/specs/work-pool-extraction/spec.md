@@ -140,6 +140,19 @@ The system SHALL run every assembly attempt in a fresh assembly folder under the
 - **THEN** after the attempt it SHALL be back at `in/sub/X.7z.002`
 - **AND** any deletion of it SHALL happen at that path
 
+### Requirement: Never consume a volume 7-Zip did not use
+When a probe reports that 7-Zip used fewer volumes than the combination holds, the system SHALL NOT mark the unused volumes as consumed:
+
+- if more than one volume was used, it SHALL retry with only the used volumes;
+- if only an ambiguous primary (`.rar`, `.zip`, `.zipx`, `.arj`, `.ace`) was used, it SHALL reject the combination.
+
+An ambiguous primary whose set fails, and that was never opened as a single container, SHALL then be opened as a single container.
+
+#### Scenario: Standalone zip next to an unrelated continuation
+- **WHEN** the input root contains a standalone `X.zip` and an unrelated `X.z01`
+- **THEN** `X.zip` SHALL be extracted as a single container
+- **AND** `X.z01` SHALL NOT be deleted
+
 ### Requirement: Bound and pre-filter the combination search
 Before invoking 7-Zip on a combination of 7z or generic numbered split volumes (`.7z.NNN`, `.<ext>.NNN`), the system SHALL reject it without invoking 7-Zip when the volume sizes are inconsistent:
 
@@ -168,7 +181,7 @@ The system SHALL prompt the user for a multipart set's password at most once per
 
 - the loop has reached quiescence;
 - the set has a complete combination, with no missing index;
-- every probe of the set failed with a password-type error.
+- at least one probe failed with a password-type error, and every other probe failed only for a missing volume (missing-volume failures carry no password information).
 
 A password the user enters SHALL be retried across the combinations in the same order, and SHALL be added to the password book.
 

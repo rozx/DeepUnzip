@@ -153,7 +153,7 @@ A run is non-interactive when `--json` is set or stdin is not a TTY. In non-inte
 
 ## Migration Plan
 
-This change ships in **v2.0.0** with `redesign-work-pool-extraction`, as additional PRs on `release/v2.0.0` after that change's PR 2:
+This change ships in **v2.0.0** with `redesign-work-pool-extraction`. It is committed directly on `release/v2.0.0` after that change's stage 2, and released through the single release PR. The commit stages are:
 
 1. Event types, `i18n.py` with the catalog and its tests, and the three renderers with recorded-event tests.
 2. Wire the renderers into the pool driver and `main.py`. Add `--json`, exit codes, prompt gating, and `-bsp1` progress. Remove `rich_utils.py`.

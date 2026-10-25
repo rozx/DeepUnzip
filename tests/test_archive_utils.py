@@ -7,8 +7,30 @@ import complex_unzip_tool_v2.modules.archive_utils as au
 from complex_unzip_tool_v2.classes.ArchiveTypes import (
     ArchivePasswordError,
     ArchiveCorruptedError,
+    ArchiveMissingVolumeError,
     ArchiveUnsupportedError,
     ArchiveFileInfo,
+)
+
+# Recorded 7-Zip 26.03 output for a split set whose second volume is missing.
+SPLIT_7Z_MISSING_VOLUME_STDOUT = (
+    "ERROR: split.7z.001\n"
+    "split.7z\n"
+    "Open ERROR: Cannot open the file as [7z] archive\n"
+    "\n"
+    "ERRORS:\n"
+    "Unexpected end of archive\n"
+    "\n"
+    "Can't open as archive: 1\n"
+)
+SPLIT_ZIP_MISSING_VOLUME_STDOUT = (
+    "split.zip\n"
+    "ERRORS:\n"
+    "Unexpected end of archive\n"
+    "Path = split.zip\n"
+    "Type = zip\n"
+    "ERROR: CRC Failed : src\\blob.bin\n"
+    "Sub items Errors: 1\n"
 )
 
 
@@ -74,6 +96,62 @@ def test_raise_for_7z_error_not_archive_mapping():
             pass
         else:
             assert False, f"Expected ArchiveUnsupportedError for message: {msg}"
+
+
+def test_raise_for_7z_error_missing_7z_volume():
+    try:
+        au._raise_for_7z_error(
+            2, "", "split.7z.001", stdout=SPLIT_7Z_MISSING_VOLUME_STDOUT
+        )
+    except ArchiveMissingVolumeError:
+        pass
+    else:
+        assert False, "Expected ArchiveMissingVolumeError"
+
+
+def test_raise_for_7z_error_missing_volume_wins_over_crc_failure():
+    # A truncated split zip also reports CRC Failed; it must not look corrupted.
+    try:
+        au._raise_for_7z_error(
+            2, "", "split.zip.001", stdout=SPLIT_ZIP_MISSING_VOLUME_STDOUT
+        )
+    except ArchiveMissingVolumeError:
+        pass
+    else:
+        assert False, "Expected ArchiveMissingVolumeError"
+
+
+def test_raise_for_7z_error_missing_volume_message():
+    try:
+        au._raise_for_7z_error(2, "Missing volume : x.part2.rar", "x.part1.rar")
+    except ArchiveMissingVolumeError:
+        pass
+    else:
+        assert False, "Expected ArchiveMissingVolumeError"
+
+
+def test_password_loop_stops_on_missing_volume(monkeypatch, tmp_path):
+    monkeypatch.setattr(au, "is_valid_archive", lambda *args, **kwargs: True)
+    attempts = []
+
+    def missing_volume(*args, **kwargs):
+        attempts.append(kwargs.get("password"))
+        raise ArchiveMissingVolumeError("missing volume")
+
+    monkeypatch.setattr(au, "extractArchiveWith7z", missing_volume)
+    (tmp_path / "x.7z.001").write_bytes(b"dummy")
+
+    result = au.extract_nested_archives(
+        archive_path=str(tmp_path / "x.7z.001"),
+        output_path=str(tmp_path / "out"),
+        password_list=["a", "b", "c"],
+        interactive=False,
+        use_recycle_bin=False,
+    )
+
+    assert attempts == [""]
+    assert result["success"] is False
+    assert result["password_failed_archives"] == []
 
 
 def test_is_valid_archive_false_on_garbage(monkeypatch):

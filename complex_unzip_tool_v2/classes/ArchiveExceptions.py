@@ -50,6 +50,12 @@ class ArchiveCorruptedError(ArchiveError):
     pass
 
 
+class ArchiveMissingVolumeError(ArchiveError):
+    """Raised when a multi-volume archive is missing one of its volumes."""
+
+    pass
+
+
 class ArchiveUnsupportedError(ArchiveError):
     """Raised when archive format is not supported."""
 
