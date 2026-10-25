@@ -18,8 +18,9 @@ The work-pool redesign (`redesign-work-pool-extraction`) replaces the step-by-st
   - At the end, the live lines are replaced by a **lineage tree**: each multipart set lists its volumes and the source container each came from, including the original cloaked name. It is followed by a summary of output files, deleted or kept sources, and unresolved items with reasons.
 - **Plain output when not a terminal.** Live rendering is used only when stdout is a TTY. Otherwise the same item lines and summary are printed without animation or progress frames. `NO_COLOR` is honored.
 - **Single-language output that follows the system language.**
-  - The language comes from the `DEEPUNZIP_LANG` environment variable (`zh` / `en`) if set; otherwise from the system UI language (`zh-*` → Chinese, anything else → English).
-  - All user-facing strings move into a message catalog with Chinese and English entries.
+  - Five languages, the same as the README: English, Simplified Chinese, Traditional Chinese, Japanese and Korean.
+  - The language comes from the `DEEPUNZIP_LANG` environment variable (`en`, `zh`, `zh-TW`, `ja`, `ko`) if set; otherwise from the system UI language (Taiwan, Hong Kong and Macau Chinese → Traditional Chinese, other Chinese → Simplified Chinese, Japanese, Korean, anything else → English).
+  - All user-facing strings move into a message catalog with an entry in each language.
   - **BREAKING (convention):** this replaces the "every string bilingual inline" rule in `CLAUDE.md` / `AGENTS.md`.
 - **Passwords are never printed.** A working password is shown by its position in the password book (`password #4`), and user-entered passwords as `password (entered)`.
 - **New `--json` flag for program-friendly output:**
@@ -37,7 +38,7 @@ The work-pool redesign (`redesign-work-pool-extraction`) replaces the step-by-st
 
 ### New Capabilities
 - `terminal-output`: human output: item lines, live progress (TTY only), the final lineage tree and summary, plain non-TTY rendering, `NO_COLOR`, and password masking.
-- `output-localization`: language selection (`DEEPUNZIP_LANG`, system UI language, English fallback), a single language per run, and a message catalog with complete zh/en coverage.
+- `output-localization`: language selection (`DEEPUNZIP_LANG`, system UI language, English fallback), a single language per run, and a message catalog with complete coverage of the five languages.
 - `machine-readable-output`: the `--json` event stream and its schema, non-interactive behavior, exit codes, and automatic non-interactive mode when stdin is not a TTY.
 
 ### Modified Capabilities
@@ -51,5 +52,5 @@ The work-pool redesign (`redesign-work-pool-extraction`) replaces the step-by-st
   - `archive_utils`: run 7-Zip with `-bsp2` and stream its progress.
   - `main.py`: the `--json` flag, exit codes, and prompt gating.
 - **Depends on** `redesign-work-pool-extraction`, whose rounds, sets and lineage these events describe. Ships with it in **v2.0.0**.
-- **Tests**: a catalog completeness test (every key has zh and en); renderer tests that feed recorded event sequences; JSON schema tests; exit-code tests; non-TTY tests (no ANSI or progress frames). 7-Zip stays mocked.
+- **Tests**: a catalog completeness test (every key has all five languages); renderer tests that feed recorded event sequences; JSON schema tests; exit-code tests; non-TTY tests (no ANSI or progress frames). 7-Zip stays mocked.
 - **Docs**: `CLAUDE.md` / `AGENTS.md` conventions (catalog instead of inline bilingual strings), README usage for `--json` and exit codes, and v2.0.0 upgrade notes about exit codes and single-language output.

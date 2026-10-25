@@ -20,7 +20,7 @@ A command-line tool to unzip/extract various archive formats, including nested a
 - Always extract single archive first to see if it contains other contained archives
 - Supports extraction to a specified output directory
 - Provides clear CLI feedback and logging
-- Have both Chinese and English language support
+- Output in English, Simplified Chinese, Traditional Chinese, Japanese and Korean
 
 ## Goals
 - Keep the app stable and easy to maintain.
@@ -168,7 +168,7 @@ This repo uses **OpenSpec**. Active specs live in `openspec/specs/`, proposed ch
 - Regression coverage: `tests/test_multipart_file_input.py`; real source/frozen coverage: `scripts/smoke_test.py`.
 
 ## User-facing text and output
-- Every user-facing string lives in `deepunzip/modules/i18n.py` `CATALOG` with an `en` and a `zh` entry that use the same placeholders; code calls `t(key, **params)`. Add new keys in both languages. Never write inline user-facing strings, and never inline bilingual ones (`"Wrong password 密码错误"`). Each run uses one language: `DEEPUNZIP_LANG` (`zh`/`en`), else the system UI language, else English.
+- Every user-facing string lives in `deepunzip/modules/i18n.py` `CATALOG` with an entry in each of the five output languages (`en`, `zh`, `zh-TW`, `ja`, `ko`, matching the five READMEs) that use the same placeholders; code calls `t(key, **params)`. Add new keys in all five languages. Never write inline user-facing strings, and never inline bilingual ones (`"Wrong password 密码错误"`). Each run uses one language: `DEEPUNZIP_LANG` (`en`, `zh`, `zh-TW`, `ja`, `ko`), else the system UI language, else English.
 - Library code does not print. It emits events (`modules/events.py`); warnings use `events.notice("warning", key, **params)`. Exactly one renderer (`modules/render.py`) writes the output: terminal view, plain lines when redirected, or JSON lines with `--json`.
 - `--json` writes only JSON lines to stdout and never prompts or pauses. Exit codes: `0` all resolved, `1` something unresolved, `2` fatal or usage error.
 - Passwords never appear in any output; refer to them as `password #N`.

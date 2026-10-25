@@ -19,7 +19,7 @@ The user chose:
 - Extraction logic that does not know how output is rendered, so it is testable without a console.
 
 **Non-Goals:**
-- Languages beyond zh/en in the terminal. The catalog is built to allow more later; the README covers five languages separately.
+- Languages beyond the five the README covers (en, zh, zh-TW, ja, ko).
 - A TUI with keyboard interaction.
 - Log files. `--json` redirected to a file serves that purpose.
 
@@ -89,17 +89,17 @@ Listing and probing (`7z l`) stay with `subprocess.run`.
 
 ### D4. Localization
 
-`modules/i18n.py` holds a catalog `{key: {"en": str, "zh": str}}` with `str.format` placeholders and a `t(key, **kw)` accessor. The language is resolved once, at startup:
+`modules/i18n.py` holds a catalog `{key: {"en": str, "zh": str, "zh-TW": str, "ja": str, "ko": str}}` with `str.format` placeholders and a `t(key, **kw)` accessor. An entry may add `en_one` for a `count` of 1 ("1 file"). The five languages match the five READMEs. The language is resolved once, at startup:
 
-1. `DEEPUNZIP_LANG` = `zh` or `en`, if set.
+1. `DEEPUNZIP_LANG`, if it names a supported language.
 2. The system UI language:
-   - Windows: `GetUserDefaultUILanguage` via `ctypes`;
-   - POSIX: `LC_ALL` → `LC_MESSAGES` → `LANG`.
-
-   Any `zh*` value means Chinese.
+   - Windows: `GetUserDefaultUILanguage` via `ctypes`. The primary language ID selects Chinese (`0x04`), Japanese (`0x11`) or Korean (`0x12`); for Chinese, the sublanguages Taiwan, Hong Kong, Macau and the `zh-Hant` neutral (`0x01`, `0x03`, `0x05`, `0x1F`) select Traditional Chinese, all others Simplified.
+   - POSIX: the first set of `LC_ALL` → `LC_MESSAGES` → `LANG`. An unsupported value (`fr_FR`, `C`) means English.
 3. English otherwise.
 
-A missing zh entry falls back to en at runtime. A unit test fails if any key lacks either language. Help text for Typer options is localized the same way.
+Names are normalized before matching: lower case, `_` read as `-`, and any `.encoding` or `@modifier` dropped. `zh-tw`, `zh-hk`, `zh-mo` and `zh-hant*` mean Traditional Chinese; other `zh*` values mean Simplified Chinese; `ja*` and `ko*` mean Japanese and Korean.
+
+A missing entry falls back to en at runtime. A unit test fails if any key lacks any of the five languages or uses different placeholders. Help text for Typer options is localized the same way.
 
 JSON output never contains catalog text. It carries only codes and data, so it is language-independent.
 

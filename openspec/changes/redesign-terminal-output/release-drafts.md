@@ -16,9 +16,9 @@ In a terminal, DeepUnzip prints one line per finished archive, with a live progr
 
 ### Output follows the system language / 输出语言跟随系统
 
-Output is now in one language per run instead of English and Chinese side by side. Chinese is used when the system UI language is Chinese, English otherwise. Set `DEEPUNZIP_LANG=zh` or `DEEPUNZIP_LANG=en` to choose explicitly.
+Output is now in one language per run instead of English and Chinese side by side, and DeepUnzip speaks five languages: English, Simplified Chinese, Traditional Chinese, Japanese and Korean. The system UI language decides; any other system language gets English. Set `DEEPUNZIP_LANG` to `en`, `zh`, `zh-TW`, `ja` or `ko` to choose explicitly.
 
-输出不再中英并列，每次运行只使用一种语言：系统界面语言为中文时使用中文，否则使用英文。可以设置 `DEEPUNZIP_LANG=zh` 或 `DEEPUNZIP_LANG=en` 来指定语言。
+输出不再中英并列，每次运行只使用一种语言。DeepUnzip 支持五种语言：英文、简体中文、繁体中文、日文和韩文，默认跟随系统界面语言，其他语言的系统使用英文。可以把 `DEEPUNZIP_LANG` 设为 `en`、`zh`、`zh-TW`、`ja` 或 `ko` 来指定语言。
 
 ### `--json` for scripts / 供脚本使用的 `--json`
 
@@ -63,7 +63,7 @@ deepunzip --version
 
 Output goes to an `unzipped` folder inside each input folder (for a file, inside the folder that holds it). Sources are removed only after everything extracted from them is resolved; anything that cannot be extracted is kept and listed with its reason.
 
-- **Language**: output follows the system language (Chinese or English). Override with `DEEPUNZIP_LANG=zh` or `DEEPUNZIP_LANG=en`.
+- **Language**: output follows the system language (English, Simplified Chinese, Traditional Chinese, Japanese or Korean; English otherwise). Override with `DEEPUNZIP_LANG` set to `en`, `zh`, `zh-TW`, `ja` or `ko`.
 - **Passwords**: put one password per line in `passwords.txt` next to the program, or next to the archives. Passwords you type during a run are tried on later archives and saved to the program's `passwords.txt`. Output refers to passwords only as `password #N`.
 - **Exit codes**: `0` everything extracted, `1` some items unresolved (their sources kept), `2` fatal or usage error.
 - **`--json`**: one JSON object per line (`start`, `root`, `round`, `item`, `set`, `progress`, `unresolved`, `error`, `summary`), each with `schema_version`. The last line is always `summary`:
@@ -83,7 +83,7 @@ deepunzip --version
 
 输出位于每个输入文件夹内的 `unzipped` 文件夹（输入是文件时，位于该文件所在的文件夹内）。只有当从原文件解出的所有内容都已解决时，原文件才会被移除；无法解压的内容会被保留，并列出原因。
 
-- **语言**：输出跟随系统语言（中文或英文），可用 `DEEPUNZIP_LANG=zh` 或 `DEEPUNZIP_LANG=en` 指定。
+- **语言**：输出跟随系统语言（英文、简体中文、繁体中文、日文或韩文，其他系统使用英文），可把 `DEEPUNZIP_LANG` 设为 `en`、`zh`、`zh-TW`、`ja` 或 `ko` 指定。
 - **密码**：在程序旁边或压缩包旁边的 `passwords.txt` 中每行写一个密码。运行中手动输入的密码会用于后续压缩包，并保存到程序目录的 `passwords.txt`。输出中只以 `密码 #N` 指代密码。
 - **退出码**：`0` 全部解压完成，`1` 有未解决的项目（其原文件已保留），`2` 致命错误或用法错误。
 - **`--json`**：每行一个 JSON 对象（`start`、`root`、`round`、`item`、`set`、`progress`、`unresolved`、`error`、`summary`），都带有 `schema_version`，最后一行总是 `summary`（示例见上方英文部分）。

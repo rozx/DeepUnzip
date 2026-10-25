@@ -549,7 +549,16 @@ def test_non_interactive_recovery_keeps_renames(fake_7z, monkeypatch, tmp_path):
     assert renamed.exists()
 
 
-@pytest.mark.parametrize("language, text", [("en", "Extract nested"), ("zh", "解开嵌套")])
+@pytest.mark.parametrize(
+    "language, text",
+    [
+        ("en", "Extract nested"),
+        ("zh", "解开嵌套"),
+        ("zh-TW", "解開巢狀"),
+        ("ja", "入れ子"),
+        ("ko", "중첩"),
+    ],
+)
 def test_help_follows_the_language(language, text):
     import subprocess
     import sys

@@ -103,6 +103,21 @@ def test_chinese_output(tmp_path):
     assert "opened" not in out
 
 
+@pytest.mark.parametrize("language", i18n.LANGUAGES)
+def test_output_in_each_language(tmp_path, language):
+    i18n.set_language(language)
+    stream, renderer = plain()
+    drive(renderer, tmp_path, **reproduction(tmp_path))
+    out = stream.getvalue()
+    one_file = i18n.t("count.files", count=1)
+    password = i18n.t("password.index", index=1)
+    assert i18n.t("line.opened", name="A.7z", files=one_file, password=password) in out
+    assert i18n.t("tree.uncloaked", original="X.7z.001删掉") in out
+    assert i18n.t("summary.done", elapsed="2.5s", code=0) in out
+    if language != "en":
+        assert "opened" not in out and "exit code" not in out
+
+
 def test_file_names_are_never_read_as_markup(tmp_path):
     write(tmp_path / "[group] title.7z", archive({"a.txt": "a"}))
     stream, renderer = plain()
@@ -162,9 +177,9 @@ def test_json_stream_describes_the_run(tmp_path):
     assert summary["files"] == 1 and summary["sources"] == {"deleted": 2, "kept": 0}
 
 
-def test_json_stream_is_identical_in_both_languages(tmp_path):
+def test_json_stream_is_identical_in_every_language(tmp_path):
     streams = []
-    for language in ("en", "zh"):
+    for language in i18n.LANGUAGES:
         i18n.set_language(language)
         root = tmp_path / language
         root.mkdir()
@@ -180,11 +195,11 @@ def test_json_stream_is_identical_in_both_languages(tmp_path):
                 for line in json_lines(stream)
             ]
         )
-    for line in streams[0] + streams[1]:
+    for line in [line for stream in streams for line in stream]:
         line.pop("output_dirs", None)  # absolute paths differ between the roots
         if line["event"] == "root":
             line.pop("path")
-    assert streams[0] == streams[1]
+    assert all(stream == streams[0] for stream in streams)
 
 
 def test_json_reports_unresolved_items_with_their_location(tmp_path):

@@ -63,3 +63,12 @@ The tasks follow TDD with mocked 7-Zip. They are committed directly on `release/
 
 - [x] 5.1 In `CLAUDE.md` / `AGENTS.md`, replace the "all user-facing strings bilingual inline" rule with the catalog rule (add keys in both languages, and never use inline user-facing strings).
 - [x] 5.2 Draft the upgrade-notes text for `docs/releaseNotes/v2.0.0.md` (exit codes, single-language output, `DEEPUNZIP_LANG`, `--json`) and the README usage section text, for use in `rename-to-deepunzip` and in release task 8.3.
+
+## 6. Five output languages
+
+The README covers five languages, so the output does too (added after 1–5 were done).
+
+- [x] 6.1 Language resolution for `en`, `zh`, `zh-TW`, `ja`, `ko`: normalize names (case, `_`/`-`, `.encoding`, `@modifier`); Taiwan, Hong Kong, Macau and `zh-Hant` → `zh-TW`; Windows LANGIDs by primary language and Chinese sublanguage. Tests for `DEEPUNZIP_LANG`, POSIX variables and LANGIDs.
+- [x] 6.2 Translate every catalog key into Traditional Chinese, Japanese and Korean. The completeness test requires all five languages with the same placeholders.
+- [x] 6.3 Render tests in each language; the JSON stream stays identical across languages.
+- [x] 6.4 Update `CLAUDE.md` / `AGENTS.md`, the upgrade-notes draft and the README language notes.
