@@ -287,7 +287,7 @@ Multipart volumes may come from the input root or from any container, at any dep
 - Validation:
   - Unit tests: `tests/test_multipart_assembly.py`, `tests/test_work_pool.py` (fake engine), `tests/test_pool_engine.py`.
   - CLI-level tests with mocked 7-Zip: `tests/test_main.py`, `tests/test_multipart_file_input.py`, `tests/test_multipart_retention.py`.
-  - Real engine: `poetry run python -m scripts.smoke_test`. The end-to-end reproduction is recorded in `openspec/changes/redesign-work-pool-extraction/validation.md`.
+  - Real engine: `poetry run python -m scripts.smoke_test`. The end-to-end reproduction is recorded in `openspec/changes/archive/2026-10-25-redesign-work-pool-extraction/validation.md`.
 
 ## Non-archive handling during nested scan
 The tool treats every file as a potential archive by default. During nested extraction, we probe files with 7‑Zip but avoid flagging regular files (e.g., .mp4) as corrupted by mapping 7‑Zip output appropriately and parsing list output robustly.

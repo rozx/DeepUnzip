@@ -4,37 +4,33 @@
 Ensure multipart parts extracted from inside a container archive survive temporary-folder cleanup, and that skipping a file during nested recursion never implicitly deletes it.
 ## Requirements
 ### Requirement: Preserve multipart parts extracted from containers
-The system SHALL ensure multipart archive parts that are extracted from within a container archive (including continuation parts such as `.7z.002+`, `.r00/.r01+`, `.z01/.z02+`, `.part2+.rar`, `.tar.gz.002+`) are not lost due to temporary directory cleanup.
+The system SHALL ensure multipart archive parts that are extracted from within a container archive are not lost when the run work directory is removed. This includes continuation parts such as `.7z.002+`, `.r00/.r01+`, `.z01/.z02+`, `.part2+.rar` and `.tar.gz.002+`. A part SHALL stay in the work pool until it is either consumed by a successful multipart extraction or preserved to the output folder, regardless of whether its primary is surfaced before it, after it, or never.
 
 #### Scenario: Try extraction first, then preserve on failure
-- **GIVEN** an outer archive is extracted into a temporary extraction directory
+- **GIVEN** an outer archive is extracted into the run work directory
 - **AND** the extracted contents include a multipart set containing `x.7z.001` and `x.7z.002`
-- **WHEN** the tool attempts to extract `x.7z.001` and extraction fails
-- **AND** matching the extracted candidate parts to missing volumes does not make extraction succeed
-- **THEN** `x.7z.002` SHALL be moved to the target output folder before the temp directory is removed
+- **WHEN** the tool attempts to extract `x.7z.001` and every assembly scope fails
+- **THEN** `x.7z.002` SHALL be moved to the target output folder before the work directory is removed
 - **AND** `x.7z.002` SHALL exist on disk after the run completes
 
 #### Scenario: Candidate part is cleaned after enabling successful extraction
-- **GIVEN** an outer archive is extracted into a temporary extraction directory
-- **AND** the extracted contents include a multipart set containing `x.7z.001` and `x.7z.002`
-- **WHEN** extracting `x.7z.001` initially fails due to missing parts
-- **AND** the tool matches `x.7z.002` to the current archive’s missing multipart volumes
-- **AND** extraction succeeds after matching
-- **THEN** `x.7z.002` SHALL be eligible for cleanup as a temporary, tool-extracted artifact
+- **GIVEN** an outer archive is extracted into the run work directory
+- **AND** the extracted contents include `x.7z.002`
+- **WHEN** a combination that includes `x.7z.002` extracts successfully
+- **THEN** `x.7z.002` SHALL be eligible for cleanup as a consumed, tool-extracted artifact
 
-#### Scenario: Continuation part is relocated
-- **GIVEN** nested scanning identifies a continuation part extracted from a container
-- **AND** a `group_relocator` callback is provided
-- **WHEN** `group_relocator` returns `True` for that file
-- **THEN** the system SHALL treat the continuation part as relocated
-- **AND** it SHALL NOT be processed as a nested archive
-- **AND** it SHALL NOT be deleted due to temp cleanup
+#### Scenario: Continuation part extracted before its primary
+- **GIVEN** container `A.7z` is opened first and yields `x.7z.002`
+- **AND** container `B.rar` is opened later and yields `x.7z.001`
+- **WHEN** multipart assembly runs
+- **THEN** `x.7z.002` SHALL still be in the pool
+- **AND** it SHALL be combined with `x.7z.001`
 
 ### Requirement: Skipping recursion MUST NOT imply deletion
-The system SHALL ensure that skipping a file from recursive nested extraction does not implicitly delete the file, unless the file is a tool-created temporary artifact.
+The system SHALL ensure that not opening a file, for whatever reason (continuation part, depth limit, unsupported format, password failure), never implicitly deletes it, unless the file is a consumed tool-created artifact.
 
-#### Scenario: Temp cleanup runs after nested extraction
-- **GIVEN** nested extraction returns and the caller removes the temp extraction directory
-- **WHEN** files were skipped from recursion for policy reasons (e.g., multipart continuation parts)
-- **THEN** those skipped files SHALL already have been preserved to a persistent output location or relocated
+#### Scenario: Work directory cleanup runs after the extraction loop
+- **GIVEN** the extraction loop has terminated and the run work directory is about to be removed
+- **WHEN** files in it were never opened or were never consumed
+- **THEN** those files SHALL already have been moved to the output folder
 

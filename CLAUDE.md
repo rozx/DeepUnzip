@@ -60,7 +60,7 @@ The pool runs in **rounds until a round changes nothing**. Every file, scanned o
 - **Multipart sets** are assembled only when no container is pending, and only from pool items. The search widens scope (`iter_combinations`): the primary's folder, then its subtree, then each ancestor's subtree, never above the input root. Each combination goes through size and 7z-header prefilters, then a header-only probe, then extraction in an isolated `.assemble/<n>/` folder. Source volumes moved there are recorded as `relocation` entries and always moved back. A failed set waits for new volumes with its key, or for a newly learned password. At quiescence it prompts at most once, then fails.
 - **Finalization**: final and unresolved derived items move to `<root>/unzipped/`, and the work directory is removed. A source is deleted only if it was consumed, has descendants, and none of them is unresolved.
 
-Design and requirements: `openspec/changes/redesign-work-pool-extraction/` (moved to `openspec/specs/` when archived).
+Requirements: `openspec/specs/work-pool-extraction/` and related specs; design: `openspec/changes/archive/2026-10-25-redesign-work-pool-extraction/design.md`.
 
 ### Multipart: primary vs. continuation (cross-cutting invariant)
 

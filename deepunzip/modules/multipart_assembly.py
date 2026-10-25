@@ -3,7 +3,8 @@ Multipart volume naming, combination search and prefilters for the work pool.
 工作池使用的分卷命名、组合搜索与预过滤。
 
 Everything here is pure (no 7-Zip calls) so the assembly rules can be tested
-directly. See openspec/changes/redesign-work-pool-extraction/design.md (D4).
+directly. See D4 in
+openspec/changes/archive/2026-10-25-redesign-work-pool-extraction/design.md.
 """
 
 import hashlib

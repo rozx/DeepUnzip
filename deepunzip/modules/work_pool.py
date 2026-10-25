@@ -7,7 +7,7 @@ becomes a WorkItem in one pool and goes through the same cycle: uncloak →
 classify → group → extract. Containers are opened one level per round;
 multipart sets are assembled from the whole pool by widening scope once no
 container is pending; sources are deleted only at the end, based on lineage.
-See openspec/changes/redesign-work-pool-extraction/design.md.
+See openspec/changes/archive/2026-10-25-redesign-work-pool-extraction/design.md.
 
 7-Zip access, prompting, uncloaking, deletion and output go through injected
 callables so the whole loop can be tested without real archives.
