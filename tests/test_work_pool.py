@@ -695,3 +695,22 @@ def test_complete_prefix_is_tried_past_a_gap_before_an_unrelated_volume(
     result, _ = run_pool(tmp_path)
     assert output_files(tmp_path) == ["f"]
     assert (tmp_path / "s3" / "X.7z.007").exists()
+
+
+def test_volume_stranded_in_an_assembly_folder_is_preserved_inside_the_output(
+    tmp_path, monkeypatch
+):
+    write(tmp_path / "A.7z", archive({"X.7z.001": volume("S", 1, 2, password="?")}))
+    write(tmp_path / "B.7z", archive({"X.7z.002": volume("S", 2, 2, password="?")}))
+    real_move = wp.shutil.move
+
+    def move(src, dst):
+        if ".assemble" in str(src) and os.path.basename(src) == "X.7z.001":
+            raise PermissionError("locked")
+        return real_move(src, dst)
+
+    monkeypatch.setattr(wp.shutil, "move", move)
+    result, _ = run_pool(tmp_path)
+    output = os.path.join(str(tmp_path), "unzipped") + os.sep
+    preserved = [os.path.normpath(i.output_path) for i in result.items if i.output_path]
+    assert preserved and all(p.startswith(output) for p in preserved), preserved

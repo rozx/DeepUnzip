@@ -263,6 +263,18 @@ def _volumes_used(primary: WorkItem, reported: Optional[int], chosen: int) -> in
     return chosen
 
 
+def _inside_output(relative: str, name: str) -> str:
+    """Return `relative`, or just `name` if it would leave the output folder.
+
+    A volume stranded in an assembly folder (it could not be moved back) is
+    relative to its old folder through "..".
+    """
+    norm = os.path.normpath(relative)
+    if os.path.isabs(norm) or norm == os.pardir or norm.startswith(os.pardir + os.sep):
+        return name
+    return relative
+
+
 def _list_files(folder: str) -> list[str]:
     found = []
     for current, _dirs, names in os.walk(folder):
@@ -960,8 +972,14 @@ class WorkPool:
                         os.path.dirname(primary.path), primary.rel_base
                     )
                 )
-                return normalize_output_relative_path(os.path.join(folder, item.name))
-        return normalize_output_relative_path(os.path.relpath(item.path, item.rel_base))
+                return _inside_output(
+                    normalize_output_relative_path(os.path.join(folder, item.name)),
+                    item.name,
+                )
+        return _inside_output(
+            normalize_output_relative_path(os.path.relpath(item.path, item.rel_base)),
+            item.name,
+        )
 
     def _move_to_output(self, item: WorkItem) -> bool:
         destination = os.path.join(self.output_dir, self._output_relpath(item))
