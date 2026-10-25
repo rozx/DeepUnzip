@@ -681,3 +681,17 @@ def test_complete_prefix_is_tried_when_an_unrelated_later_volume_is_in_scope(
     assert output_files(tmp_path) == ["f"]
     assert (tmp_path / "s3" / "X.7z.003").exists()
     assert "X.7z.003" in [i.name for i in result.unresolved]
+
+
+def test_complete_prefix_is_tried_past_a_gap_before_an_unrelated_volume(
+    tmp_path, monkeypatch
+):
+    from fake_archives import VOLUME_SIZE
+
+    write(tmp_path / "s1" / "X.7z.001", volume("S", 1, 2, {"f": "f"}))
+    write(tmp_path / "s2" / "X.7z.002", volume("S", 2, 2))
+    write(tmp_path / "s3" / "X.7z.007", volume("U", 7, 7))
+    monkeypatch.setattr(ma, "read_7z_total_size", lambda path: 2 * VOLUME_SIZE)
+    result, _ = run_pool(tmp_path)
+    assert output_files(tmp_path) == ["f"]
+    assert (tmp_path / "s3" / "X.7z.007").exists()

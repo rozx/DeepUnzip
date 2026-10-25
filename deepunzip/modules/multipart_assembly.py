@@ -271,8 +271,8 @@ def iter_combinations(
     Only `candidates` (pool items) are considered. A combination already
     yielded by a narrower scope is not repeated. Within a scope, the full run
     of indices comes first; shorter prefixes follow only for a 7z split whose
-    header records the total size. A scope whose volume indices have a gap
-    cannot succeed and is skipped.
+    header records the total size. Otherwise a scope whose volume indices
+    have a gap cannot succeed and is skipped.
     """
     seen: set[tuple[str, ...]] = set()
     prefixes_checkable = (
@@ -290,7 +290,9 @@ def iter_combinations(
         last = 1
         while last + 1 in by_index:
             last += 1
-        if any(index > last for index in by_index):
+        # A gap means the full run cannot be the set, unless a later index
+        # belongs to another set; only a checkable 7z prefix can tell.
+        if not prefixes_checkable and any(index > last for index in by_index):
             continue
         if last == 1 and primary.volume.ambiguous:
             continue
