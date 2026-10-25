@@ -109,23 +109,22 @@ The tasks follow TDD (`CLAUDE.md`): write the failing test first, with 7-Zip moc
 - [ ] 7.2 Update the pipeline description in `CLAUDE.md`, `AGENTS.md` and `openspec/project.md`.
 - [ ] 7.3 Quality gates: `pytest -q`, `flake8`, `mypy` (no new diagnostics against the 1.1 baseline), `black`, and `--help`.
 
-## 8. Release v2.0.0 (after `redesign-terminal-output` and `rename-to-deepunzip`)
+## 8. Release v2.0.0 (after `redesign-terminal-output`, `rename-to-deepunzip` and `adopt-release-ready-workflow`)
 
-- [ ] 8.1 Run `poetry run bump-major`. Check that `pyproject.toml`, `__init__.py` and `.bumpversion.cfg` all read 2.0.0.
-- [ ] 8.2 Write `ReleaseNotes/RELEASE_NOTES_v2.0.0.md`, bilingual, in the v1.3.x format. It opens with the rename and the old→new mapping. Its upgrade notes cover:
+- [ ] 8.1 Archive the four v2.0.0 OpenSpec changes once their tasks are complete, then run `openspec validate --specs --strict`.
+- [ ] 8.2 After the maintainer approves, run the `release-ready` skill on `release/v2.0.0`. It:
+  - bumps the version (`poetry run bump-major`) in its own commit;
+  - writes `docs/releaseNotes/v2.0.0.md`, which opens with the rename and the old→new mapping;
+  - updates the version summary, package table and release-notes link in all five READMEs;
+  - runs the checks;
+  - pushes;
+  - opens the single release PR `release: v2.0.0`.
+- [ ] 8.3 The upgrade notes of `docs/releaseNotes/v2.0.0.md` cover:
   - the new executable and asset names;
   - one `unzipped/` per root;
   - end-of-run source deletion;
   - exit codes 0/1/2;
   - single-language output and `DEEPUNZIP_LANG`;
   - `--json`;
-  - relocation auto-restore.
-- [ ] 8.3 Set the version summary, package table and release-notes link to 2.0.0 in all five READMEs.
-- [ ] 8.4 Local verification:
-  - `scripts.release version` / `verify-notes` / `verify-engines`;
-  - `--version` / `--help`;
-  - `pytest -q`;
-  - `scripts.smoke_test`;
-  - `git diff --check`.
-- [ ] 8.5 Archive the three OpenSpec changes, then run `openspec validate --strict` on the merged specs.
-- [ ] 8.6 Open the single release PR `release/v2.0.0` → `main` with the `release` label, after the maintainer approves.
+  - relocation auto-restore;
+  - the new release-notes location.

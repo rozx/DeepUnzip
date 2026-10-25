@@ -113,7 +113,7 @@ Translations are written from the Chinese and English masters. Japanese and Kore
 
 This change is committed directly on `release/v2.0.0`, after the terminal-output commits. It ships through the single release PR (`release/v2.0.0` → `main`). The commit stages are:
 
-1. **Rename (mechanical)**: package move, imports, `pyproject.toml`, scripts, CI, aliases with deprecation notice, release-prep skill, and developer docs.
+1. **Rename (mechanical)**: package move, imports, `pyproject.toml`, scripts, CI, aliases with deprecation notice, the `release-ready` skill's names, and developer docs.
 2. **Docs**:
    - the five READMEs;
    - `scripts/generate_screenshots.py`, `scripts/make_demo_archives.py`, `docs/demo.tape`;

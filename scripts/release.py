@@ -47,9 +47,24 @@ def read_version(root: Path = ROOT) -> str:
     return str(version)
 
 
+def verify_branch(ref: str, root: Path = ROOT) -> None:
+    """Require a release branch whose version-like suffix matches the project.
+
+    `release/2.0.0` and `release/v2.0.0` must name the project version; a
+    suffix that is not a version (`release/rename`) is accepted.
+    """
+    if not ref.startswith("release/"):
+        raise ValueError(f"Release branches must start with release/: {ref}")
+    suffix = ref[len("release/") :]
+    suffix = suffix[1:] if suffix.startswith("v") else suffix
+    version = read_version(root)
+    if re.fullmatch(r"\d+\.\d+\.\d+", suffix) and suffix != version:
+        raise ValueError(f"Branch {ref} does not match the project version {version}")
+
+
 def read_release_notes(root: Path = ROOT) -> str:
     """Read the required release notes for the exact project version."""
-    path = root / "ReleaseNotes" / f"RELEASE_NOTES_v{read_version(root)}.md"
+    path = root / "docs" / "releaseNotes" / f"v{read_version(root)}.md"
     if not path.is_file():
         raise ValueError(f"Release notes not found: {path}")
     notes = path.read_text(encoding="utf-8")
@@ -129,6 +144,8 @@ def main() -> None:
     commands.add_parser("version")
     commands.add_parser("verify-notes")
     commands.add_parser("verify-engines")
+    branch = commands.add_parser("verify-branch")
+    branch.add_argument("ref")
     pack = commands.add_parser("package")
     pack.add_argument("target", choices=TARGETS)
     pack.add_argument("--output", type=Path, default=ROOT / "artifacts")
@@ -141,6 +158,8 @@ def main() -> None:
         read_release_notes()
     elif args.command == "verify-engines":
         verify_engines()
+    elif args.command == "verify-branch":
+        verify_branch(args.ref)
     elif args.command == "package":
         print(package(ROOT, args.target, args.output))
     else:

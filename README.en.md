@@ -9,7 +9,7 @@
 
 **One-click extraction for disguised ("cloaked") archives downloaded from cloud drives — built for 百度网盘 / Baidu Netdisk.**
 
-**v1.3.2** reuses manually entered passwords for later archives in the same run, so batches with a shared password no longer prompt for each archive. See the [1.3.2 release notes](ReleaseNotes/RELEASE_NOTES_v1.3.2.md).
+**v1.3.2** reuses manually entered passwords for later archives in the same run, so batches with a shared password no longer prompt for each archive. See the [1.3.2 release notes](docs/releaseNotes/v1.3.2.md).
 
 ---
 
@@ -147,28 +147,31 @@ See [AGENTS.md](AGENTS.md) and [CLAUDE.md](CLAUDE.md) for architecture, conventi
 
 ### GitHub CI and automatic releases
 
-[CI](.github/workflows/ci.yml) runs on pushes and PRs targeting `main` or `release/**`. Each of the five platforms runs the complete test suite, engine checksum validation, real archive smoke tests, a standalone build, and standalone smoke tests. Downloadable packages remain in Actions artifacts for 14 days.
+[CI](.github/workflows/ci.yml) runs fast checks on pushes and PRs targeting `main` or `release/**`: version and engine checksum validation, compilation, and the complete test suite on Ubuntu and Windows. New commits cancel older CI runs for the same branch or PR event. The five-platform standalone builds and real archive smoke tests run during releases; to run them on any branch, start CI manually in Actions with **full_build** checked. Their packages remain in Actions artifacts for 14 days.
 
-New commits cancel older CI runs for the same branch or PR event. Release builds use a separate concurrency group and are not cancelled by ordinary CI. Release merges still run both the `main` push checks and the release builds so publication uses only artifacts from its own workflow run.
+Releases are prepared with the `release-ready` skill (`.claude/skills/release-ready/`; `.agents/skills/release-ready` links to it). All of a release's commits go on a `release/vX.Y.Z` branch, which merges through exactly one PR. The skill:
+
+1. checks the version against the branch and bumps all three version declarations in a separate `chore: bump version to X.Y.Z` commit;
+2. writes bilingual release notes to `docs/releaseNotes/vX.Y.Z.md` from the changes since the last tag (the 2.0.0 notes, for example, will be `docs/releaseNotes/v2.0.0.md`);
+3. updates the READMEs and docs, runs the checks, pushes the branch, and opens the PR `release: vX.Y.Z` with the `release` label.
 
 [Release](.github/workflows/release.yml) publishes only when all of these conditions hold:
 
-1. The PR source branch matches `release/*`, for example `release/v1.3`.
-2. The PR has the `release` label at merge time.
-3. The PR is merged into `main`.
+1. The PR comes from a `release/*` branch in this repository, for example `release/v2.0.0`.
+2. A version-like branch suffix (`release/2.0.0` or `release/v2.0.0`) equals the project version in `pyproject.toml`, package `__version__`, and `.bumpversion.cfg`.
+3. The PR has the `release` label at merge time and is merged into `main`.
 
-Before merging, check that `pyproject.toml`, package `__version__`, and `.bumpversion.cfg` agree on an unpublished stable `X.Y.Z`. Use `poetry run bump-minor`, `poetry run bump-patch`, or the other bump commands when preparing subsequent versions. The branch name controls eligibility; the project version supplies the tag, such as `v1.3.2`. Include the matching notes in the same PR; the 1.3.2 notes are in [ReleaseNotes/RELEASE_NOTES_v1.3.2.md](ReleaseNotes/RELEASE_NOTES_v1.3.2.md). Missing or empty notes fail before platform builds start.
-
-Check the version and notes locally before committing:
+Check the version, branch, and notes locally before opening the PR:
 
 ```powershell
 poetry run python -m scripts.release version
+poetry run python -m scripts.release verify-branch release/v2.0.0
 poetry run python -m scripts.release verify-notes
 ```
 
-The release workflow rebuilds all platforms from the PR's exact merge commit. After every build succeeds, it creates a GitHub Release using the exact contents of `ReleaseNotes/RELEASE_NOTES_vX.Y.Z.md` as its body, and uploads the five platform packages listed above plus `SHA256SUMS`.
+The release workflow rebuilds and smoke-tests all five platforms from the PR's exact merge commit. After every build succeeds, it creates a GitHub Release using the exact contents of `docs/releaseNotes/vX.Y.Z.md` as its body, and uploads the five platform packages listed above plus `SHA256SUMS`. Missing or empty notes fail before platform builds start.
 
-The workflow must first exist on `main`; subsequent eligible merges trigger publication. Add the label before merging. Closing an unmerged PR, adding the label after merge, or pushing a tag alone does not publish. The built-in `GITHUB_TOKEN` is sufficient; only the final publishing job has `contents: write`.
+Release runs are processed one at a time and never cancelled. Add the label before merging. Closing an unmerged PR, adding the label after merge, a branch from a fork, or pushing a tag alone does not publish. The built-in `GITHUB_TOKEN` is sufficient; only the final publishing job has `contents: write`.
 
 Use Actions to rerun failed jobs. Interrupted uploads leave a draft that can be resumed for the same version and merge commit; its body is updated from that commit's matching release notes file. Publication waits until all remote assets pass checksum verification. Published releases are never overwritten, and a tag or draft belonging to another commit causes a clear failure.
 

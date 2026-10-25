@@ -310,7 +310,7 @@ poetry run pytest -v
 ### Documentation
 - **README.md**: User-facing documentation (bilingual: English/Chinese)
 - **AGENTS.md**: AI agent guidelines and project conventions
-- **Release Notes**: `ReleaseNotes/` directory with version-specific notes
+- **Release Notes**: `docs/releaseNotes/vX.Y.Z.md`, bilingual, written by the `release-ready` skill (`.claude/skills/release-ready/`) on the `release/vX.Y.Z` branch
 - **OpenSpec**: `openspec/` directory for spec-driven development
 
 ## Quick Reference

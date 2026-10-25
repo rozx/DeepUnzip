@@ -15,7 +15,7 @@ These tasks are committed directly on `release/v2.0.0` (single release PR) as th
   - `scripts/smoke_test.py`, `scripts/standalone_main.py` and `scripts/generate_icon.py`.
 - [ ] 1.4 Update the executable paths and the `compileall` package path in `.github/workflows/ci.yml`. Check that `release.yml` uses no hardcoded repository name.
 - [ ] 1.5 Set the product name in the catalog (version output, help header) to DeepUnzip / 深度解压. Test `deepunzip --version` in both languages.
-- [ ] 1.6 Move the release-prep skill to `.agents/skills/deepunzip-release/`, update its package-name check, and update every reference to it.
+- [ ] 1.6 Update the `release-ready` skill for the new names: the package path `deepunzip/__init__.py`, the product name, and the `deepunzip-v…` asset names in its download table.
 - [ ] 1.7 Update `CLAUDE.md`, `AGENTS.md`, `openspec/project.md` and current specs to the new names. Add a test that fails if the old name appears outside the allowlist (historical release notes, archived OpenSpec changes, the v2.0.0 rename notice).
 - [ ] 1.8 Add a test that a `.unzip-rename-history.tmp.json` written by 1.3.2 is still detected and recovered.
 - [ ] 1.9 Quality gates: `pytest -q`, `flake8`, `mypy`, `black`. Build `dist/deepunzip.exe` locally on Windows and run it with `--version` / `--help`.

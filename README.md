@@ -145,28 +145,31 @@ poetry run build
 
 ### GitHub CI 与自动发布
 
-[CI](.github/workflows/ci.yml) 在推送或提交 PR 到 `main`、`release/**` 时运行。五个平台分别执行完整测试、原生引擎校验、真实压缩包冒烟测试、独立程序构建及构建产物冒烟测试。每个平台的发布包在 Actions artifacts 中保留 14 天。
+[CI](.github/workflows/ci.yml) 在推送或提交 PR 到 `main`、`release/**` 时运行快速检查：在 Ubuntu 和 Windows 上校验版本与内置引擎、编译并运行完整测试。同一分支或 PR 的新提交会取消对应事件的旧 CI。五个平台的独立程序构建与真实压缩包冒烟测试在发布时进行；需要在任意分支上运行时，可在 Actions 中手动运行 CI 并勾选 **full_build**，发布包在 Actions artifacts 中保留 14 天。
 
-同一分支或 PR 的新提交会取消对应事件的旧 CI。发布构建使用独立并发组，不会被普通 CI 取消。发布合并仍分别执行 `main` 推送检查和发布构建，以确保发布仅使用本次发布工作流生成的产物。
+发布用 `release-ready` 技能准备（`.claude/skills/release-ready/`，`.agents/skills/release-ready` 是指向它的链接）。一次发布的所有提交都放在 `release/vX.Y.Z` 分支上，最后只通过一个 PR 合并。该技能会：
+
+1. 核对分支与项目版本，并以单独的 `chore: bump version to X.Y.Z` 提交一次改齐三处版本声明；
+2. 按上次发布以来的改动，在 `docs/releaseNotes/vX.Y.Z.md` 写中英双语发布说明（例如 2.0.0 的说明为 `docs/releaseNotes/v2.0.0.md`）；
+3. 更新各语言 README 与文档，运行检查，推送分支，并创建带 `release` 标签的 PR `release: vX.Y.Z`。
 
 [Release](.github/workflows/release.yml) 仅在以下条件同时满足时自动发布：
 
-1. PR 的来源分支为 `release/*`，例如 `release/v1.3`。
-2. PR 在合并时带有 `release` 标签。
-3. PR 被合并到 `main`。
+1. PR 来自本仓库的 `release/*` 分支，例如 `release/v2.0.0`。
+2. 分支名后缀形如版本号时（`release/2.0.0` 或 `release/v2.0.0`），与 `pyproject.toml`、包内 `__version__` 和 `.bumpversion.cfg` 中一致的项目版本相同。
+3. PR 在合并时带有 `release` 标签，并被合并到 `main`。
 
-合并前，确认 `pyproject.toml`、包内 `__version__` 和 `.bumpversion.cfg` 使用一致且尚未发布的 `X.Y.Z`。准备后续版本时，可通过 `poetry run bump-minor`、`poetry run bump-patch` 等命令升版。分支名只控制触发，发布标签取自项目版本，例如 `v1.3.2`。同一 PR 必须包含对应的发布说明；1.3.2 的说明位于 [ReleaseNotes/RELEASE_NOTES_v1.3.2.md](ReleaseNotes/RELEASE_NOTES_v1.3.2.md)。文件缺失或为空时，会在平台构建前报错。
-
-提交前可本地检查版本和发布说明：
+创建 PR 前可本地检查版本、分支和发布说明：
 
 ```powershell
 poetry run python -m scripts.release version
+poetry run python -m scripts.release verify-branch release/v2.0.0
 poetry run python -m scripts.release verify-notes
 ```
 
-发布流程会从该 PR 的确切合并提交重新构建全部平台；全部成功后创建 GitHub Release，以 `ReleaseNotes/RELEASE_NOTES_vX.Y.Z.md` 的原文作为正文，并上传上方列出的五个平台发布包和 `SHA256SUMS`。
+发布流程会从该 PR 的确切合并提交重新构建全部五个平台并做冒烟测试；全部成功后创建 GitHub Release，以 `docs/releaseNotes/vX.Y.Z.md` 的原文作为正文，并上传上方列出的五个平台发布包和 `SHA256SUMS`。发布说明缺失或为空时，会在平台构建前报错。
 
-工作流需先存在于 `main`，之后符合条件的合并才会触发自动发布。标签应在合并前添加；仅关闭 PR、合并后补标签或直接推送 tag 都不会发布。使用内置 `GITHUB_TOKEN`，仅最终发布任务拥有 `contents: write`。
+发布任务逐个执行，不会被取消。标签应在合并前添加；仅关闭 PR、合并后补标签、来自 fork 的分支或直接推送 tag 都不会发布。使用内置 `GITHUB_TOKEN`，仅最终发布任务拥有 `contents: write`。
 
 失败时可在 Actions 中重新运行失败任务。上传中断会保留草稿；同版本、同合并提交的草稿可以继续上传，并以该提交中对应版本的说明文件更新正文。校验全部远端文件后才公开发布；已公开的 Release 不会覆盖，指向其他提交的已有 tag 或草稿会报错。
 

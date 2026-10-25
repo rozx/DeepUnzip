@@ -291,9 +291,9 @@ Commits land in this order: this change's stages 1–3, then the terminal-output
 3. **Stage 3**:
    - remove `extract_nested_archives`, `add_file_to_groups`, `relocate_multipart_parts_from_directory` and `ensure_contained_multipart_groups`;
    - update `CLAUDE.md` / `AGENTS.md` and `openspec/project.md` for the new flow.
-4. **Release preparation**, the last commits on the branch. They follow the project's release-prep process (`.agents/skills/deepunzip-release` after the rename). Then open the single release PR:
+4. **Release preparation**, the last commits on the branch. They are prepared by the `release-ready` skill (`adopt-release-ready-workflow`), which also opens the single release PR:
    - `poetry run bump-major`. The version in `pyproject.toml`, `__init__.py` and `.bumpversion.cfg` must read 2.0.0 in all three.
-   - `ReleaseNotes/RELEASE_NOTES_v2.0.0.md`, bilingual, in the v1.3.x format. It opens with the rename to DeepUnzip and the old→new mapping. Its upgrade notes cover:
+   - `docs/releaseNotes/v2.0.0.md`, bilingual, from the `release-ready` template. It opens with the rename to DeepUnzip and the old→new mapping. Its upgrade notes cover:
      - the new executable and asset names;
      - one `unzipped/` per input root;
      - sources deleted only at the end of the run;
@@ -302,7 +302,7 @@ Commits land in this order: this change's stages 1–3, then the terminal-output
      - `--json`;
      - relocation auto-restore after a crash.
    - README: the five-language READMEs from `rename-to-deepunzip`, with version summary, package table and release-notes link set to 2.0.0.
-   - Archive all three OpenSpec changes into `openspec/specs/` once their tasks are complete.
+   - Archive all four v2.0.0 OpenSpec changes into `openspec/specs/` once their tasks are complete.
    - Local verification:
      - `scripts.release version` / `verify-notes` / `verify-engines`;
      - `--version` / `--help`;

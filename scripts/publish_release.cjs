@@ -4,11 +4,11 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 
 module.exports = async function publish({github, context, core, tag, sha, assetDir,
-  notesDir = path.join(__dirname, '..', 'ReleaseNotes')}) {
+  notesDir = path.join(__dirname, '..', 'docs', 'releaseNotes')}) {
   if (!/^v\d+\.\d+\.\d+$/.test(tag) || !/^[a-f0-9]{40}$/.test(sha)) {
     throw new Error('Invalid release tag or merge commit');
   }
-  const notesPath = path.join(notesDir, `RELEASE_NOTES_${tag}.md`);
+  const notesPath = path.join(notesDir, `${tag}.md`);
   const notes = fs.readFileSync(notesPath, 'utf8');
   if (!notes.trim()) throw new Error(`Release notes are empty: ${notesPath}`);
   const digest = data => 'sha256:' + crypto.createHash('sha256').update(data).digest('hex');

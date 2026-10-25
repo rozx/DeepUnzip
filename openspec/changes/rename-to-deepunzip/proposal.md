@@ -39,7 +39,7 @@ v2.0.0 already changes the extraction flow and the terminal output, so it is the
 - Repository docs and tooling follow the new name:
   - `CLAUDE.md`, `AGENTS.md`, `openspec/project.md`;
   - the build, release and smoke scripts, and the CI and release workflows;
-  - the release-prep skill, which becomes `.agents/skills/deepunzip-release`.
+  - the `release-ready` skill's package path, product name and asset names.
 
   Historical release notes and archived OpenSpec changes are left untouched.
 

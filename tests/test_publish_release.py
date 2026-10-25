@@ -38,15 +38,15 @@ const [dir, scenario] = process.argv.slice(2);
 const sha = 'a'.repeat(40);
 const other = 'b'.repeat(40);
 const tag = 'v1.3.0';
-const notesDir = path.join(dir, 'ReleaseNotes');
-fs.mkdirSync(notesDir);
+const notesDir = path.join(dir, 'docs', 'releaseNotes');
+fs.mkdirSync(notesDir, {recursive: true});
 const notes = '# v1.3.0 发布说明\n\n- Native builds\n';
 if (scenario !== 'missing-notes') {
-  fs.writeFileSync(path.join(notesDir, 'RELEASE_NOTES_v1.3.0.md'),
+  fs.writeFileSync(path.join(notesDir, 'v1.3.0.md'),
                    scenario === 'empty-notes' ? ' \n\t' : notes);
 }
 // Another version must never be used as a fallback.
-fs.writeFileSync(path.join(notesDir, 'RELEASE_NOTES_v1.2.2.md'), 'Old release');
+fs.writeFileSync(path.join(notesDir, 'v1.2.2.md'), 'Old release');
 const hash = data => 'sha256:' + crypto.createHash('sha256').update(data).digest('hex');
 const names = ['windows-x64.zip', 'macos-x64.tar.gz', 'macos-arm64.tar.gz',
                'linux-x64.tar.gz', 'linux-arm64.tar.gz'].map(x => 'app-' + x);
@@ -118,7 +118,7 @@ const github = {rest: {repos, git: {
          'missing-notes', 'empty-notes'].includes(scenario))
       assert.deepEqual(effects, []);
     if (['missing-notes', 'empty-notes'].includes(scenario))
-      assert.match(error.message, /RELEASE_NOTES_v1\.3\.0\.md/);
+      assert.match(error.message, /releaseNotes[\\/]v1\.3\.0\.md/);
     if (['upload-failure', 'digest-mismatch'].includes(scenario))
       assert.equal(effects.includes('upload'), true);
   }

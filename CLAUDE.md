@@ -86,4 +86,4 @@ Primary/continuation rules per format: `.7z.001` primary / `.7z.002+` cont; `.ta
 
 - Detailed conventions live in [AGENTS.md](AGENTS.md) (operating guide, passwords, uncloaking rules, nested handling) and [openspec/project.md](openspec/project.md). Read those before larger changes; if anything conflicts with [README.md](README.md), README wins.
 - This project uses **OpenSpec** for spec-driven development. Specs are in `openspec/specs/`, proposed changes in `openspec/changes/`. For non-trivial features/changes, follow the OpenSpec workflow (the `openspec-*` skills) rather than ad-hoc edits.
-- Keep PRs atomic (~<300 lines), reuse existing utilities, don't add dependencies without justification, and never modify bundled binaries under `7z/`.
+- Keep PRs atomic (~<300 lines; a release is one PR from `release/vX.Y.Z`, so keep its commits atomic instead), reuse existing utilities, don't add dependencies without justification, and never modify bundled binaries under `7z/`.

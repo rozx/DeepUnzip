@@ -157,7 +157,7 @@ This change ships in **v2.0.0** with `redesign-work-pool-extraction`. It is comm
 
 1. Event types, `i18n.py` with the catalog and its tests, and the three renderers with recorded-event tests.
 2. Wire the renderers into the pool driver and `main.py`. Add `--json`, exit codes, prompt gating, and `-bsp1` progress. Remove `rich_utils.py`.
-3. Docs: the `CLAUDE.md` / `AGENTS.md` conventions, the README `--json` and exit-code section, and the upgrade notes in `RELEASE_NOTES_v2.0.0.md`.
+3. Docs: the `CLAUDE.md` / `AGENTS.md` conventions, the README `--json` and exit-code section, and the upgrade notes in `docs/releaseNotes/v2.0.0.md`.
 
 ## Open Questions
 

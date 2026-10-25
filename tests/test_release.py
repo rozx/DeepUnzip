@@ -27,21 +27,39 @@ def test_release_version_matches_all_declarations(project):
 
 def test_release_notes_are_read_from_matching_version_file(project):
     notes = "# v1.3.0 发布说明\n\n- Native builds\n"
-    directory = project / "ReleaseNotes"
-    directory.mkdir()
-    (directory / "RELEASE_NOTES_v1.3.0.md").write_text(notes, encoding="utf-8")
+    directory = project / "docs" / "releaseNotes"
+    directory.mkdir(parents=True)
+    (directory / "v1.3.0.md").write_text(notes, encoding="utf-8")
     assert release.read_release_notes(project) == notes
 
 
 @pytest.mark.parametrize("contents", [None, " \n\t"])
 def test_missing_or_empty_release_notes_fail_without_fallback(project, contents):
-    directory = project / "ReleaseNotes"
-    directory.mkdir()
-    (directory / "RELEASE_NOTES_v1.2.2.md").write_text("Previous version")
+    directory = project / "docs" / "releaseNotes"
+    directory.mkdir(parents=True)
+    (directory / "v1.2.2.md").write_text("Previous version")
     if contents is not None:
-        (directory / "RELEASE_NOTES_v1.3.0.md").write_text(contents)
-    with pytest.raises(ValueError, match="RELEASE_NOTES_v1.3.0.md"):
+        (directory / "v1.3.0.md").write_text(contents)
+    with pytest.raises(ValueError, match=r"v1\.3\.0\.md"):
         release.read_release_notes(project)
+
+
+@pytest.mark.parametrize(
+    "ref", ["release/1.3.0", "release/v1.3.0", "release/rename", "release/v1.3"]
+)
+def test_release_branch_matching_or_non_version_suffix_passes(project, ref):
+    release.verify_branch(ref, project)
+
+
+@pytest.mark.parametrize("ref", ["release/1.3.1", "release/v2.0.0"])
+def test_release_branch_version_must_match_project_version(project, ref):
+    with pytest.raises(ValueError, match="1.3.0"):
+        release.verify_branch(ref, project)
+
+
+def test_release_branch_must_start_with_release(project):
+    with pytest.raises(ValueError, match="release/"):
+        release.verify_branch("feature/1.3.0", project)
 
 
 @pytest.mark.parametrize("bad_version", ["1.2.2", "1.3.0rc1", "1.3"])

@@ -109,17 +109,18 @@ The project bundles 7-Zip 26.03 for each supported platform. Use `modules/seven_
    - Tests: `poetry run pytest -q`
    - Lint/Typecheck: if configured in `pyproject.toml`
 5) Update docs (`README.md`) if user-facing behavior changes.
-6) Commit with a clear message and open a PR with a short checklist.
+6) Commit with a clear message and open a PR with a short checklist. Release work is the exception: commit it directly on `release/vX.Y.Z`; the `release-ready` skill opens the single release PR (see "CI and releases").
 
 ## Spec-driven development (OpenSpec)
 This repo uses **OpenSpec**. Active specs live in `openspec/specs/`, proposed changes in `openspec/changes/`, and project conventions in `openspec/project.md`. For non-trivial features or behavior changes, create/advance an OpenSpec change (via the `openspec-*` skills) instead of ad-hoc edits, then archive it once implemented. Small bugfixes can skip this, but still follow TDD.
 
 ## CI and releases
 
-- `.github/workflows/ci.yml` tests and builds Windows x64, macOS x64/ARM64, and Linux x64/ARM64. `scripts/smoke_test.py` verifies real native source/standalone extraction using temporary fixtures.
-- `.github/workflows/release.yml` publishes only after a `release/*` PR carrying the `release` label merges into `main`. Build and tag the exact merge commit.
-- Versions in `pyproject.toml`, package `__version__`, and `.bumpversion.cfg` must match and be bumped before release. `scripts/release.py` validates versions and packages assets/checksums.
-- Release bodies come verbatim from `ReleaseNotes/RELEASE_NOTES_vX.Y.Z.md` in the merge commit. Missing or empty notes block publication; do not fall back to generated GitHub notes or another version.
+- `.github/workflows/ci.yml` runs fast checks (version/engine verification, compile, full `pytest`) on Ubuntu and Windows for every push and PR. The five-target build (Windows x64, macOS x64/ARM64, Linux x64/ARM64) with `scripts/smoke_test.py` native source/standalone extraction runs only when the release workflow calls it, or on manual dispatch with `full_build`.
+- Prepare releases with the `release-ready` skill (`.claude/skills/release-ready/SKILL.md`; `.agents/skills/release-ready` is a symlink to it). All of a release's commits go directly on `release/vX.Y.Z`, and the release merges as exactly one PR (`release: vX.Y.Z`, `release` label) into `main`. Do not open feature branches or extra PRs for release work.
+- `.github/workflows/release.yml` triggers on the merged `pull_request`. It publishes only for a same-repository `release/*` branch carrying the `release` label, whose version-like suffix equals the project version (`scripts.release verify-branch`). Build and tag the exact merge commit. Release runs are serialized and never cancelled.
+- Versions in `pyproject.toml`, package `__version__`, and `.bumpversion.cfg` must match and be bumped before release, in a separate `chore: bump version to X.Y.Z` commit. `scripts/release.py` validates versions and branches, and packages assets/checksums.
+- Release bodies come verbatim from `docs/releaseNotes/vX.Y.Z.md` (bilingual, `release-ready` template) in the merge commit. Missing or empty notes block publication; do not fall back to generated GitHub notes or another version.
 - Only the publication job has write permissions. Never move an existing version tag or overwrite a published release; `scripts/publish_release.cjs` can resume a matching draft.
 
 ## Quality Gates (Definition of Done)
