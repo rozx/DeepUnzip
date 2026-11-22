@@ -442,6 +442,15 @@ class TestSafeRemove:
         assert result is True
         assert not os.path.exists(self.test_file)
 
+    def test_permanent_remove_of_a_folder(self):
+        """A folder is removed with everything in it."""
+        folder = os.path.join(self.test_dir, "work", "sub")
+        os.makedirs(folder)
+        Path(folder, "partial.txt").write_text("x")
+        result = fu.safe_remove(os.path.dirname(folder), use_recycle_bin=False)
+        assert result is True
+        assert not os.path.exists(os.path.dirname(folder))
+
     def test_remove_nonexistent_file(self):
         """Test removing nonexistent file."""
         result = fu.safe_remove("/nonexistent/file")

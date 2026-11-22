@@ -41,7 +41,7 @@ Doing this by hand means opening archives one by one, trying passwords, moving v
 
 - Restores mangled file names using rules in `config/cloaked_file_rules.json`, which you can extend. If a file ends up not extracting, its original name is put back.
 - Handles `.7z.001`, `.part1.rar`, `.rar` + `.r00`, `.zip` + `.z01` and other multipart formats. Volumes may be spread over different folders or hidden inside other archives.
-- Tries the passwords in `passwords.txt` in order. A password you type during a run is used for the archives that follow and saved at the end.
+- Tries the passwords in `passwords.txt` in order. A password you type during a run is used for the archives that follow and saved as soon as it opens a file.
 - Opens nested archives level by level until there is nothing new to extract.
 - Deletes an original only when everything extracted from it succeeded, and moves it to the recycle bin by default. Anything it cannot extract is kept, and the final summary says why and where.
 - Offers `--json` output and clear exit codes for scripts.
@@ -54,7 +54,7 @@ Doing this by hand means opening archives one by one, trying passwords, moving v
 3. macOS / Linux: unpack the `.tar.gz` and run it in a terminal:
 
    ```bash
-   tar -xzf deepunzip-v2.0.0-macos-arm64.tar.gz
+   tar -xzf deepunzip-v2.1.0-macos-arm64.tar.gz
    ./deepunzip ~/Downloads/archives
    ```
 
@@ -103,7 +103,7 @@ The output is available in English, Simplified Chinese, Traditional Chinese, Jap
 With `--json`, every line on standard output is a JSON object, and the last one is always `summary`:
 
 ```json
-{"event": "summary", "schema_version": 1, "status": "partial", "files": 12, "output_dirs": ["D:\\Downloads\\unzipped"], "sources": {"deleted": 3, "kept": 1}, "unresolved": [{"root": 1, "path": "locked.7z", "reason": "password"}], "exit": 1}
+{"event": "summary", "schema_version": 1, "status": "partial", "files": 12, "output_dirs": ["D:\\Downloads\\unzipped"], "sources": {"deleted": 3, "kept": 1}, "duplicates_skipped": 0, "unresolved": [{"root": 1, "path": "locked.7z", "reason": "password"}], "exit": 1}
 ```
 
 In `--json` mode DeepUnzip never asks for a password and never waits for Enter at the end. It doesn't ask either when standard input is not a terminal, for example in a scheduled task.
@@ -117,21 +117,21 @@ In `--json` mode DeepUnzip never asks for a password and never waits for Enter a
 5. The run ends when a round makes no progress. Extracted files move to `unzipped/`. Anything extracted from an archive but not usable (an inner archive that won't open, an incomplete set of volumes) goes there as well; files that were already in the input folder stay where they are.
 6. An original is deleted only when everything extracted from it succeeded.
 
-If a run is interrupted, the next run puts moved volumes back where they were and asks whether to undo the previous run's renames.
+If a run is interrupted, the next run puts moved volumes back where they were, asks whether to undo the previous run's renames, and extracts again. Identical files already in `unzipped/` are not copied twice, and the interrupted run's work folder is cleaned up when the new run finishes.
 
 ## Release packages
 
 | Platform | File |
 | --- | --- |
-| Windows x64 | `deepunzip-v2.0.0-windows-x64.zip` |
-| macOS Intel | `deepunzip-v2.0.0-macos-x64.tar.gz` |
-| macOS Apple Silicon | `deepunzip-v2.0.0-macos-arm64.tar.gz` |
-| Linux x64 | `deepunzip-v2.0.0-linux-x64.tar.gz` |
-| Linux ARM64 | `deepunzip-v2.0.0-linux-arm64.tar.gz` |
+| Windows x64 | `deepunzip-v2.1.0-windows-x64.zip` |
+| macOS Intel | `deepunzip-v2.1.0-macos-x64.tar.gz` |
+| macOS Apple Silicon | `deepunzip-v2.1.0-macos-arm64.tar.gz` |
+| Linux x64 | `deepunzip-v2.1.0-linux-x64.tar.gz` |
+| Linux ARM64 | `deepunzip-v2.1.0-linux-arm64.tar.gz` |
 
 Each package contains the program, the bundled 7-Zip and the license files; the release page also has `SHA256SUMS`. The Linux builds are made on Ubuntu 24.04. The program is not code-signed, and the macOS builds are not notarized. See [7z/README.md](7z/README.md) for where 7-Zip comes from and its checksums.
 
-See the [release notes](docs/releaseNotes/v2.0.0.md) for what changed in this version.
+See the [release notes](docs/releaseNotes/v2.1.0.md) for what changed in this version.
 
 ## FAQ
 
@@ -153,7 +153,7 @@ Add a rule to `config/cloaked_file_rules.json`; the format is described in the "
 
 ### A folder starting with `temp.deepunzip-` showed up
 
-It is the work folder of a run that was interrupted. The next run tells you where it is; once you have checked that nothing in it is needed, you can delete it.
+It is the work folder of a run that was interrupted. Run DeepUnzip on the same folder again: when that run finishes, it moves the old work folder to the recycle bin (or deletes it with `--permanent-delete`). It is kept if it still holds one of your original volumes, if another DeepUnzip run is still using it, or if the new run has to keep its own work folder too; the run then tells you where it is.
 
 ## Development
 

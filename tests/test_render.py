@@ -75,6 +75,23 @@ def test_plain_output_reports_kept_and_unresolved_items(tmp_path):
     assert "exit code 1" in out
 
 
+def test_summary_counts_identical_files_skipped(tmp_path):
+    write(tmp_path / "A.7z", archive({"a.txt": "same", "b.txt": "b"}))
+    write(tmp_path / "B.7z", archive({"a.txt": "same"}))
+    stream, renderer = plain()
+    drive(renderer, tmp_path)
+    out = stream.getvalue()
+    assert "output: 2 files →" in out
+    assert "identical files already in the output, skipped: 1" in out
+
+
+def test_summary_has_no_skip_line_without_duplicates(tmp_path):
+    write(tmp_path / "A.7z", archive({"a.txt": "a"}))
+    stream, renderer = plain()
+    drive(renderer, tmp_path)
+    assert "skipped" not in stream.getvalue()
+
+
 def _item(tmp_path, name, number):
     return wp.WorkItem(
         number, str(tmp_path / name), wp.Origin.SOURCE, frozenset({number}), 0, ""
@@ -175,6 +192,16 @@ def test_json_stream_describes_the_run(tmp_path):
     summary = lines[-1]
     assert summary["status"] == "ok" and summary["exit"] == 0
     assert summary["files"] == 1 and summary["sources"] == {"deleted": 2, "kept": 0}
+    assert summary["duplicates_skipped"] == 0
+
+
+def test_json_summary_counts_identical_files_skipped(tmp_path):
+    write(tmp_path / "A.7z", archive({"a.txt": "same"}))
+    write(tmp_path / "B.7z", archive({"a.txt": "same"}))
+    stream = io.StringIO()
+    drive(render.create_renderer(json_mode=True, stream=stream), tmp_path)
+    summary = json_lines(stream)[-1]
+    assert summary["files"] == 1 and summary["duplicates_skipped"] == 1
 
 
 def test_json_stream_is_identical_in_every_language(tmp_path):

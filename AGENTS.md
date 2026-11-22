@@ -157,7 +157,7 @@ This repo uses **OpenSpec**. Active specs live in `openspec/specs/`, proposed ch
   - Byte Order Marks (BOM) are handled/stripped.
 
 - Saving behavior:
-  - When new passwords are learned during a run, they are saved to the local `passwords.txt` in UTF-8. Existing lines (comments, blanks, order) are kept; removed passwords are dropped and new ones appended.
+  - A password typed during a run is saved to the local `passwords.txt` in UTF-8 as soon as it works (not at the end), so an interrupted run cannot lose it. Existing lines (comments, blanks, order) are kept; removed passwords are dropped and new ones appended.
   - Save only occurs when there are actual changes.
   - Save to the same tool-directory path used for loading; target-directory books are read-only sources unless they are the same file. If saving raises `OSError`, warn without interrupting rename-history finalization or CLI completion. Builds must not embed `passwords.txt`.
 
@@ -245,7 +245,7 @@ Uncloaking renames source files *in place*. If a file is kept, the user must sti
   - clears the entries of deleted sources (`clear_for`);
   - reverts every remaining entry, so kept originals get their cloaked names back;
   - deletes the file on a clean run (`finalize`).
-- On startup (`_maybe_recover_pending_renames`), leftover `relocation` entries are restored automatically, without a prompt, because they would otherwise strand a source volume in a work directory. Leftover `uncloak` entries are offered for revert (default "no"). Leftover `temp.deepunzip-*` work directories are reported.
+- On startup (`_maybe_recover_pending_renames`), leftover `relocation` entries are restored automatically, without a prompt, because they would otherwise strand a source volume in a work directory. Leftover `uncloak` entries are offered for revert (default "no"). Leftover `temp.deepunzip-*` work directories are reported, and removed after the root's run (`_remove_leftover_work_dirs`, Recycle Bin unless `--permanent-delete`) unless that run kept its own work directory, a remaining history entry points into one, or the run that owns it is still going (`.owner` marker with PID and host; `work_pool.work_dir_in_use`; never `os.kill(pid, 0)` on Windows, which terminates the process).
 - Tests: `tests/test_rename_history.py`, `tests/test_main.py`.
 
 ## Cleanup safety guards (do not break these)

@@ -250,11 +250,12 @@ def safe_remove(
     file_path: str, use_recycle_bin: bool = True, error_callback=None
 ) -> bool:
     """
-    Safely remove a file, optionally moving it to recycle bin instead of permanent deletion.
-    安全删除文件，可选择移动到回收站而不是永久删除。
+    Safely remove a file or folder, optionally moving it to recycle bin instead of
+    permanent deletion.
+    安全删除文件或文件夹，可选择移动到回收站而不是永久删除。
 
     Args:
-        file_path (str): Path to the file to remove
+        file_path (str): Path to the file or folder to remove
         use_recycle_bin (bool): If True, move to recycle bin; if False, permanently delete
         error_callback: Optional callback function to handle errors
 
@@ -265,6 +266,9 @@ def safe_remove(
         if os.path.exists(file_path):
             if use_recycle_bin:
                 send2trash(file_path)
+                return True
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
                 return True
             else:
                 os.remove(file_path)

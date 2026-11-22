@@ -42,7 +42,7 @@
 
 - 按规则还原被改坏的文件名，规则写在 `config/cloaked_file_rules.json`，可以自己添加。如果文件最后没能解开，原文件名会被改回来。
 - 支持 `.7z.001`、`.part1.rar`、`.rar` + `.r00`、`.zip` + `.z01` 等分卷格式。分卷可以散落在不同文件夹，也可以藏在别的压缩包里。
-- 从 `passwords.txt` 里按顺序试密码。运行中手动输入的密码会用于后面的压缩包，并在结束时保存下来。
+- 从 `passwords.txt` 里按顺序试密码。运行中手动输入的密码会用于后面的压缩包，确认能解开文件后立即保存下来。
 - 逐层解开嵌套的压缩包，直到没有新东西可解。
 - 原文件只有在解出的内容全部处理成功后才会删除，默认移到回收站。解不开的东西会保留，并在结尾写明原因和位置。
 - 提供 `--json` 输出和明确的退出码，方便写进脚本。
@@ -55,7 +55,7 @@
 3. macOS / Linux：解开 `.tar.gz`，在终端运行：
 
    ```bash
-   tar -xzf deepunzip-v2.0.0-macos-arm64.tar.gz
+   tar -xzf deepunzip-v2.1.0-macos-arm64.tar.gz
    ./deepunzip ~/Downloads/资源
    ```
 
@@ -104,7 +104,7 @@ deepunzip [选项] <文件或文件夹>...
 加上 `--json` 后，标准输出每行是一个 JSON 对象，最后一行总是 `summary`：
 
 ```json
-{"event": "summary", "schema_version": 1, "status": "partial", "files": 12, "output_dirs": ["D:\\Downloads\\unzipped"], "sources": {"deleted": 3, "kept": 1}, "unresolved": [{"root": 1, "path": "locked.7z", "reason": "password"}], "exit": 1}
+{"event": "summary", "schema_version": 1, "status": "partial", "files": 12, "output_dirs": ["D:\\Downloads\\unzipped"], "sources": {"deleted": 3, "kept": 1}, "duplicates_skipped": 0, "unresolved": [{"root": 1, "path": "locked.7z", "reason": "password"}], "exit": 1}
 ```
 
 `--json` 模式下不会询问密码，也不会在结束时等待回车。标准输入不是终端时（例如计划任务）同样不会询问。
@@ -118,21 +118,21 @@ deepunzip [选项] <文件或文件夹>...
 5. 某一轮没有任何进展时结束。解出的文件移到 `unzipped/`。从压缩包里解出、但处理不了的东西（打不开的内层压缩包、凑不齐的分卷）也放到那里；输入文件夹里原有的文件留在原处。
 6. 一个原文件只有在它解出的所有内容都处理成功后才会被删除。
 
-运行中途被打断时，下次运行会把挪走的分卷放回原处，并询问是否撤销上次的改名。
+运行中途被打断时，下次运行会把挪走的分卷放回原处，询问是否撤销上次的改名，然后重新解压。已经放进 `unzipped/` 的相同文件不会重复复制，上次留下的工作文件夹会在这次运行结束后清理掉。
 
 ## 发布包
 
 | 平台 | 文件 |
 | --- | --- |
-| Windows x64 | `deepunzip-v2.0.0-windows-x64.zip` |
-| macOS Intel | `deepunzip-v2.0.0-macos-x64.tar.gz` |
-| macOS Apple Silicon | `deepunzip-v2.0.0-macos-arm64.tar.gz` |
-| Linux x64 | `deepunzip-v2.0.0-linux-x64.tar.gz` |
-| Linux ARM64 | `deepunzip-v2.0.0-linux-arm64.tar.gz` |
+| Windows x64 | `deepunzip-v2.1.0-windows-x64.zip` |
+| macOS Intel | `deepunzip-v2.1.0-macos-x64.tar.gz` |
+| macOS Apple Silicon | `deepunzip-v2.1.0-macos-arm64.tar.gz` |
+| Linux x64 | `deepunzip-v2.1.0-linux-x64.tar.gz` |
+| Linux ARM64 | `deepunzip-v2.1.0-linux-arm64.tar.gz` |
 
 每个包含有程序、自带的 7-Zip 和许可证文件，Release 页面另有 `SHA256SUMS`。Linux 版在 Ubuntu 24.04 上构建。程序没有做代码签名，macOS 也没有公证。7-Zip 的来源和校验值见 [7z/README.md](7z/README.md)。
 
-这一版的变化见[发布说明](docs/releaseNotes/v2.0.0.md)。
+这一版的变化见[发布说明](docs/releaseNotes/v2.1.0.md)。
 
 ## 常见问题
 
@@ -154,7 +154,7 @@ deepunzip [选项] <文件或文件夹>...
 
 ### 文件夹里出现了 `temp.deepunzip-` 开头的文件夹
 
-这是上次运行中断后留下的工作文件夹。下次运行时会提示它的位置，确认里面没有需要的文件后可以删除。
+这是上次运行中断后留下的工作文件夹。对同一个文件夹再运行一次即可：运行结束时会把它移到回收站（使用 `--permanent-delete` 时直接删除）。如果里面还有没能放回原处的原始分卷，或者另一次运行还在使用它，或者这次运行也不得不保留自己的工作文件夹，它会被保留，程序会提示它的位置。
 
 ## 开发
 

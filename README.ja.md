@@ -41,7 +41,7 @@ DeepUnzip は、入れ子になった、パスワード付きの、分割され�
 
 - `config/cloaked_file_rules.json` のルールに従って崩された名前を元に戻します。ルールは自分で追加できます。最終的に展開できなかったファイルは元の名前に戻します。
 - `.7z.001`、`.part1.rar`、`.rar` + `.r00`、`.zip` + `.z01` などの分割形式に対応します。ボリュームは別々のフォルダーにあっても、他のアーカイブの中にあってもかまいません。
-- `passwords.txt` のパスワードを順番に試します。実行中に入力したパスワードは後続のアーカイブにも使い、終了時に保存します。
+- `passwords.txt` のパスワードを順番に試します。実行中に入力したパスワードは後続のアーカイブにも使い、ファイルを開けた時点で保存します。
 - 入れ子のアーカイブを、新しく展開するものがなくなるまで 1 段ずつ開きます。
 - 元ファイルは、そこから展開したものがすべて成功した場合にだけ削除し、既定ではごみ箱に移します。展開できなかったものは残し、最後に理由と場所を表示します。
 - スクリプト向けに `--json` 出力と明確な終了コードを用意しています。
@@ -54,7 +54,7 @@ DeepUnzip は、入れ子になった、パスワード付きの、分割され�
 3. macOS / Linux：`.tar.gz` を展開し、ターミナルで実行します。
 
    ```bash
-   tar -xzf deepunzip-v2.0.0-macos-arm64.tar.gz
+   tar -xzf deepunzip-v2.1.0-macos-arm64.tar.gz
    ./deepunzip ~/Downloads/archives
    ```
 
@@ -103,7 +103,7 @@ deepunzip [オプション] <ファイルまたはフォルダー>...
 `--json` を付けると、標準出力の各行が 1 つの JSON オブジェクトになり、最後の行は必ず `summary` です。
 
 ```json
-{"event": "summary", "schema_version": 1, "status": "partial", "files": 12, "output_dirs": ["D:\\Downloads\\unzipped"], "sources": {"deleted": 3, "kept": 1}, "unresolved": [{"root": 1, "path": "locked.7z", "reason": "password"}], "exit": 1}
+{"event": "summary", "schema_version": 1, "status": "partial", "files": 12, "output_dirs": ["D:\\Downloads\\unzipped"], "sources": {"deleted": 3, "kept": 1}, "duplicates_skipped": 0, "unresolved": [{"root": 1, "path": "locked.7z", "reason": "password"}], "exit": 1}
 ```
 
 `--json` モードではパスワードを尋ねず、終了時に Enter を待つこともありません。標準入力が端末でない場合（タスクスケジューラーなど）も質問しません。
@@ -117,21 +117,21 @@ deepunzip [オプション] <ファイルまたはフォルダー>...
 5. あるラウンドで何も進展がなければ終了します。展開したファイルは `unzipped/` に移します。アーカイブから取り出したものの処理できなかったもの（開けない内側のアーカイブ、そろわない分割ボリューム）もそこに置きます。入力フォルダーにもともとあったファイルはその場に残ります。
 6. 元ファイルは、そこから展開したものがすべて成功した場合にだけ削除します。
 
-実行が途中で中断された場合は、次の実行で移動したボリュームを元の場所に戻し、前回の名前変更を元に戻すかどうかを尋ねます。
+実行が途中で中断された場合は、次の実行で移動したボリュームを元の場所に戻し、前回の名前変更を元に戻すかどうかを尋ねてから、展開をやり直します。すでに `unzipped/` にある同一のファイルは重複してコピーせず、前回残った作業フォルダーは今回の実行が終わったときに片付けます。
 
 ## リリースパッケージ
 
 | プラットフォーム | ファイル |
 | --- | --- |
-| Windows x64 | `deepunzip-v2.0.0-windows-x64.zip` |
-| macOS Intel | `deepunzip-v2.0.0-macos-x64.tar.gz` |
-| macOS Apple Silicon | `deepunzip-v2.0.0-macos-arm64.tar.gz` |
-| Linux x64 | `deepunzip-v2.0.0-linux-x64.tar.gz` |
-| Linux ARM64 | `deepunzip-v2.0.0-linux-arm64.tar.gz` |
+| Windows x64 | `deepunzip-v2.1.0-windows-x64.zip` |
+| macOS Intel | `deepunzip-v2.1.0-macos-x64.tar.gz` |
+| macOS Apple Silicon | `deepunzip-v2.1.0-macos-arm64.tar.gz` |
+| Linux x64 | `deepunzip-v2.1.0-linux-x64.tar.gz` |
+| Linux ARM64 | `deepunzip-v2.1.0-linux-arm64.tar.gz` |
 
 各パッケージにはプログラム、同梱の 7-Zip、ライセンスファイルが含まれ、リリースページには `SHA256SUMS` もあります。Linux 版は Ubuntu 24.04 でビルドしています。プログラムにはコード署名がなく、macOS 版は公証も受けていません。7-Zip の入手元とチェックサムは [7z/README.md](7z/README.md) を参照してください。
 
-このバージョンの変更点は[リリースノート](docs/releaseNotes/v2.0.0.md)を参照してください。
+このバージョンの変更点は[リリースノート](docs/releaseNotes/v2.1.0.md)を参照してください。
 
 ## よくある質問
 
@@ -153,7 +153,7 @@ deepunzip [オプション] <ファイルまたはフォルダー>...
 
 ### `temp.deepunzip-` で始まるフォルダーができている
 
-前回の実行が中断されたときに残った作業フォルダーです。次の実行でその場所を表示します。必要なファイルが残っていないことを確かめたら削除してかまいません。
+前回の実行が中断されたときに残った作業フォルダーです。同じフォルダーに対してもう一度実行してください。実行が終わるとごみ箱に移動します（`--permanent-delete` のときは削除します）。元の場所に戻せなかった元の分割ボリュームが中に残っている場合、別の実行がまだ使っている場合、今回の実行でも作業フォルダーを残す必要があった場合は削除せず、その場所を表示します。
 
 ## 開発
 

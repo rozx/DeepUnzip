@@ -13,9 +13,14 @@ See openspec/changes/archive/2026-10-25-redesign-work-pool-extraction/design.md.
 callables so the whole loop can be tested without real archives.
 """
 
+import contextlib
+import hashlib
+import json
 import os
 import re
 import shutil
+import socket
+import sys
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
@@ -150,6 +155,8 @@ class WorkItem:
     output_path: Optional[str] = None
     # A consumed derived archive that could not be removed is kept as output.
     keep_in_output: bool = False
+    # Not moved: an identical file was already at its output path.
+    duplicate_in_output: bool = False
     tried_as_container: bool = False
 
     @property
@@ -177,7 +184,12 @@ class PoolResult:
 
     @property
     def output_files(self) -> list[str]:
-        return [i.output_path for i in self.items if i.output_path]
+        paths = (i.output_path for i in self.items if i.output_path)
+        return list(dict.fromkeys(paths))
+
+    @property
+    def duplicates_skipped(self) -> list[WorkItem]:
+        return [i for i in self.items if i.duplicate_in_output]
 
     def item(self, item_id: int) -> WorkItem:
         return next(i for i in self.items if i.id == item_id)
@@ -247,6 +259,78 @@ def _unique_dir(base: str) -> str:
         counter += 1
     os.makedirs(candidate)
     return candidate
+
+
+def _md5(path: str, cache: dict[str, str]) -> str:
+    if path not in cache:
+        with open(path, "rb") as handle:
+            digest = hashlib.file_digest(
+                handle, lambda: hashlib.md5(usedforsecurity=False)
+            )
+        cache[path] = digest.hexdigest()
+    return cache[path]
+
+
+def _same_content(path: str, existing: str, cache: dict[str, str]) -> bool:
+    """True if `existing` is a file with the same size and MD5 as `path`."""
+    try:
+        return (
+            os.path.isfile(existing)
+            and os.path.getsize(existing) == os.path.getsize(path)
+            and _md5(existing, cache) == _md5(path, cache)
+        )
+    except OSError:
+        return False
+
+
+_NUMBERED_STEM = re.compile(r"(.+)_([1-9][0-9]*)")
+
+
+class _NumberedCopies:
+    """The numbered copies (`a_1.txt`, ...) in each output folder.
+
+    A folder is listed once, at its first name collision, and kept up to date
+    as files are moved in, so finalization stays linear in the number of files.
+    """
+
+    def __init__(self) -> None:
+        self._folders: dict[str, dict[tuple[str, str], list[tuple[int, str]]]] = {}
+
+    def of(self, destination: str) -> list[str]:
+        """`destination` and every numbered copy of it, also past a gap."""
+        folder, name = os.path.split(destination)
+        stem, ext = os.path.splitext(name)
+        index = self._index(folder)
+        key = (os.path.normcase(stem), os.path.normcase(ext))
+        return [destination] + [path for _, path in sorted(index.get(key, []))]
+
+    def added(self, path: str) -> None:
+        folder, name = os.path.split(path)
+        if folder in self._folders:
+            self._add(self._folders[folder], folder, name)
+
+    def _index(self, folder: str) -> dict[tuple[str, str], list[tuple[int, str]]]:
+        if folder not in self._folders:
+            index: dict[tuple[str, str], list[tuple[int, str]]] = {}
+            try:
+                names = os.listdir(folder)
+            except OSError:
+                names = []
+            for name in names:
+                self._add(index, folder, name)
+            self._folders[folder] = index
+        return self._folders[folder]
+
+    @staticmethod
+    def _add(
+        index: dict[tuple[str, str], list[tuple[int, str]]], folder: str, name: str
+    ) -> None:
+        stem, ext = os.path.splitext(name)
+        match = _NUMBERED_STEM.fullmatch(stem)
+        if match is not None:
+            key = (os.path.normcase(match.group(1)), os.path.normcase(ext))
+            copy = (int(match.group(2)), os.path.join(folder, name))
+            index.setdefault(key, []).append(copy)
 
 
 def _volumes_used(primary: WorkItem, reported: Optional[int], chosen: int) -> int:
@@ -327,6 +411,76 @@ def leftover_work_dirs(root: str) -> list[str]:
     ]
 
 
+# Written into each run's work directory: which process on which computer owns it.
+OWNER_FILE = ".owner"
+
+
+def mark_work_dir(work_dir: str, pid: Optional[int] = None) -> None:
+    """Record that this process (or `pid`) owns `work_dir`."""
+    owner = {"pid": os.getpid() if pid is None else pid, "host": socket.gethostname()}
+    path = os.path.join(work_dir, OWNER_FILE)
+    with contextlib.suppress(OSError):
+        with open(path + ".tmp", "w", encoding="utf-8") as handle:
+            json.dump(owner, handle)
+        os.replace(path + ".tmp", path)
+
+
+def work_dir_in_use(work_dir: str) -> bool:
+    """True if the run that owns `work_dir` may still be running.
+
+    A directory without a readable owner (an older version, or a run that died
+    before marking it) is a leftover. An owner on another computer cannot be
+    checked, so it counts as running. This process never owns a leftover: its
+    PID belonged to an earlier process.
+    """
+    try:
+        with open(os.path.join(work_dir, OWNER_FILE), encoding="utf-8") as handle:
+            owner = json.load(handle)
+        pid, host = int(owner["pid"]), str(owner["host"])
+    except (OSError, ValueError, TypeError, KeyError):
+        return False
+    if host != socket.gethostname():
+        return True
+    return pid != os.getpid() and _process_running(pid)
+
+
+def _process_running(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    if sys.platform == "win32":
+        # os.kill(pid, 0) would terminate the process on Windows.
+        import ctypes
+        from ctypes import wintypes
+
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
+        kernel32.OpenProcess.restype = wintypes.HANDLE
+        kernel32.GetExitCodeProcess.argtypes = (
+            wintypes.HANDLE,
+            ctypes.POINTER(wintypes.DWORD),
+        )
+        kernel32.GetExitCodeProcess.restype = wintypes.BOOL
+        kernel32.CloseHandle.argtypes = (wintypes.HANDLE,)
+        query_limited_information, still_active, access_denied = 0x1000, 259, 5
+        handle = kernel32.OpenProcess(query_limited_information, False, pid)
+        if not handle:
+            return ctypes.get_last_error() == access_denied
+        try:
+            code = wintypes.DWORD()
+            if not kernel32.GetExitCodeProcess(handle, ctypes.byref(code)):
+                return True
+            return code.value == still_active
+        finally:
+            kernel32.CloseHandle(handle)
+    try:
+        os.kill(pid, 0)
+    except PermissionError:
+        return True  # exists, owned by another user
+    except OSError:
+        return False
+    return True
+
+
 def _default_remove(path: str) -> bool:
     try:
         os.remove(path)
@@ -393,6 +547,7 @@ class WorkPool:
 
     def run(self) -> PoolResult:
         os.makedirs(self.work_dir, exist_ok=True)
+        mark_work_dir(self.work_dir)
         for path in sorted(self.sources):
             if os.path.isfile(path):
                 self._add(path, Origin.SOURCE, (), 0, self.work_dir)
@@ -981,8 +1136,22 @@ class WorkPool:
             item.name,
         )
 
-    def _move_to_output(self, item: WorkItem) -> bool:
+    def _move_to_output(
+        self, item: WorkItem, digests: dict[str, str], copies: _NumberedCopies
+    ) -> bool:
+        """Move `item` to the output, or skip it if an identical file is there.
+
+        A different file with the same name is kept: `item` gets a numbered name.
+        """
         destination = os.path.join(self.output_dir, self._output_relpath(item))
+        if os.path.exists(destination):
+            for existing in copies.of(destination):
+                if _same_content(item.path, existing, digests):
+                    with contextlib.suppress(OSError):
+                        os.remove(item.path)
+                    item.output_path = existing
+                    item.duplicate_in_output = True
+                    return True
         stem, ext = os.path.splitext(destination)
         counter = 1
         while os.path.exists(destination):
@@ -993,19 +1162,22 @@ class WorkPool:
             self.mover(item.path, destination)
         except OSError:
             return False
+        copies.added(destination)
         item.output_path = destination
         return True
 
     def _finalize(self) -> bool:
         """Move outputs and unresolved derived items out; True if work dir kept."""
         failed = False
+        digests: dict[str, str] = {}
+        copies = _NumberedCopies()
         for item in self.items:
             if item.is_source or not os.path.exists(item.path):
                 continue
             wanted = (
                 item.state in (State.FINAL, State.UNRESOLVED) or item.keep_in_output
             )
-            if wanted and not self._move_to_output(item):
+            if wanted and not self._move_to_output(item, digests, copies):
                 failed = True
                 self._unresolve(item, "move failed")
         if failed or self._keep_work_dir:

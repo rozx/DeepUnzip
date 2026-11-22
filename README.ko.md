@@ -41,7 +41,7 @@ DeepUnzip은 중첩되고, 암호가 걸리고, 분할되고, 이름이 위장�
 
 - `config/cloaked_file_rules.json`의 규칙에 따라 망가진 파일 이름을 되돌립니다. 규칙은 직접 추가할 수 있습니다. 끝내 풀지 못한 파일은 원래 이름으로 되돌립니다.
 - `.7z.001`, `.part1.rar`, `.rar` + `.r00`, `.zip` + `.z01` 등의 분할 형식을 지원합니다. 볼륨이 여러 폴더에 흩어져 있거나 다른 압축 파일 안에 들어 있어도 됩니다.
-- `passwords.txt`의 비밀번호를 순서대로 시도합니다. 실행 중에 입력한 비밀번호는 이후 압축 파일에도 쓰고, 끝날 때 저장합니다.
+- `passwords.txt`의 비밀번호를 순서대로 시도합니다. 실행 중에 입력한 비밀번호는 이후 압축 파일에도 쓰고, 파일을 여는 데 성공하면 바로 저장합니다.
 - 더 풀 것이 없을 때까지 중첩된 압축 파일을 한 단계씩 엽니다.
 - 원본 파일은 거기서 풀어낸 내용이 모두 성공했을 때만 지우며, 기본적으로 휴지통으로 옮깁니다. 풀지 못한 것은 남겨 두고, 마지막에 이유와 위치를 알려 줍니다.
 - 스크립트용으로 `--json` 출력과 명확한 종료 코드를 제공합니다.
@@ -54,7 +54,7 @@ DeepUnzip은 중첩되고, 암호가 걸리고, 분할되고, 이름이 위장�
 3. macOS / Linux: `.tar.gz`를 풀고 터미널에서 실행합니다.
 
    ```bash
-   tar -xzf deepunzip-v2.0.0-macos-arm64.tar.gz
+   tar -xzf deepunzip-v2.1.0-macos-arm64.tar.gz
    ./deepunzip ~/Downloads/archives
    ```
 
@@ -103,7 +103,7 @@ deepunzip [옵션] <파일 또는 폴더>...
 `--json`을 붙이면 표준 출력의 각 줄이 JSON 객체 하나가 되며, 마지막 줄은 항상 `summary`입니다.
 
 ```json
-{"event": "summary", "schema_version": 1, "status": "partial", "files": 12, "output_dirs": ["D:\\Downloads\\unzipped"], "sources": {"deleted": 3, "kept": 1}, "unresolved": [{"root": 1, "path": "locked.7z", "reason": "password"}], "exit": 1}
+{"event": "summary", "schema_version": 1, "status": "partial", "files": 12, "output_dirs": ["D:\\Downloads\\unzipped"], "sources": {"deleted": 3, "kept": 1}, "duplicates_skipped": 0, "unresolved": [{"root": 1, "path": "locked.7z", "reason": "password"}], "exit": 1}
 ```
 
 `--json` 모드에서는 비밀번호를 묻지 않고, 끝날 때 Enter를 기다리지도 않습니다. 표준 입력이 터미널이 아닐 때(예: 작업 스케줄러)도 묻지 않습니다.
@@ -117,21 +117,21 @@ deepunzip [옵션] <파일 또는 폴더>...
 5. 어떤 라운드에서 아무 진전이 없으면 끝납니다. 풀어낸 파일은 `unzipped/`로 옮깁니다. 압축 파일에서 꺼냈지만 처리하지 못한 것(열리지 않는 안쪽 압축 파일, 다 모이지 않은 분할 볼륨)도 그곳에 둡니다. 입력 폴더에 원래 있던 파일은 그 자리에 남습니다.
 6. 원본 파일은 거기서 풀어낸 내용이 모두 성공했을 때만 지웁니다.
 
-실행이 도중에 중단되면 다음 실행에서 옮겨 둔 볼륨을 원래 자리로 되돌리고, 지난번의 이름 변경을 되돌릴지 묻습니다.
+실행이 도중에 중단되면 다음 실행에서 옮겨 둔 볼륨을 원래 자리로 되돌리고, 지난번의 이름 변경을 되돌릴지 물은 뒤 압축을 다시 풉니다. 이미 `unzipped/`에 있는 같은 파일은 중복으로 복사하지 않고, 남은 작업 폴더는 이번 실행이 끝날 때 정리합니다.
 
 ## 릴리스 패키지
 
 | 플랫폼 | 파일 |
 | --- | --- |
-| Windows x64 | `deepunzip-v2.0.0-windows-x64.zip` |
-| macOS Intel | `deepunzip-v2.0.0-macos-x64.tar.gz` |
-| macOS Apple Silicon | `deepunzip-v2.0.0-macos-arm64.tar.gz` |
-| Linux x64 | `deepunzip-v2.0.0-linux-x64.tar.gz` |
-| Linux ARM64 | `deepunzip-v2.0.0-linux-arm64.tar.gz` |
+| Windows x64 | `deepunzip-v2.1.0-windows-x64.zip` |
+| macOS Intel | `deepunzip-v2.1.0-macos-x64.tar.gz` |
+| macOS Apple Silicon | `deepunzip-v2.1.0-macos-arm64.tar.gz` |
+| Linux x64 | `deepunzip-v2.1.0-linux-x64.tar.gz` |
+| Linux ARM64 | `deepunzip-v2.1.0-linux-arm64.tar.gz` |
 
 각 패키지에는 프로그램, 함께 들어 있는 7-Zip, 라이선스 파일이 있으며, 릴리스 페이지에는 `SHA256SUMS`도 있습니다. Linux 버전은 Ubuntu 24.04에서 빌드합니다. 프로그램에는 코드 서명이 없고, macOS 버전은 공증도 받지 않았습니다. 7-Zip의 출처와 체크섬은 [7z/README.md](7z/README.md)를 참고하세요.
 
-이번 버전의 변경 사항은 [릴리스 노트](docs/releaseNotes/v2.0.0.md)를 참고하세요.
+이번 버전의 변경 사항은 [릴리스 노트](docs/releaseNotes/v2.1.0.md)를 참고하세요.
 
 ## 자주 묻는 질문
 
@@ -153,7 +153,7 @@ deepunzip [옵션] <파일 또는 폴더>...
 
 ### `temp.deepunzip-`로 시작하는 폴더가 생겼습니다
 
-이전 실행이 중단되면서 남은 작업 폴더입니다. 다음 실행 때 그 위치를 알려 줍니다. 안에 필요한 파일이 없는지 확인한 뒤 지워도 됩니다.
+이전 실행이 중단되면서 남은 작업 폴더입니다. 같은 폴더로 한 번 더 실행하면, 실행이 끝날 때 휴지통으로 옮깁니다(`--permanent-delete`를 쓰면 바로 지웁니다). 원래 자리로 되돌리지 못한 원본 볼륨이 안에 남아 있거나, 다른 실행이 아직 쓰고 있거나, 이번 실행도 자기 작업 폴더를 남겨야 했다면 지우지 않고 위치를 알려 줍니다.
 
 ## 개발
 

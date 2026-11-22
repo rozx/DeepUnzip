@@ -1,6 +1,9 @@
 """Work pool tests with a fake engine (no 7-Zip); helpers in fake_archives.py."""
 
+import json
 import os
+import subprocess
+import sys
 
 import pytest
 
@@ -455,6 +458,132 @@ def test_parity_p13_meaningless_leading_folders_are_flattened(tmp_path):
     assert output_files(tmp_path) == ["222.jpg", "photos/1/a.jpg"]
 
 
+def _scanned(root, *names):
+    """Source paths for `names`, leaving out an existing output folder."""
+    return [str(root / name) for name in names]
+
+
+def test_identical_file_already_in_the_output_is_skipped(tmp_path):
+    write(tmp_path / "unzipped" / "a.txt", "hello")
+    write(tmp_path / "A.7z", archive({"a.txt": "hello"}))
+    result, _ = run_pool(tmp_path, sources=_scanned(tmp_path, "A.7z"))
+    assert output_files(tmp_path) == ["a.txt"]
+    (item,) = [i for i in result.items if i.name == "a.txt"]
+    assert item.output_path == str(tmp_path / "unzipped" / "a.txt")
+    assert item.duplicate_in_output
+    assert result.duplicates_skipped == [item]
+    assert result.output_files == [str(tmp_path / "unzipped" / "a.txt")]
+    assert deleted(result) == ["A.7z"]
+    assert not os.path.exists(result.work_dir)
+
+
+def test_identical_files_from_two_archives_are_written_once(tmp_path):
+    write(tmp_path / "A.7z", archive({"a.txt": "same"}))
+    write(tmp_path / "B.7z", archive({"a.txt": "same"}))
+    result, _ = run_pool(tmp_path)
+    assert output_files(tmp_path) == ["a.txt"]
+    assert len(result.duplicates_skipped) == 1
+    assert len(result.output_files) == 1
+    assert deleted(result) == ["A.7z", "B.7z"]
+
+
+def test_different_file_with_the_same_name_is_still_renamed(tmp_path):
+    write(tmp_path / "unzipped" / "a.txt", "old")
+    write(tmp_path / "A.7z", archive({"a.txt": "new"}))
+    result, _ = run_pool(tmp_path, sources=_scanned(tmp_path, "A.7z"))
+    assert output_files(tmp_path) == ["a.txt", "a_1.txt"]
+    assert (tmp_path / "unzipped" / "a_1.txt").read_text() == "new"
+    assert result.duplicates_skipped == []
+
+
+def test_same_size_but_different_content_is_renamed(tmp_path):
+    write(tmp_path / "unzipped" / "a.txt", "abc")
+    write(tmp_path / "A.7z", archive({"a.txt": "xyz"}))
+    run_pool(tmp_path, sources=_scanned(tmp_path, "A.7z"))
+    assert output_files(tmp_path) == ["a.txt", "a_1.txt"]
+
+
+def test_identical_copy_under_a_renamed_name_is_found(tmp_path):
+    write(tmp_path / "unzipped" / "a.txt", "first")
+    write(tmp_path / "unzipped" / "a_1.txt", "second")
+    write(tmp_path / "A.7z", archive({"a.txt": "second"}))
+    result, _ = run_pool(tmp_path, sources=_scanned(tmp_path, "A.7z"))
+    assert output_files(tmp_path) == ["a.txt", "a_1.txt"]
+    (item,) = result.duplicates_skipped
+    assert item.output_path == str(tmp_path / "unzipped" / "a_1.txt")
+
+
+def test_identical_copy_after_a_gap_in_the_numbers_is_found(tmp_path):
+    write(tmp_path / "unzipped" / "a.txt", "first")
+    write(tmp_path / "unzipped" / "a_2.txt", "second")  # a_1.txt was deleted
+    write(tmp_path / "A.7z", archive({"a.txt": "second"}))
+    result, _ = run_pool(tmp_path, sources=_scanned(tmp_path, "A.7z"))
+    assert output_files(tmp_path) == ["a.txt", "a_2.txt"]
+    (item,) = result.duplicates_skipped
+    assert item.output_path == str(tmp_path / "unzipped" / "a_2.txt")
+
+
+def test_new_file_takes_the_first_free_number_after_comparing_all(tmp_path):
+    write(tmp_path / "unzipped" / "a.txt", "first")
+    write(tmp_path / "unzipped" / "a_2.txt", "second")
+    write(tmp_path / "A.7z", archive({"a.txt": "third"}))
+    run_pool(tmp_path, sources=_scanned(tmp_path, "A.7z"))
+    assert output_files(tmp_path) == ["a.txt", "a_1.txt", "a_2.txt"]
+    assert (tmp_path / "unzipped" / "a_1.txt").read_text() == "third"
+
+
+def test_output_folder_is_listed_once_however_many_files_collide(tmp_path, monkeypatch):
+    files = {f"f{i}.txt": f"new {i}" for i in range(20)}
+    for name in files:
+        write(tmp_path / "unzipped" / name, "old")
+    write(tmp_path / "A.7z", archive(files))
+    out = os.path.normcase(str(tmp_path / "unzipped"))
+    listed = []
+    real_listdir = os.listdir
+
+    def listdir(path="."):
+        if os.path.normcase(os.fspath(path)) == out:
+            listed.append(path)
+        return real_listdir(path)
+
+    monkeypatch.setattr(wp.os, "listdir", listdir)
+    run_pool(tmp_path, sources=_scanned(tmp_path, "A.7z"))
+    assert len(output_files(tmp_path)) == 40  # every new file got f<i>_1.txt
+    assert len(listed) <= 1
+
+
+def test_no_collision_never_lists_the_output_folder(tmp_path, monkeypatch):
+    write(tmp_path / "A.7z", archive({f"f{i}.txt": str(i) for i in range(20)}))
+    listed = []
+    real_listdir = os.listdir
+    monkeypatch.setattr(
+        wp.os, "listdir", lambda path=".": listed.append(path) or real_listdir(path)
+    )
+    run_pool(tmp_path)
+    out = os.path.normcase(str(tmp_path / "unzipped"))
+    assert [p for p in listed if os.path.normcase(os.fspath(p)) == out] == []
+
+
+def test_folder_with_the_same_name_is_not_a_duplicate(tmp_path):
+    (tmp_path / "unzipped" / "a.txt").mkdir(parents=True)
+    write(tmp_path / "A.7z", archive({"a.txt": "a"}))
+    result, _ = run_pool(tmp_path, sources=_scanned(tmp_path, "A.7z"))
+    assert (tmp_path / "unzipped" / "a_1.txt").read_text() == "a"
+    assert result.duplicates_skipped == []
+
+
+def test_identical_preserved_archive_is_skipped_and_stays_unresolved(tmp_path):
+    inner = archive({"x": "x"}, password="zz")
+    write(tmp_path / "unzipped" / "inner.rar", inner)
+    write(tmp_path / "A.7z", archive({"inner.rar": inner}))
+    result, _ = run_pool(tmp_path, sources=_scanned(tmp_path, "A.7z"))
+    assert output_files(tmp_path) == ["inner.rar"]
+    (item,) = result.unresolved
+    assert item.reason == "password" and item.duplicate_in_output
+    assert item.output_path == str(tmp_path / "unzipped" / "inner.rar")
+    assert deleted(result) == []
+
+
 def test_standalone_zip_with_unrelated_continuation(tmp_path):
     write(tmp_path / "X.zip", archive({"inside.txt": "i"}))
     write(tmp_path / "X.z01", volume("Q", 2, 2))
@@ -496,6 +625,56 @@ def test_leftover_work_dirs_are_listed(tmp_path):
     assert wp.leftover_work_dirs(str(tmp_path)) == [
         str(tmp_path / "temp.deepunzip-old1")
     ]
+
+
+@pytest.fixture
+def other_process():
+    """A real process that is running, for the owner checks."""
+    process = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+    yield process
+    process.kill()
+    process.wait()
+
+
+def test_work_dir_owned_by_a_running_process_is_in_use(tmp_path, other_process):
+    wp.mark_work_dir(str(tmp_path), pid=other_process.pid)
+    assert wp.work_dir_in_use(str(tmp_path))
+    other_process.kill()
+    other_process.wait()
+    assert not wp.work_dir_in_use(str(tmp_path))
+
+
+def test_work_dir_without_a_readable_owner_is_not_in_use(tmp_path):
+    assert not wp.work_dir_in_use(str(tmp_path))  # older version or early crash
+    (tmp_path / wp.OWNER_FILE).write_text("{not json")
+    assert not wp.work_dir_in_use(str(tmp_path))
+
+
+def test_work_dir_owned_by_another_computer_counts_as_in_use(tmp_path):
+    owner = {"pid": 1, "host": "some-other-computer"}
+    (tmp_path / wp.OWNER_FILE).write_text(json.dumps(owner))
+    assert wp.work_dir_in_use(str(tmp_path))
+
+
+def test_work_dir_with_this_process_as_owner_is_a_leftover(tmp_path):
+    # The running pool never lists its own directory as a leftover, so this
+    # PID belonged to an earlier, dead process.
+    wp.mark_work_dir(str(tmp_path))
+    assert not wp.work_dir_in_use(str(tmp_path))
+
+
+def test_running_pool_marks_its_work_dir(tmp_path):
+    write(tmp_path / "A.7z", archive({"a.txt": "a"}))
+    owners = []
+
+    def mover(src, dst):
+        # Output moves run while the work directory still exists.
+        (work_dir,) = tmp_path.glob("temp.deepunzip-*")
+        owners.append(json.loads((work_dir / wp.OWNER_FILE).read_text())["pid"])
+        os.replace(src, dst)
+
+    run_pool(tmp_path, mover=mover)
+    assert owners == [os.getpid()]
 
 
 @pytest.mark.parametrize("name", ["X.rar", "X.zip", "X.zipx", "X.arj", "X.ace"])

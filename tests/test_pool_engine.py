@@ -159,6 +159,14 @@ def test_remember_adds_to_the_password_book():
     assert book.get_passwords() == ["a", "typed"]
 
 
+def test_remember_reports_the_password_once_it_is_in_the_book():
+    book = Book(["a"])
+    seen = []
+    engine = SevenZipEngine(book, on_learn=lambda: seen.append(book.get_passwords()))
+    engine.remember("typed")
+    assert seen == [["a", "typed"]]
+
+
 def test_extract_sizes_the_archive_once_for_all_passwords(monkeypatch, tmp_path):
     import deepunzip.modules.pool_engine as pe
 

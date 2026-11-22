@@ -304,6 +304,13 @@ CATALOG: dict[str, dict[str, str]] = {
         "ja": "保持した元ファイル: {count} 個",
         "ko": "유지한 원본: {count}개",
     },
+    "summary.duplicates_skipped": {
+        "en": "identical files already in the output, skipped: {count}",
+        "zh": "输出中已有相同文件，已跳过：{count} 个",
+        "zh-TW": "輸出中已有相同檔案，已略過：{count} 個",
+        "ja": "出力に同一のファイルがあるためスキップ: {count} 個",
+        "ko": "출력에 동일한 파일이 있어 건너뜀: {count}개",
+    },
     "summary.work_dir_kept": {
         "en": "work directory kept: {path}",
         "zh": "工作目录已保留：{path}",
@@ -454,6 +461,27 @@ CATALOG: dict[str, dict[str, str]] = {
         "zh-TW": "發現中斷執行遺留的工作資料夾：{path}",
         "ja": "中断された実行の作業フォルダーが残っています: {path}",
         "ko": "중단된 실행이 남긴 작업 폴더가 있습니다: {path}",
+    },
+    "recovery.work_dir_in_use": {
+        "en": "Work directory of another run that is still going, left alone: {path}",
+        "zh": "另一个仍在运行的任务正在使用这个工作目录，不会动它：{path}",
+        "zh-TW": "另一個仍在執行的工作正在使用這個工作資料夾，不會動它：{path}",
+        "ja": "実行中の別の処理が使っている作業フォルダーのため、そのままにします: {path}",
+        "ko": "아직 실행 중인 다른 작업이 쓰는 작업 폴더라서 그대로 둡니다: {path}",
+    },
+    "recovery.work_dir_recycled": {
+        "en": "Moved the interrupted run's work directory to the recycle bin: {path}",
+        "zh": "已把中断运行遗留的工作目录移到回收站：{path}",
+        "zh-TW": "已把中斷執行遺留的工作資料夾移到資源回收筒：{path}",
+        "ja": "中断された実行の作業フォルダーをごみ箱に移動しました: {path}",
+        "ko": "중단된 실행이 남긴 작업 폴더를 휴지통으로 옮겼습니다: {path}",
+    },
+    "recovery.work_dir_deleted": {
+        "en": "Deleted the interrupted run's work directory: {path}",
+        "zh": "已删除中断运行遗留的工作目录：{path}",
+        "zh-TW": "已刪除中斷執行遺留的工作資料夾：{path}",
+        "ja": "中断された実行の作業フォルダーを削除しました: {path}",
+        "ko": "중단된 실행이 남긴 작업 폴더를 삭제했습니다: {path}",
     },
     "recovery.restored": {
         "en": "Restored {count} source volume(s) moved by an interrupted run",
