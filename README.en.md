@@ -41,7 +41,7 @@ Doing this by hand means opening archives one by one, trying passwords, moving v
 
 - Restores mangled file names using rules in `config/cloaked_file_rules.json`, which you can extend. If a file ends up not extracting, its original name is put back.
 - Handles `.7z.001`, `.part1.rar`, `.rar` + `.r00`, `.zip` + `.z01` and other multipart formats. Volumes may be spread over different folders or hidden inside other archives.
-- Tries the passwords in `passwords.txt` in order. A password you type during a run is used for the archives that follow and saved at the end.
+- Tries the passwords in `passwords.txt` in order. A password you type during a run is used for the archives that follow and saved as soon as it opens a file.
 - Opens nested archives level by level until there is nothing new to extract.
 - Deletes an original only when everything extracted from it succeeded, and moves it to the recycle bin by default. Anything it cannot extract is kept, and the final summary says why and where.
 - Offers `--json` output and clear exit codes for scripts.
@@ -117,7 +117,7 @@ In `--json` mode DeepUnzip never asks for a password and never waits for Enter a
 5. The run ends when a round makes no progress. Extracted files move to `unzipped/`. Anything extracted from an archive but not usable (an inner archive that won't open, an incomplete set of volumes) goes there as well; files that were already in the input folder stay where they are.
 6. An original is deleted only when everything extracted from it succeeded.
 
-If a run is interrupted, the next run puts moved volumes back where they were and asks whether to undo the previous run's renames.
+If a run is interrupted, the next run puts moved volumes back where they were, asks whether to undo the previous run's renames, and extracts again. Identical files already in `unzipped/` are not copied twice, and the interrupted run's work folder is cleaned up when the new run finishes.
 
 ## Release packages
 
@@ -153,7 +153,7 @@ Add a rule to `config/cloaked_file_rules.json`; the format is described in the "
 
 ### A folder starting with `temp.deepunzip-` showed up
 
-It is the work folder of a run that was interrupted. The next run tells you where it is; once you have checked that nothing in it is needed, you can delete it.
+It is the work folder of a run that was interrupted. Run DeepUnzip on the same folder again: when that run finishes, it moves the old work folder to the recycle bin (or deletes it with `--permanent-delete`). It is kept if it still holds one of your original volumes, or if the new run has to keep its own work folder too; the run then tells you where it is.
 
 ## Development
 

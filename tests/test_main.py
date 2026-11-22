@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 
 import pytest
 
@@ -67,7 +68,10 @@ def fake_7z(monkeypatch):
 
     def remove(path, use_recycle_bin=True, error_callback=None):
         state["removed"][os.path.basename(path)] = use_recycle_bin
-        os.remove(path)
+        if os.path.isdir(path):
+            shutil.rmtree(path)
+        else:
+            os.remove(path)
         return True
 
     monkeypatch.setattr(main.archive_utils, "resolve_seven_zip_path", lambda *a: "7z")
@@ -211,7 +215,62 @@ def test_leftover_work_directory_is_not_scanned(fake_7z, tmp_path):
     main.extract_files([str(tmp_path)])
 
     assert fake_7z["extracted"] == []
-    assert (leftover / "stale.7z").exists()
+    assert _outputs(tmp_path) == []
+
+
+def _leftover_with_partial_output(root):
+    leftover = root / "temp.deepunzip-old"
+    (leftover / "A").mkdir(parents=True)
+    (leftover / "A" / "a.txt").write_text("partial", encoding="utf-8")
+    return leftover
+
+
+def test_leftover_work_directory_is_removed_after_the_run(
+    fake_7z, monkeypatch, tmp_path
+):
+    leftover = _leftover_with_partial_output(tmp_path)
+    (tmp_path / "A.7z").write_bytes(b"dummy")
+    fake_7z["contents"]["A.7z"] = {"a.txt": "a"}
+    notices = []
+    monkeypatch.setattr(main.events, "notice", lambda *a, **k: notices.append(a[1]))
+
+    main.extract_files([str(tmp_path)])
+
+    assert not leftover.exists()
+    assert fake_7z["removed"]["temp.deepunzip-old"] is True  # to the recycle bin
+    assert "recovery.work_dir_recycled" in notices
+    assert _outputs(tmp_path) == ["a.txt"]
+    assert [p.name for p in tmp_path.iterdir()] == [const.OUTPUT_FOLDER]
+
+
+def test_leftover_work_directory_follows_permanent_delete(fake_7z, tmp_path):
+    leftover = _leftover_with_partial_output(tmp_path)
+
+    main.extract_files([str(tmp_path)], use_recycle_bin=False)
+
+    assert not leftover.exists()
+    assert fake_7z["removed"]["temp.deepunzip-old"] is False
+
+
+def test_leftover_is_kept_when_this_run_keeps_its_work_directory(
+    fake_7z, monkeypatch, tmp_path
+):
+    leftover = _leftover_with_partial_output(tmp_path)
+    (tmp_path / "A.7z").write_bytes(b"dummy")
+    fake_7z["contents"]["A.7z"] = {"movie.mp4": "m"}
+    real_move = shutil.move
+
+    def move(src, dst):
+        if src.endswith("movie.mp4"):
+            raise OSError("path too long")
+        return real_move(src, dst)
+
+    monkeypatch.setattr(main.work_pool.shutil, "move", move)
+
+    (result,) = main.extract_files([str(tmp_path)])
+
+    assert result.work_dir_kept
+    assert (leftover / "A" / "a.txt").exists()
 
 
 # ---------------------------------------------------------------------------
@@ -338,6 +397,41 @@ def test_relocation_that_cannot_be_restored_is_retried_not_forgotten(
     # history and the volume was moved home when the run finished.
     assert home.read_bytes() == b"volume"
     assert not stranded.exists()
+
+
+def test_leftover_holding_a_source_volume_is_kept(fake_7z, monkeypatch, tmp_path):
+    home = tmp_path / "src" / "X.7z.002"
+    leftover = tmp_path / "temp.deepunzip-old"
+    stranded = leftover / ".assemble" / "1" / "X.7z.002"
+    stranded.parent.mkdir(parents=True)
+    stranded.write_bytes(b"volume")
+    (tmp_path / "src").mkdir()
+    RenameHistory(str(tmp_path)).record(str(home), str(stranded), kind="relocation")
+
+    real_replace, real_rename = os.replace, os.rename
+
+    def locked(real):
+        def move(src, dst):
+            if os.path.abspath(src) == str(stranded):
+                raise PermissionError("locked")
+            return real(src, dst)
+
+        return move
+
+    # Locked at startup and again when the run finishes.
+    monkeypatch.setattr(
+        "deepunzip.modules.rename_history.os.replace", locked(real_replace)
+    )
+    monkeypatch.setattr(
+        "deepunzip.modules.rename_history.os.rename", locked(real_rename)
+    )
+    monkeypatch.setattr("builtins.input", lambda *a, **k: "n")
+
+    main.extract_files([str(tmp_path)], use_recycle_bin=False)
+
+    # The volume could not be moved home, so its folder must survive.
+    assert stranded.read_bytes() == b"volume"
+    assert "temp.deepunzip-old" not in fake_7z["removed"]
 
 
 def _capture_cli_extract(monkeypatch) -> list:

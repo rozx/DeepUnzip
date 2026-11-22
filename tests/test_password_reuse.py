@@ -135,3 +135,35 @@ def test_cli_learned_password_unlocks_later_archives_but_keeps_failed_sources(
     assert not (source / "archive1.7z").exists()
     assert (source / "unzipped" / "locked.7z").exists()
     assert book_path.read_text(encoding="utf-8").splitlines() == ["learned-password"]
+
+
+def test_typed_password_is_saved_before_the_run_is_interrupted(
+    monkeypatch, password_directories
+):
+    """A password that worked is saved at once, so Ctrl+C later cannot lose it."""
+    source, book_path = password_directories
+    for name in ("archive0.7z", "archive1.7z"):
+        (source / name).write_bytes(b"encrypted fixture")
+    monkeypatch.setattr(
+        main.archive_utils,
+        "is_valid_archive",
+        lambda path, **kwargs: Path(path).name.endswith(".7z"),
+    )
+    answers = iter(["1", "learned-password"])
+    monkeypatch.setattr("builtins.input", lambda *a, **k: next(answers))
+
+    def extract(archive_path, output_path, password="", **kwargs):
+        if Path(archive_path).name == "archive1.7z":
+            raise KeyboardInterrupt
+        if password != "learned-password":
+            raise main.archive_utils.ArchivePasswordError("Incorrect password")
+        (Path(output_path) / "a.txt").write_text("a", encoding="utf-8")
+        return True
+
+    monkeypatch.setattr(main.archive_utils, "extractArchiveWith7z", extract)
+
+    result = CliRunner().invoke(main.app, [str(source)])
+
+    assert result.exit_code == 2, result.output
+    assert list(answers) == []
+    assert book_path.read_text(encoding="utf-8").splitlines() == ["learned-password"]

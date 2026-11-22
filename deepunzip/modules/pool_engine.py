@@ -68,10 +68,13 @@ class SevenZipEngine:
         book: PasswordSource,
         seven_zip_path: Optional[str] = None,
         emit: Optional[Callable[[Event], None]] = None,
+        on_learn: Optional[Callable[[], None]] = None,
     ) -> None:
         self.book = book
         self.seven_zip_path = seven_zip_path
         self.emit = emit
+        # Called once a typed password that worked is in the book (to save it).
+        self.on_learn = on_learn
 
     # ---------- helpers ----------
 
@@ -196,3 +199,5 @@ class SevenZipEngine:
 
     def remember(self, password: str) -> None:
         self.book.add_password(password)
+        if self.on_learn is not None:
+            self.on_learn()

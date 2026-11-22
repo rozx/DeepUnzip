@@ -12,7 +12,7 @@ import os
 import platform
 import sys
 import time
-from typing import Annotated, List, Optional, TextIO
+from typing import Annotated, Callable, List, Optional, TextIO
 
 import typer
 
@@ -297,6 +297,38 @@ def _reconcile_history(history: RenameHistory, result: work_pool.PoolResult) -> 
     history.finalize()
 
 
+def _is_within(path: str, folder: str) -> bool:
+    path, folder = (os.path.normcase(os.path.abspath(p)) for p in (path, folder))
+    return path == folder or path.startswith(folder.rstrip(os.sep) + os.sep)
+
+
+def _remove_leftover_work_dirs(
+    leftovers: list[str],
+    result: work_pool.PoolResult,
+    history: RenameHistory,
+    remove: Callable[[str], bool],
+    use_recycle_bin: bool,
+) -> None:
+    """Remove work directories of interrupted runs once this run removed its own.
+
+    This run extracted the root's sources again, so what an interrupted run
+    left behind is redundant. A leftover is kept while a rename-history entry
+    still points into it (a source volume that could not be moved home), and
+    all are kept when this run had to keep its own work directory.
+    """
+    if result.work_dir_kept:
+        return
+    held = [entry["renamed"] for entry in history.entries]
+    key = (
+        "recovery.work_dir_recycled" if use_recycle_bin else "recovery.work_dir_deleted"
+    )
+    for folder in leftovers:
+        if any(_is_within(path, folder) for path in held):
+            continue
+        if remove(folder):
+            events.notice("info", key, path=folder)
+
+
 def _save_passwords(book: PasswordBook) -> None:
     if not book.has_unsaved_changes():
         return
@@ -315,7 +347,12 @@ def extract_files(
 ) -> list[work_pool.PoolResult]:
     """Run one work pool per input root; return the results in root order."""
     password_book = password_util.load_all_passwords(paths)
-    engine = SevenZipEngine(password_book, emit=events.emit)
+    # A password that worked is saved at once, so an interruption cannot lose it.
+    engine = SevenZipEngine(
+        password_book,
+        emit=events.emit,
+        on_learn=lambda: _save_passwords(password_book),
+    )
     detector = file_utils.create_cloaked_detector()
     results: list[work_pool.PoolResult] = []
 
@@ -323,6 +360,7 @@ def extract_files(
         work_pool.group_input_roots(paths), start=1
     ):
         events.emit(events.RootStarted(index, root))
+        leftovers = work_pool.leftover_work_dirs(root)
         stranded = _maybe_recover_pending_renames(root, interactive)
 
         history = RenameHistory(root)
@@ -357,6 +395,7 @@ def extract_files(
         )
         result = pool.run()
         _reconcile_history(history, result)
+        _remove_leftover_work_dirs(leftovers, result, history, remove, use_recycle_bin)
         results.append(result)
 
     _save_passwords(password_book)

@@ -462,6 +462,20 @@ CATALOG: dict[str, dict[str, str]] = {
         "ja": "中断された実行の作業フォルダーが残っています: {path}",
         "ko": "중단된 실행이 남긴 작업 폴더가 있습니다: {path}",
     },
+    "recovery.work_dir_recycled": {
+        "en": "Moved the interrupted run's work directory to the recycle bin: {path}",
+        "zh": "已把中断运行遗留的工作目录移到回收站：{path}",
+        "zh-TW": "已把中斷執行遺留的工作資料夾移到資源回收筒：{path}",
+        "ja": "中断された実行の作業フォルダーをごみ箱に移動しました: {path}",
+        "ko": "중단된 실행이 남긴 작업 폴더를 휴지통으로 옮겼습니다: {path}",
+    },
+    "recovery.work_dir_deleted": {
+        "en": "Deleted the interrupted run's work directory: {path}",
+        "zh": "已删除中断运行遗留的工作目录：{path}",
+        "zh-TW": "已刪除中斷執行遺留的工作資料夾：{path}",
+        "ja": "中断された実行の作業フォルダーを削除しました: {path}",
+        "ko": "중단된 실행이 남긴 작업 폴더를 삭제했습니다: {path}",
+    },
     "recovery.restored": {
         "en": "Restored {count} source volume(s) moved by an interrupted run",
         "zh": "已还原中断运行移动的 {count} 个原始分卷",
