@@ -259,7 +259,7 @@ Before removing the run work directory, the system SHALL move every unresolved d
 - **AND** no volume SHALL be deleted unless the set extracted successfully
 
 ### Requirement: One output folder and work directory per input root
-For each input root, the system SHALL write extracted output to `<root>/unzipped/`, and SHALL create a run work directory inside that root. The system SHALL exclude both from the input scan, and SHALL report a leftover work directory from an interrupted run at startup. After the root's run, the system SHALL remove each leftover work directory it reported, to the recycle bin unless permanent deletion was chosen, unless the run kept its own work directory or a rename-history entry still points into the leftover.
+For each input root, the system SHALL write extracted output to `<root>/unzipped/`, and SHALL create a run work directory inside that root. The system SHALL exclude both from the input scan, and SHALL report a leftover work directory from an interrupted run at startup.
 
 #### Scenario: Two input roots
 - **WHEN** the user passes `D:\a` and `E:\b`
@@ -270,6 +270,9 @@ For each input root, the system SHALL write extracted output to `<root>/unzipped
 - **WHEN** a `temp.deepunzip-<run-id>` directory from a previous run exists in the input root at startup
 - **THEN** its files SHALL NOT be scanned as inputs
 - **AND** the user SHALL be told about it
+
+### Requirement: Remove leftover work directories after a run
+After a root's run, the system SHALL remove each leftover work directory it reported at startup, to the recycle bin unless permanent deletion was chosen. It SHALL keep a leftover while a rename-history entry still points into it, and SHALL keep all of them when the run kept its own work directory.
 
 #### Scenario: Leftover removed after the next run
 - **GIVEN** a `temp.deepunzip-<run-id>` directory from an interrupted run exists in the input root

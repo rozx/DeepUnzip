@@ -1,17 +1,7 @@
-## MODIFIED Requirements
+## ADDED Requirements
 
-### Requirement: One output folder and work directory per input root
-For each input root, the system SHALL write extracted output to `<root>/unzipped/`, and SHALL create a run work directory inside that root. The system SHALL exclude both from the input scan, and SHALL report a leftover work directory from an interrupted run at startup. After the root's run, the system SHALL remove each leftover work directory it reported, to the recycle bin unless permanent deletion was chosen, unless the run kept its own work directory or a rename-history entry still points into the leftover.
-
-#### Scenario: Two input roots
-- **WHEN** the user passes `D:\a` and `E:\b`
-- **THEN** output from `D:\a` SHALL be written under `D:\a\unzipped\`
-- **AND** output from `E:\b` SHALL be written under `E:\b\unzipped\`
-
-#### Scenario: Leftover work directory
-- **WHEN** a `temp.deepunzip-<run-id>` directory from a previous run exists in the input root at startup
-- **THEN** its files SHALL NOT be scanned as inputs
-- **AND** the user SHALL be told about it
+### Requirement: Remove leftover work directories after a run
+After a root's run, the system SHALL remove each leftover work directory it reported at startup, to the recycle bin unless permanent deletion was chosen. It SHALL keep a leftover while a rename-history entry still points into it, and SHALL keep all of them when the run kept its own work directory.
 
 #### Scenario: Leftover removed after the next run
 - **GIVEN** a `temp.deepunzip-<run-id>` directory from an interrupted run exists in the input root
@@ -28,8 +18,6 @@ For each input root, the system SHALL write extracted output to `<root>/unzipped
 #### Scenario: This run keeps its own work directory
 - **WHEN** a run keeps its own work directory (a move failed, or a volume could not be moved back)
 - **THEN** every leftover work directory SHALL be kept
-
-## ADDED Requirements
 
 ### Requirement: Save a typed password as soon as it works
 A password the user typed at a prompt SHALL be saved to the password book as soon as it opens an archive or a set, not at the end of the run.
