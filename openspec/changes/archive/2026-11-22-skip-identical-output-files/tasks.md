@@ -3,6 +3,7 @@
 - [x] Two archives with the same identical file write it once.
 - [x] A different file with the same name (including same size) is still renamed.
 - [x] An identical copy under a numbered name (`a_1.txt`) is found.
+- [x] An identical numbered copy past a gap (`a_2.txt` with `a_1.txt` deleted) is found.
 - [x] A folder with the same name is not a duplicate.
 - [x] A password-failed archive whose identical copy is in the output stays unresolved.
 - [x] The summary reports the skipped count, in human output and JSON.

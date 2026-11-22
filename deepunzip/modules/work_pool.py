@@ -280,6 +280,30 @@ def _same_content(path: str, existing: str, cache: dict[str, str]) -> bool:
         return False
 
 
+def _numbered_copies(destination: str) -> list[str]:
+    """`destination` and its existing numbered copies (`a_1.txt`, ...), in order.
+
+    Every copy is listed, also past a gap left by a deleted one.
+    """
+    folder, name = os.path.split(destination)
+    stem, ext = os.path.splitext(name)
+    pattern = re.compile(
+        re.escape(os.path.normcase(stem)) + r"_([1-9][0-9]*)" + re.escape(ext),
+        re.IGNORECASE if os.path.normcase("A") == "a" else 0,
+    )
+    try:
+        names = os.listdir(folder)
+    except OSError:
+        return []
+    numbered = sorted(
+        (int(match.group(1)), os.path.join(folder, other))
+        for other in names
+        if (match := pattern.fullmatch(other)) is not None
+    )
+    copies = [destination] if os.path.exists(destination) else []
+    return copies + [path for _, path in numbered]
+
+
 def _volumes_used(primary: WorkItem, reported: Optional[int], chosen: int) -> int:
     """Return how many of the chosen volumes 7-Zip actually used.
 
@@ -1018,15 +1042,16 @@ class WorkPool:
         A different file with the same name is kept: `item` gets a numbered name.
         """
         destination = os.path.join(self.output_dir, self._output_relpath(item))
+        for existing in _numbered_copies(destination):
+            if _same_content(item.path, existing, digests):
+                with contextlib.suppress(OSError):
+                    os.remove(item.path)
+                item.output_path = existing
+                item.duplicate_in_output = True
+                return True
         stem, ext = os.path.splitext(destination)
         counter = 1
         while os.path.exists(destination):
-            if _same_content(item.path, destination, digests):
-                with contextlib.suppress(OSError):
-                    os.remove(item.path)
-                item.output_path = destination
-                item.duplicate_in_output = True
-                return True
             destination = f"{stem}_{counter}{ext}"
             counter += 1
         try:

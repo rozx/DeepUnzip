@@ -1,7 +1,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Collisions MUST be handled safely
-If a file would be placed at an output path that is already taken, the system SHALL compare it with the existing file, and with each numbered alternative of that path, by size and then by MD5 hash. If one of them has the same content, the system SHALL NOT write a second copy, SHALL report the item at that existing file, and SHALL count it as an identical file skipped. Otherwise the system SHALL preserve all files by applying existing name-collision handling.
+If a file would be placed at an output path that is already taken, the system SHALL compare it with the existing file, and with every existing numbered alternative of that path, by size and then by MD5 hash. If one of them has the same content, the system SHALL NOT write a second copy, SHALL report the item at that existing file, and SHALL count it as an identical file skipped. Otherwise the system SHALL preserve all files by applying existing name-collision handling.
 
 #### Scenario: Two inputs collide after flattening
 - **GIVEN** two different extracted files would be placed at `unzipped/1/aaa.jpg` and `unzipped/2/aaa.jpg`
@@ -22,6 +22,12 @@ If a file would be placed at an output path that is already taken, the system SH
 - **AND** an extracted `a.txt` has the same content as `unzipped/a_1.txt`
 - **WHEN** the tool moves it to the output
 - **THEN** no `unzipped/a_2.txt` SHALL be created
+
+#### Scenario: Identical copy after a gap in the numbers
+- **GIVEN** `unzipped/a.txt` and `unzipped/a_2.txt` exist, and `unzipped/a_1.txt` was deleted
+- **AND** an extracted `a.txt` has the same content as `unzipped/a_2.txt`
+- **WHEN** the tool moves it to the output
+- **THEN** no `unzipped/a_1.txt` SHALL be created
 
 #### Scenario: Same name, different content
 - **GIVEN** `unzipped/a.txt` exists

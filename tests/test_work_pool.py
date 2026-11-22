@@ -510,6 +510,25 @@ def test_identical_copy_under_a_renamed_name_is_found(tmp_path):
     assert item.output_path == str(tmp_path / "unzipped" / "a_1.txt")
 
 
+def test_identical_copy_after_a_gap_in_the_numbers_is_found(tmp_path):
+    write(tmp_path / "unzipped" / "a.txt", "first")
+    write(tmp_path / "unzipped" / "a_2.txt", "second")  # a_1.txt was deleted
+    write(tmp_path / "A.7z", archive({"a.txt": "second"}))
+    result, _ = run_pool(tmp_path, sources=_scanned(tmp_path, "A.7z"))
+    assert output_files(tmp_path) == ["a.txt", "a_2.txt"]
+    (item,) = result.duplicates_skipped
+    assert item.output_path == str(tmp_path / "unzipped" / "a_2.txt")
+
+
+def test_new_file_takes_the_first_free_number_after_comparing_all(tmp_path):
+    write(tmp_path / "unzipped" / "a.txt", "first")
+    write(tmp_path / "unzipped" / "a_2.txt", "second")
+    write(tmp_path / "A.7z", archive({"a.txt": "third"}))
+    run_pool(tmp_path, sources=_scanned(tmp_path, "A.7z"))
+    assert output_files(tmp_path) == ["a.txt", "a_1.txt", "a_2.txt"]
+    assert (tmp_path / "unzipped" / "a_1.txt").read_text() == "third"
+
+
 def test_folder_with_the_same_name_is_not_a_duplicate(tmp_path):
     (tmp_path / "unzipped" / "a.txt").mkdir(parents=True)
     write(tmp_path / "A.7z", archive({"a.txt": "a"}))
