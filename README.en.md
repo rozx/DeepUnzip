@@ -54,7 +54,7 @@ Doing this by hand means opening archives one by one, trying passwords, moving v
 3. macOS / Linux: unpack the `.tar.gz` and run it in a terminal:
 
    ```bash
-   tar -xzf deepunzip-v2.0.0-macos-arm64.tar.gz
+   tar -xzf deepunzip-v2.1.0-macos-arm64.tar.gz
    ./deepunzip ~/Downloads/archives
    ```
 
@@ -103,7 +103,7 @@ The output is available in English, Simplified Chinese, Traditional Chinese, Jap
 With `--json`, every line on standard output is a JSON object, and the last one is always `summary`:
 
 ```json
-{"event": "summary", "schema_version": 1, "status": "partial", "files": 12, "output_dirs": ["D:\\Downloads\\unzipped"], "sources": {"deleted": 3, "kept": 1}, "unresolved": [{"root": 1, "path": "locked.7z", "reason": "password"}], "exit": 1}
+{"event": "summary", "schema_version": 1, "status": "partial", "files": 12, "output_dirs": ["D:\\Downloads\\unzipped"], "sources": {"deleted": 3, "kept": 1}, "duplicates_skipped": 0, "unresolved": [{"root": 1, "path": "locked.7z", "reason": "password"}], "exit": 1}
 ```
 
 In `--json` mode DeepUnzip never asks for a password and never waits for Enter at the end. It doesn't ask either when standard input is not a terminal, for example in a scheduled task.
@@ -123,15 +123,15 @@ If a run is interrupted, the next run puts moved volumes back where they were, a
 
 | Platform | File |
 | --- | --- |
-| Windows x64 | `deepunzip-v2.0.0-windows-x64.zip` |
-| macOS Intel | `deepunzip-v2.0.0-macos-x64.tar.gz` |
-| macOS Apple Silicon | `deepunzip-v2.0.0-macos-arm64.tar.gz` |
-| Linux x64 | `deepunzip-v2.0.0-linux-x64.tar.gz` |
-| Linux ARM64 | `deepunzip-v2.0.0-linux-arm64.tar.gz` |
+| Windows x64 | `deepunzip-v2.1.0-windows-x64.zip` |
+| macOS Intel | `deepunzip-v2.1.0-macos-x64.tar.gz` |
+| macOS Apple Silicon | `deepunzip-v2.1.0-macos-arm64.tar.gz` |
+| Linux x64 | `deepunzip-v2.1.0-linux-x64.tar.gz` |
+| Linux ARM64 | `deepunzip-v2.1.0-linux-arm64.tar.gz` |
 
 Each package contains the program, the bundled 7-Zip and the license files; the release page also has `SHA256SUMS`. The Linux builds are made on Ubuntu 24.04. The program is not code-signed, and the macOS builds are not notarized. See [7z/README.md](7z/README.md) for where 7-Zip comes from and its checksums.
 
-See the [release notes](docs/releaseNotes/v2.0.0.md) for what changed in this version.
+See the [release notes](docs/releaseNotes/v2.1.0.md) for what changed in this version.
 
 ## FAQ
 

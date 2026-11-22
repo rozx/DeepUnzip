@@ -54,7 +54,7 @@
 3. macOS / Linux：解開 `.tar.gz`，在終端機執行：
 
    ```bash
-   tar -xzf deepunzip-v2.0.0-macos-arm64.tar.gz
+   tar -xzf deepunzip-v2.1.0-macos-arm64.tar.gz
    ./deepunzip ~/Downloads/archives
    ```
 
@@ -103,7 +103,7 @@ deepunzip [選項] <檔案或資料夾>...
 加上 `--json` 後，標準輸出每行是一個 JSON 物件，最後一行一定是 `summary`：
 
 ```json
-{"event": "summary", "schema_version": 1, "status": "partial", "files": 12, "output_dirs": ["D:\\Downloads\\unzipped"], "sources": {"deleted": 3, "kept": 1}, "unresolved": [{"root": 1, "path": "locked.7z", "reason": "password"}], "exit": 1}
+{"event": "summary", "schema_version": 1, "status": "partial", "files": 12, "output_dirs": ["D:\\Downloads\\unzipped"], "sources": {"deleted": 3, "kept": 1}, "duplicates_skipped": 0, "unresolved": [{"root": 1, "path": "locked.7z", "reason": "password"}], "exit": 1}
 ```
 
 `--json` 模式下不會詢問密碼，也不會在結束時等待按 Enter。標準輸入不是終端機時（例如排程工作）同樣不會詢問。
@@ -123,15 +123,15 @@ deepunzip [選項] <檔案或資料夾>...
 
 | 平台 | 檔案 |
 | --- | --- |
-| Windows x64 | `deepunzip-v2.0.0-windows-x64.zip` |
-| macOS Intel | `deepunzip-v2.0.0-macos-x64.tar.gz` |
-| macOS Apple Silicon | `deepunzip-v2.0.0-macos-arm64.tar.gz` |
-| Linux x64 | `deepunzip-v2.0.0-linux-x64.tar.gz` |
-| Linux ARM64 | `deepunzip-v2.0.0-linux-arm64.tar.gz` |
+| Windows x64 | `deepunzip-v2.1.0-windows-x64.zip` |
+| macOS Intel | `deepunzip-v2.1.0-macos-x64.tar.gz` |
+| macOS Apple Silicon | `deepunzip-v2.1.0-macos-arm64.tar.gz` |
+| Linux x64 | `deepunzip-v2.1.0-linux-x64.tar.gz` |
+| Linux ARM64 | `deepunzip-v2.1.0-linux-arm64.tar.gz` |
 
 每個套件包含程式、內附的 7-Zip 和授權檔案，Release 頁面另有 `SHA256SUMS`。Linux 版在 Ubuntu 24.04 上建置。程式沒有程式碼簽章，macOS 版也沒有經過公證。7-Zip 的來源和校驗值見 [7z/README.md](7z/README.md)。
 
-這一版的變更見[發布說明](docs/releaseNotes/v2.0.0.md)。
+這一版的變更見[發布說明](docs/releaseNotes/v2.1.0.md)。
 
 ## 常見問題
 

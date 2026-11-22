@@ -54,7 +54,7 @@ DeepUnzip は、入れ子になった、パスワード付きの、分割され�
 3. macOS / Linux：`.tar.gz` を展開し、ターミナルで実行します。
 
    ```bash
-   tar -xzf deepunzip-v2.0.0-macos-arm64.tar.gz
+   tar -xzf deepunzip-v2.1.0-macos-arm64.tar.gz
    ./deepunzip ~/Downloads/archives
    ```
 
@@ -103,7 +103,7 @@ deepunzip [オプション] <ファイルまたはフォルダー>...
 `--json` を付けると、標準出力の各行が 1 つの JSON オブジェクトになり、最後の行は必ず `summary` です。
 
 ```json
-{"event": "summary", "schema_version": 1, "status": "partial", "files": 12, "output_dirs": ["D:\\Downloads\\unzipped"], "sources": {"deleted": 3, "kept": 1}, "unresolved": [{"root": 1, "path": "locked.7z", "reason": "password"}], "exit": 1}
+{"event": "summary", "schema_version": 1, "status": "partial", "files": 12, "output_dirs": ["D:\\Downloads\\unzipped"], "sources": {"deleted": 3, "kept": 1}, "duplicates_skipped": 0, "unresolved": [{"root": 1, "path": "locked.7z", "reason": "password"}], "exit": 1}
 ```
 
 `--json` モードではパスワードを尋ねず、終了時に Enter を待つこともありません。標準入力が端末でない場合（タスクスケジューラーなど）も質問しません。
@@ -123,15 +123,15 @@ deepunzip [オプション] <ファイルまたはフォルダー>...
 
 | プラットフォーム | ファイル |
 | --- | --- |
-| Windows x64 | `deepunzip-v2.0.0-windows-x64.zip` |
-| macOS Intel | `deepunzip-v2.0.0-macos-x64.tar.gz` |
-| macOS Apple Silicon | `deepunzip-v2.0.0-macos-arm64.tar.gz` |
-| Linux x64 | `deepunzip-v2.0.0-linux-x64.tar.gz` |
-| Linux ARM64 | `deepunzip-v2.0.0-linux-arm64.tar.gz` |
+| Windows x64 | `deepunzip-v2.1.0-windows-x64.zip` |
+| macOS Intel | `deepunzip-v2.1.0-macos-x64.tar.gz` |
+| macOS Apple Silicon | `deepunzip-v2.1.0-macos-arm64.tar.gz` |
+| Linux x64 | `deepunzip-v2.1.0-linux-x64.tar.gz` |
+| Linux ARM64 | `deepunzip-v2.1.0-linux-arm64.tar.gz` |
 
 各パッケージにはプログラム、同梱の 7-Zip、ライセンスファイルが含まれ、リリースページには `SHA256SUMS` もあります。Linux 版は Ubuntu 24.04 でビルドしています。プログラムにはコード署名がなく、macOS 版は公証も受けていません。7-Zip の入手元とチェックサムは [7z/README.md](7z/README.md) を参照してください。
 
-このバージョンの変更点は[リリースノート](docs/releaseNotes/v2.0.0.md)を参照してください。
+このバージョンの変更点は[リリースノート](docs/releaseNotes/v2.1.0.md)を参照してください。
 
 ## よくある質問
 

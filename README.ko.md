@@ -54,7 +54,7 @@ DeepUnzip은 중첩되고, 암호가 걸리고, 분할되고, 이름이 위장�
 3. macOS / Linux: `.tar.gz`를 풀고 터미널에서 실행합니다.
 
    ```bash
-   tar -xzf deepunzip-v2.0.0-macos-arm64.tar.gz
+   tar -xzf deepunzip-v2.1.0-macos-arm64.tar.gz
    ./deepunzip ~/Downloads/archives
    ```
 
@@ -103,7 +103,7 @@ deepunzip [옵션] <파일 또는 폴더>...
 `--json`을 붙이면 표준 출력의 각 줄이 JSON 객체 하나가 되며, 마지막 줄은 항상 `summary`입니다.
 
 ```json
-{"event": "summary", "schema_version": 1, "status": "partial", "files": 12, "output_dirs": ["D:\\Downloads\\unzipped"], "sources": {"deleted": 3, "kept": 1}, "unresolved": [{"root": 1, "path": "locked.7z", "reason": "password"}], "exit": 1}
+{"event": "summary", "schema_version": 1, "status": "partial", "files": 12, "output_dirs": ["D:\\Downloads\\unzipped"], "sources": {"deleted": 3, "kept": 1}, "duplicates_skipped": 0, "unresolved": [{"root": 1, "path": "locked.7z", "reason": "password"}], "exit": 1}
 ```
 
 `--json` 모드에서는 비밀번호를 묻지 않고, 끝날 때 Enter를 기다리지도 않습니다. 표준 입력이 터미널이 아닐 때(예: 작업 스케줄러)도 묻지 않습니다.
@@ -123,15 +123,15 @@ deepunzip [옵션] <파일 또는 폴더>...
 
 | 플랫폼 | 파일 |
 | --- | --- |
-| Windows x64 | `deepunzip-v2.0.0-windows-x64.zip` |
-| macOS Intel | `deepunzip-v2.0.0-macos-x64.tar.gz` |
-| macOS Apple Silicon | `deepunzip-v2.0.0-macos-arm64.tar.gz` |
-| Linux x64 | `deepunzip-v2.0.0-linux-x64.tar.gz` |
-| Linux ARM64 | `deepunzip-v2.0.0-linux-arm64.tar.gz` |
+| Windows x64 | `deepunzip-v2.1.0-windows-x64.zip` |
+| macOS Intel | `deepunzip-v2.1.0-macos-x64.tar.gz` |
+| macOS Apple Silicon | `deepunzip-v2.1.0-macos-arm64.tar.gz` |
+| Linux x64 | `deepunzip-v2.1.0-linux-x64.tar.gz` |
+| Linux ARM64 | `deepunzip-v2.1.0-linux-arm64.tar.gz` |
 
 각 패키지에는 프로그램, 함께 들어 있는 7-Zip, 라이선스 파일이 있으며, 릴리스 페이지에는 `SHA256SUMS`도 있습니다. Linux 버전은 Ubuntu 24.04에서 빌드합니다. 프로그램에는 코드 서명이 없고, macOS 버전은 공증도 받지 않았습니다. 7-Zip의 출처와 체크섬은 [7z/README.md](7z/README.md)를 참고하세요.
 
-이번 버전의 변경 사항은 [릴리스 노트](docs/releaseNotes/v2.0.0.md)를 참고하세요.
+이번 버전의 변경 사항은 [릴리스 노트](docs/releaseNotes/v2.1.0.md)를 참고하세요.
 
 ## 자주 묻는 질문
 
