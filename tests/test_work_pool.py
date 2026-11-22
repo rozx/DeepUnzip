@@ -532,6 +532,38 @@ def test_new_file_takes_the_first_free_number_after_comparing_all(tmp_path):
     assert (tmp_path / "unzipped" / "a_1.txt").read_text() == "third"
 
 
+def test_output_folder_is_listed_once_however_many_files_collide(tmp_path, monkeypatch):
+    files = {f"f{i}.txt": f"new {i}" for i in range(20)}
+    for name in files:
+        write(tmp_path / "unzipped" / name, "old")
+    write(tmp_path / "A.7z", archive(files))
+    out = os.path.normcase(str(tmp_path / "unzipped"))
+    listed = []
+    real_listdir = os.listdir
+
+    def listdir(path="."):
+        if os.path.normcase(os.fspath(path)) == out:
+            listed.append(path)
+        return real_listdir(path)
+
+    monkeypatch.setattr(wp.os, "listdir", listdir)
+    run_pool(tmp_path, sources=_scanned(tmp_path, "A.7z"))
+    assert len(output_files(tmp_path)) == 40  # every new file got f<i>_1.txt
+    assert len(listed) <= 1
+
+
+def test_no_collision_never_lists_the_output_folder(tmp_path, monkeypatch):
+    write(tmp_path / "A.7z", archive({f"f{i}.txt": str(i) for i in range(20)}))
+    listed = []
+    real_listdir = os.listdir
+    monkeypatch.setattr(
+        wp.os, "listdir", lambda path=".": listed.append(path) or real_listdir(path)
+    )
+    run_pool(tmp_path)
+    out = os.path.normcase(str(tmp_path / "unzipped"))
+    assert [p for p in listed if os.path.normcase(os.fspath(p)) == out] == []
+
+
 def test_folder_with_the_same_name_is_not_a_duplicate(tmp_path):
     (tmp_path / "unzipped" / "a.txt").mkdir(parents=True)
     write(tmp_path / "A.7z", archive({"a.txt": "a"}))

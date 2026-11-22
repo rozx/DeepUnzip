@@ -283,28 +283,54 @@ def _same_content(path: str, existing: str, cache: dict[str, str]) -> bool:
         return False
 
 
-def _numbered_copies(destination: str) -> list[str]:
-    """`destination` and its existing numbered copies (`a_1.txt`, ...), in order.
+_NUMBERED_STEM = re.compile(r"(.+)_([1-9][0-9]*)")
 
-    Every copy is listed, also past a gap left by a deleted one.
+
+class _NumberedCopies:
+    """The numbered copies (`a_1.txt`, ...) in each output folder.
+
+    A folder is listed once, at its first name collision, and kept up to date
+    as files are moved in, so finalization stays linear in the number of files.
     """
-    folder, name = os.path.split(destination)
-    stem, ext = os.path.splitext(name)
-    pattern = re.compile(
-        re.escape(os.path.normcase(stem)) + r"_([1-9][0-9]*)" + re.escape(ext),
-        re.IGNORECASE if os.path.normcase("A") == "a" else 0,
-    )
-    try:
-        names = os.listdir(folder)
-    except OSError:
-        return []
-    numbered = sorted(
-        (int(match.group(1)), os.path.join(folder, other))
-        for other in names
-        if (match := pattern.fullmatch(other)) is not None
-    )
-    copies = [destination] if os.path.exists(destination) else []
-    return copies + [path for _, path in numbered]
+
+    def __init__(self) -> None:
+        self._folders: dict[str, dict[tuple[str, str], list[tuple[int, str]]]] = {}
+
+    def of(self, destination: str) -> list[str]:
+        """`destination` and every numbered copy of it, also past a gap."""
+        folder, name = os.path.split(destination)
+        stem, ext = os.path.splitext(name)
+        index = self._index(folder)
+        key = (os.path.normcase(stem), os.path.normcase(ext))
+        return [destination] + [path for _, path in sorted(index.get(key, []))]
+
+    def added(self, path: str) -> None:
+        folder, name = os.path.split(path)
+        if folder in self._folders:
+            self._add(self._folders[folder], folder, name)
+
+    def _index(self, folder: str) -> dict[tuple[str, str], list[tuple[int, str]]]:
+        if folder not in self._folders:
+            index: dict[tuple[str, str], list[tuple[int, str]]] = {}
+            try:
+                names = os.listdir(folder)
+            except OSError:
+                names = []
+            for name in names:
+                self._add(index, folder, name)
+            self._folders[folder] = index
+        return self._folders[folder]
+
+    @staticmethod
+    def _add(
+        index: dict[tuple[str, str], list[tuple[int, str]]], folder: str, name: str
+    ) -> None:
+        stem, ext = os.path.splitext(name)
+        match = _NUMBERED_STEM.fullmatch(stem)
+        if match is not None:
+            key = (os.path.normcase(match.group(1)), os.path.normcase(ext))
+            copy = (int(match.group(2)), os.path.join(folder, name))
+            index.setdefault(key, []).append(copy)
 
 
 def _volumes_used(primary: WorkItem, reported: Optional[int], chosen: int) -> int:
@@ -1110,19 +1136,22 @@ class WorkPool:
             item.name,
         )
 
-    def _move_to_output(self, item: WorkItem, digests: dict[str, str]) -> bool:
+    def _move_to_output(
+        self, item: WorkItem, digests: dict[str, str], copies: _NumberedCopies
+    ) -> bool:
         """Move `item` to the output, or skip it if an identical file is there.
 
         A different file with the same name is kept: `item` gets a numbered name.
         """
         destination = os.path.join(self.output_dir, self._output_relpath(item))
-        for existing in _numbered_copies(destination):
-            if _same_content(item.path, existing, digests):
-                with contextlib.suppress(OSError):
-                    os.remove(item.path)
-                item.output_path = existing
-                item.duplicate_in_output = True
-                return True
+        if os.path.exists(destination):
+            for existing in copies.of(destination):
+                if _same_content(item.path, existing, digests):
+                    with contextlib.suppress(OSError):
+                        os.remove(item.path)
+                    item.output_path = existing
+                    item.duplicate_in_output = True
+                    return True
         stem, ext = os.path.splitext(destination)
         counter = 1
         while os.path.exists(destination):
@@ -1133,6 +1162,7 @@ class WorkPool:
             self.mover(item.path, destination)
         except OSError:
             return False
+        copies.added(destination)
         item.output_path = destination
         return True
 
@@ -1140,13 +1170,14 @@ class WorkPool:
         """Move outputs and unresolved derived items out; True if work dir kept."""
         failed = False
         digests: dict[str, str] = {}
+        copies = _NumberedCopies()
         for item in self.items:
             if item.is_source or not os.path.exists(item.path):
                 continue
             wanted = (
                 item.state in (State.FINAL, State.UNRESOLVED) or item.keep_in_output
             )
-            if wanted and not self._move_to_output(item, digests):
+            if wanted and not self._move_to_output(item, digests, copies):
                 failed = True
                 self._unresolve(item, "move failed")
         if failed or self._keep_work_dir:
