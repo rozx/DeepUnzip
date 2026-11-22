@@ -1,6 +1,8 @@
 import json
 import os
 import shutil
+import subprocess
+import sys
 
 import pytest
 
@@ -250,6 +252,25 @@ def test_leftover_work_directory_follows_permanent_delete(fake_7z, tmp_path):
 
     assert not leftover.exists()
     assert fake_7z["removed"]["temp.deepunzip-old"] is False
+
+
+def test_work_directory_of_a_run_still_going_is_kept(fake_7z, monkeypatch, tmp_path):
+    busy = _leftover_with_partial_output(tmp_path)
+    process = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+    try:
+        main.work_pool.mark_work_dir(str(busy), pid=process.pid)
+        notices = []
+        monkeypatch.setattr(main.events, "notice", lambda *a, **k: notices.append(a[1]))
+
+        main.extract_files([str(tmp_path)], use_recycle_bin=False)
+    finally:
+        process.kill()
+        process.wait()
+
+    assert (busy / "A" / "a.txt").exists()
+    assert "temp.deepunzip-old" not in fake_7z["removed"]
+    assert "recovery.work_dir_in_use" in notices
+    assert "recovery.work_dir" not in notices
 
 
 def test_leftover_is_kept_when_this_run_keeps_its_work_directory(

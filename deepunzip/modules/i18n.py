@@ -462,6 +462,13 @@ CATALOG: dict[str, dict[str, str]] = {
         "ja": "中断された実行の作業フォルダーが残っています: {path}",
         "ko": "중단된 실행이 남긴 작업 폴더가 있습니다: {path}",
     },
+    "recovery.work_dir_in_use": {
+        "en": "Work directory of another run that is still going, left alone: {path}",
+        "zh": "另一个仍在运行的任务正在使用这个工作目录，不会动它：{path}",
+        "zh-TW": "另一個仍在執行的工作正在使用這個工作資料夾，不會動它：{path}",
+        "ja": "実行中の別の処理が使っている作業フォルダーのため、そのままにします: {path}",
+        "ko": "아직 실행 중인 다른 작업이 쓰는 작업 폴더라서 그대로 둡니다: {path}",
+    },
     "recovery.work_dir_recycled": {
         "en": "Moved the interrupted run's work directory to the recycle bin: {path}",
         "zh": "已把中断运行遗留的工作目录移到回收站：{path}",

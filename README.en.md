@@ -153,7 +153,7 @@ Add a rule to `config/cloaked_file_rules.json`; the format is described in the "
 
 ### A folder starting with `temp.deepunzip-` showed up
 
-It is the work folder of a run that was interrupted. Run DeepUnzip on the same folder again: when that run finishes, it moves the old work folder to the recycle bin (or deletes it with `--permanent-delete`). It is kept if it still holds one of your original volumes, or if the new run has to keep its own work folder too; the run then tells you where it is.
+It is the work folder of a run that was interrupted. Run DeepUnzip on the same folder again: when that run finishes, it moves the old work folder to the recycle bin (or deletes it with `--permanent-delete`). It is kept if it still holds one of your original volumes, if another DeepUnzip run is still using it, or if the new run has to keep its own work folder too; the run then tells you where it is.
 
 ## Development
 

@@ -15,9 +15,12 @@ callables so the whole loop can be tested without real archives.
 
 import contextlib
 import hashlib
+import json
 import os
 import re
 import shutil
+import socket
+import sys
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
@@ -382,6 +385,76 @@ def leftover_work_dirs(root: str) -> list[str]:
     ]
 
 
+# Written into each run's work directory: which process on which computer owns it.
+OWNER_FILE = ".owner"
+
+
+def mark_work_dir(work_dir: str, pid: Optional[int] = None) -> None:
+    """Record that this process (or `pid`) owns `work_dir`."""
+    owner = {"pid": os.getpid() if pid is None else pid, "host": socket.gethostname()}
+    path = os.path.join(work_dir, OWNER_FILE)
+    with contextlib.suppress(OSError):
+        with open(path + ".tmp", "w", encoding="utf-8") as handle:
+            json.dump(owner, handle)
+        os.replace(path + ".tmp", path)
+
+
+def work_dir_in_use(work_dir: str) -> bool:
+    """True if the run that owns `work_dir` may still be running.
+
+    A directory without a readable owner (an older version, or a run that died
+    before marking it) is a leftover. An owner on another computer cannot be
+    checked, so it counts as running. This process never owns a leftover: its
+    PID belonged to an earlier process.
+    """
+    try:
+        with open(os.path.join(work_dir, OWNER_FILE), encoding="utf-8") as handle:
+            owner = json.load(handle)
+        pid, host = int(owner["pid"]), str(owner["host"])
+    except (OSError, ValueError, TypeError, KeyError):
+        return False
+    if host != socket.gethostname():
+        return True
+    return pid != os.getpid() and _process_running(pid)
+
+
+def _process_running(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    if sys.platform == "win32":
+        # os.kill(pid, 0) would terminate the process on Windows.
+        import ctypes
+        from ctypes import wintypes
+
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
+        kernel32.OpenProcess.restype = wintypes.HANDLE
+        kernel32.GetExitCodeProcess.argtypes = (
+            wintypes.HANDLE,
+            ctypes.POINTER(wintypes.DWORD),
+        )
+        kernel32.GetExitCodeProcess.restype = wintypes.BOOL
+        kernel32.CloseHandle.argtypes = (wintypes.HANDLE,)
+        query_limited_information, still_active, access_denied = 0x1000, 259, 5
+        handle = kernel32.OpenProcess(query_limited_information, False, pid)
+        if not handle:
+            return ctypes.get_last_error() == access_denied
+        try:
+            code = wintypes.DWORD()
+            if not kernel32.GetExitCodeProcess(handle, ctypes.byref(code)):
+                return True
+            return code.value == still_active
+        finally:
+            kernel32.CloseHandle(handle)
+    try:
+        os.kill(pid, 0)
+    except PermissionError:
+        return True  # exists, owned by another user
+    except OSError:
+        return False
+    return True
+
+
 def _default_remove(path: str) -> bool:
     try:
         os.remove(path)
@@ -448,6 +521,7 @@ class WorkPool:
 
     def run(self) -> PoolResult:
         os.makedirs(self.work_dir, exist_ok=True)
+        mark_work_dir(self.work_dir)
         for path in sorted(self.sources):
             if os.path.isfile(path):
                 self._add(path, Origin.SOURCE, (), 0, self.work_dir)

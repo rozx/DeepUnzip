@@ -107,7 +107,10 @@ def _maybe_recover_pending_renames(
     can carry them into this run's history instead of losing them.
     """
     for leftover in work_pool.leftover_work_dirs(input_root):
-        events.notice("warning", "recovery.work_dir", path=leftover)
+        if work_pool.work_dir_in_use(leftover):
+            events.notice("warning", "recovery.work_dir_in_use", path=leftover)
+        else:
+            events.notice("warning", "recovery.work_dir", path=leftover)
 
     pending = RenameHistory.load_pending(input_root)
     if pending is None:
@@ -313,8 +316,9 @@ def _remove_leftover_work_dirs(
 
     This run extracted the root's sources again, so what an interrupted run
     left behind is redundant. A leftover is kept while a rename-history entry
-    still points into it (a source volume that could not be moved home), and
-    all are kept when this run had to keep its own work directory.
+    still points into it (a source volume that could not be moved home) or
+    while the run that owns it is still going, and all are kept when this run
+    had to keep its own work directory.
     """
     if result.work_dir_kept:
         return
@@ -324,6 +328,8 @@ def _remove_leftover_work_dirs(
     )
     for folder in leftovers:
         if any(_is_within(path, folder) for path in held):
+            continue
+        if work_pool.work_dir_in_use(folder):
             continue
         if remove(folder):
             events.notice("info", key, path=folder)

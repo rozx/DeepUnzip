@@ -1,6 +1,9 @@
 """Work pool tests with a fake engine (no 7-Zip); helpers in fake_archives.py."""
 
+import json
 import os
+import subprocess
+import sys
 
 import pytest
 
@@ -590,6 +593,56 @@ def test_leftover_work_dirs_are_listed(tmp_path):
     assert wp.leftover_work_dirs(str(tmp_path)) == [
         str(tmp_path / "temp.deepunzip-old1")
     ]
+
+
+@pytest.fixture
+def other_process():
+    """A real process that is running, for the owner checks."""
+    process = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+    yield process
+    process.kill()
+    process.wait()
+
+
+def test_work_dir_owned_by_a_running_process_is_in_use(tmp_path, other_process):
+    wp.mark_work_dir(str(tmp_path), pid=other_process.pid)
+    assert wp.work_dir_in_use(str(tmp_path))
+    other_process.kill()
+    other_process.wait()
+    assert not wp.work_dir_in_use(str(tmp_path))
+
+
+def test_work_dir_without_a_readable_owner_is_not_in_use(tmp_path):
+    assert not wp.work_dir_in_use(str(tmp_path))  # older version or early crash
+    (tmp_path / wp.OWNER_FILE).write_text("{not json")
+    assert not wp.work_dir_in_use(str(tmp_path))
+
+
+def test_work_dir_owned_by_another_computer_counts_as_in_use(tmp_path):
+    owner = {"pid": 1, "host": "some-other-computer"}
+    (tmp_path / wp.OWNER_FILE).write_text(json.dumps(owner))
+    assert wp.work_dir_in_use(str(tmp_path))
+
+
+def test_work_dir_with_this_process_as_owner_is_a_leftover(tmp_path):
+    # The running pool never lists its own directory as a leftover, so this
+    # PID belonged to an earlier, dead process.
+    wp.mark_work_dir(str(tmp_path))
+    assert not wp.work_dir_in_use(str(tmp_path))
+
+
+def test_running_pool_marks_its_work_dir(tmp_path):
+    write(tmp_path / "A.7z", archive({"a.txt": "a"}))
+    owners = []
+
+    def mover(src, dst):
+        # Output moves run while the work directory still exists.
+        (work_dir,) = tmp_path.glob("temp.deepunzip-*")
+        owners.append(json.loads((work_dir / wp.OWNER_FILE).read_text())["pid"])
+        os.replace(src, dst)
+
+    run_pool(tmp_path, mover=mover)
+    assert owners == [os.getpid()]
 
 
 @pytest.mark.parametrize("name", ["X.rar", "X.zip", "X.zipx", "X.arj", "X.ace"])

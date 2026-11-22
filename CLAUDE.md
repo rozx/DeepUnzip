@@ -49,7 +49,7 @@ DeepUnzip (深度解压) is a CLI that extracts complex archives: password-prote
 2. scans the root with [file_utils.py](deepunzip/modules/file_utils.py) `read_dir`, which skips `unzipped/` and work directories and adds the sibling volumes of a selected file;
 3. runs a [WorkPool](deepunzip/modules/work_pool.py) over the scanned sources with a [SevenZipEngine](deepunzip/modules/pool_engine.py);
 4. reconciles rename history from the result (clears the entries of deleted sources, reverts the rest);
-5. removes the work directories found in step 1 (`_remove_leftover_work_dirs`, Recycle Bin unless `--permanent-delete`), unless this run kept its own work directory or a history entry still points into one.
+5. removes the work directories found in step 1 (`_remove_leftover_work_dirs`, Recycle Bin unless `--permanent-delete`), unless this run kept its own work directory, a history entry still points into one, or its owner is still running (`work_pool.work_dir_in_use` reads the `.owner` marker each run writes into its work directory).
 
 A typed password that worked is saved at once (`SevenZipEngine(on_learn=...)`), so an interruption cannot lose it. Finally it saves any other password changes and returns the results; the renderer prints each root's lineage tree and summary from the `RootFinished` event.
 
