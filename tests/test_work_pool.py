@@ -455,6 +455,81 @@ def test_parity_p13_meaningless_leading_folders_are_flattened(tmp_path):
     assert output_files(tmp_path) == ["222.jpg", "photos/1/a.jpg"]
 
 
+def _scanned(root, *names):
+    """Source paths for `names`, leaving out an existing output folder."""
+    return [str(root / name) for name in names]
+
+
+def test_identical_file_already_in_the_output_is_skipped(tmp_path):
+    write(tmp_path / "unzipped" / "a.txt", "hello")
+    write(tmp_path / "A.7z", archive({"a.txt": "hello"}))
+    result, _ = run_pool(tmp_path, sources=_scanned(tmp_path, "A.7z"))
+    assert output_files(tmp_path) == ["a.txt"]
+    (item,) = [i for i in result.items if i.name == "a.txt"]
+    assert item.output_path == str(tmp_path / "unzipped" / "a.txt")
+    assert item.duplicate_in_output
+    assert result.duplicates_skipped == [item]
+    assert result.output_files == [str(tmp_path / "unzipped" / "a.txt")]
+    assert deleted(result) == ["A.7z"]
+    assert not os.path.exists(result.work_dir)
+
+
+def test_identical_files_from_two_archives_are_written_once(tmp_path):
+    write(tmp_path / "A.7z", archive({"a.txt": "same"}))
+    write(tmp_path / "B.7z", archive({"a.txt": "same"}))
+    result, _ = run_pool(tmp_path)
+    assert output_files(tmp_path) == ["a.txt"]
+    assert len(result.duplicates_skipped) == 1
+    assert len(result.output_files) == 1
+    assert deleted(result) == ["A.7z", "B.7z"]
+
+
+def test_different_file_with_the_same_name_is_still_renamed(tmp_path):
+    write(tmp_path / "unzipped" / "a.txt", "old")
+    write(tmp_path / "A.7z", archive({"a.txt": "new"}))
+    result, _ = run_pool(tmp_path, sources=_scanned(tmp_path, "A.7z"))
+    assert output_files(tmp_path) == ["a.txt", "a_1.txt"]
+    assert (tmp_path / "unzipped" / "a_1.txt").read_text() == "new"
+    assert result.duplicates_skipped == []
+
+
+def test_same_size_but_different_content_is_renamed(tmp_path):
+    write(tmp_path / "unzipped" / "a.txt", "abc")
+    write(tmp_path / "A.7z", archive({"a.txt": "xyz"}))
+    run_pool(tmp_path, sources=_scanned(tmp_path, "A.7z"))
+    assert output_files(tmp_path) == ["a.txt", "a_1.txt"]
+
+
+def test_identical_copy_under_a_renamed_name_is_found(tmp_path):
+    write(tmp_path / "unzipped" / "a.txt", "first")
+    write(tmp_path / "unzipped" / "a_1.txt", "second")
+    write(tmp_path / "A.7z", archive({"a.txt": "second"}))
+    result, _ = run_pool(tmp_path, sources=_scanned(tmp_path, "A.7z"))
+    assert output_files(tmp_path) == ["a.txt", "a_1.txt"]
+    (item,) = result.duplicates_skipped
+    assert item.output_path == str(tmp_path / "unzipped" / "a_1.txt")
+
+
+def test_folder_with_the_same_name_is_not_a_duplicate(tmp_path):
+    (tmp_path / "unzipped" / "a.txt").mkdir(parents=True)
+    write(tmp_path / "A.7z", archive({"a.txt": "a"}))
+    result, _ = run_pool(tmp_path, sources=_scanned(tmp_path, "A.7z"))
+    assert (tmp_path / "unzipped" / "a_1.txt").read_text() == "a"
+    assert result.duplicates_skipped == []
+
+
+def test_identical_preserved_archive_is_skipped_and_stays_unresolved(tmp_path):
+    inner = archive({"x": "x"}, password="zz")
+    write(tmp_path / "unzipped" / "inner.rar", inner)
+    write(tmp_path / "A.7z", archive({"inner.rar": inner}))
+    result, _ = run_pool(tmp_path, sources=_scanned(tmp_path, "A.7z"))
+    assert output_files(tmp_path) == ["inner.rar"]
+    (item,) = result.unresolved
+    assert item.reason == "password" and item.duplicate_in_output
+    assert item.output_path == str(tmp_path / "unzipped" / "inner.rar")
+    assert deleted(result) == []
+
+
 def test_standalone_zip_with_unrelated_continuation(tmp_path):
     write(tmp_path / "X.zip", archive({"inside.txt": "i"}))
     write(tmp_path / "X.z01", volume("Q", 2, 2))

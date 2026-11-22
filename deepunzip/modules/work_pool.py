@@ -13,6 +13,8 @@ See openspec/changes/archive/2026-10-25-redesign-work-pool-extraction/design.md.
 callables so the whole loop can be tested without real archives.
 """
 
+import contextlib
+import hashlib
 import os
 import re
 import shutil
@@ -150,6 +152,8 @@ class WorkItem:
     output_path: Optional[str] = None
     # A consumed derived archive that could not be removed is kept as output.
     keep_in_output: bool = False
+    # Not moved: an identical file was already at its output path.
+    duplicate_in_output: bool = False
     tried_as_container: bool = False
 
     @property
@@ -177,7 +181,12 @@ class PoolResult:
 
     @property
     def output_files(self) -> list[str]:
-        return [i.output_path for i in self.items if i.output_path]
+        paths = (i.output_path for i in self.items if i.output_path)
+        return list(dict.fromkeys(paths))
+
+    @property
+    def duplicates_skipped(self) -> list[WorkItem]:
+        return [i for i in self.items if i.duplicate_in_output]
 
     def item(self, item_id: int) -> WorkItem:
         return next(i for i in self.items if i.id == item_id)
@@ -247,6 +256,28 @@ def _unique_dir(base: str) -> str:
         counter += 1
     os.makedirs(candidate)
     return candidate
+
+
+def _md5(path: str, cache: dict[str, str]) -> str:
+    if path not in cache:
+        with open(path, "rb") as handle:
+            digest = hashlib.file_digest(
+                handle, lambda: hashlib.md5(usedforsecurity=False)
+            )
+        cache[path] = digest.hexdigest()
+    return cache[path]
+
+
+def _same_content(path: str, existing: str, cache: dict[str, str]) -> bool:
+    """True if `existing` is a file with the same size and MD5 as `path`."""
+    try:
+        return (
+            os.path.isfile(existing)
+            and os.path.getsize(existing) == os.path.getsize(path)
+            and _md5(existing, cache) == _md5(path, cache)
+        )
+    except OSError:
+        return False
 
 
 def _volumes_used(primary: WorkItem, reported: Optional[int], chosen: int) -> int:
@@ -981,11 +1012,21 @@ class WorkPool:
             item.name,
         )
 
-    def _move_to_output(self, item: WorkItem) -> bool:
+    def _move_to_output(self, item: WorkItem, digests: dict[str, str]) -> bool:
+        """Move `item` to the output, or skip it if an identical file is there.
+
+        A different file with the same name is kept: `item` gets a numbered name.
+        """
         destination = os.path.join(self.output_dir, self._output_relpath(item))
         stem, ext = os.path.splitext(destination)
         counter = 1
         while os.path.exists(destination):
+            if _same_content(item.path, destination, digests):
+                with contextlib.suppress(OSError):
+                    os.remove(item.path)
+                item.output_path = destination
+                item.duplicate_in_output = True
+                return True
             destination = f"{stem}_{counter}{ext}"
             counter += 1
         try:
@@ -999,13 +1040,14 @@ class WorkPool:
     def _finalize(self) -> bool:
         """Move outputs and unresolved derived items out; True if work dir kept."""
         failed = False
+        digests: dict[str, str] = {}
         for item in self.items:
             if item.is_source or not os.path.exists(item.path):
                 continue
             wanted = (
                 item.state in (State.FINAL, State.UNRESOLVED) or item.keep_in_output
             )
-            if wanted and not self._move_to_output(item):
+            if wanted and not self._move_to_output(item, digests):
                 failed = True
                 self._unresolve(item, "move failed")
         if failed or self._keep_work_dir:

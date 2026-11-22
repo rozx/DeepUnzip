@@ -304,6 +304,13 @@ CATALOG: dict[str, dict[str, str]] = {
         "ja": "保持した元ファイル: {count} 個",
         "ko": "유지한 원본: {count}개",
     },
+    "summary.duplicates_skipped": {
+        "en": "identical files already in the output, skipped: {count}",
+        "zh": "输出中已有相同文件，已跳过：{count} 个",
+        "zh-TW": "輸出中已有相同檔案，已略過：{count} 個",
+        "ja": "出力に同一のファイルがあるためスキップ: {count} 個",
+        "ko": "출력에 동일한 파일이 있어 건너뜀: {count}개",
+    },
     "summary.work_dir_kept": {
         "en": "work directory kept: {path}",
         "zh": "工作目录已保留：{path}",

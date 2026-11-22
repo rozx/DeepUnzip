@@ -390,6 +390,10 @@ class HumanRenderer(_Dispatcher):
             lines.append(t(key, count=len(result.deleted_sources)))
         if result.kept_sources:
             lines.append(t("summary.kept", count=len(result.kept_sources)))
+        if result.duplicates_skipped:
+            lines.append(
+                t("summary.duplicates_skipped", count=len(result.duplicates_skipped))
+            )
         if result.work_dir_kept:
             lines.append(t("summary.work_dir_kept", path=result.work_dir))
         for line in lines:
@@ -678,6 +682,7 @@ class JsonRenderer(_Dispatcher):
                 "deleted": sum(len(r.deleted_sources) for r in event.results),
                 "kept": sum(len(r.kept_sources) for r in event.results),
             },
+            duplicates_skipped=sum(len(r.duplicates_skipped) for r in event.results),
             unresolved=unresolved,
             exit=event.exit_code,
         )
